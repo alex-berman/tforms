@@ -33,7 +33,6 @@ class Session(threading.Thread):
     def run_realtime(self):
         tr = subprocess.Popen(self.TR_CMD_LINE,
                               cwd=self.dir,
-                              shell=True,
                               stderr=subprocess.PIPE)
         while(True):
             line = tr.stderr.readline()
@@ -47,6 +46,5 @@ class Session(threading.Thread):
     def run_non_realtime(self):
         tr = subprocess.Popen(self.TR_CMD_LINE,
                               cwd=self.dir,
-                              shell=True,
                               stderr=self.logfile)
         tr.wait()

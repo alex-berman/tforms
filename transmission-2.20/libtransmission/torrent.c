@@ -1361,6 +1361,20 @@ fileBytesCompleted( const tr_torrent * tor, tr_file_index_t index )
     return total;
 }
 
+/* <ALEXB> */
+void outputFilesInfo(const tr_torrent *tor, tr_file_index_t fileCount) {
+  tr_file_index_t i;
+  tr_file file;
+  for(i = 0; i < fileCount; i++) {
+    file = tor->info.files[i];
+    fprintf(stderr, "TID=%d file=%d offset=%llu length=%llu firstPiece=%u lastPiece=%u name=%s\n",
+	    tor->uniqueId, i,
+	    file.offset, file.length,
+	    file.firstPiece, file.lastPiece, file.name);
+  }
+}
+/* </ALEXB> */
+
 tr_file_stat *
 tr_torrentFiles( const tr_torrent * tor,
                  tr_file_index_t *  fileCount )
@@ -1381,6 +1395,8 @@ tr_torrentFiles( const tr_torrent * tor,
 
     if( fileCount )
         *fileCount = n;
+
+    outputFilesInfo(tor, *fileCount); // ALEXB
 
     return files;
 }
@@ -1556,6 +1572,14 @@ freeTorrent( tr_torrent * tor )
 ***  Start/Stop Callback
 **/
 
+/* <ALEXB> */
+void outputTorrentInfo(tr_torrent *tor) {
+  fprintf(stderr, "initialized torrent %d: name=%s totalSize=%llu fileCount=%d pieceSize=%u pieceCount=%d\n",
+	  tor->uniqueId, tor->info.name, tor->info.totalSize, tor->info.fileCount,
+	  tor->info.pieceSize, tor->info.pieceCount);
+}
+/* </ALEXB> */
+
 static void
 torrentStartImpl( void * vtor )
 {
@@ -1581,6 +1605,10 @@ torrentStartImpl( void * vtor )
     tor->dhtAnnounce6At = now + tr_cryptoWeakRandInt( 20 );
     tor->lpdAnnounceAt = now;
     tr_peerMgrStartTorrent( tor );
+
+    /* <ALEXB> */
+    outputTorrentInfo(tor);
+    /* </ALEXB> */
 
     tr_sessionUnlock( tor->session );
 }

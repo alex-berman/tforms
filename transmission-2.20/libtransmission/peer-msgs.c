@@ -274,6 +274,7 @@ myDebug( const char * file, int line,
                              tr_torrentName( msgs->torrent ),
                              tr_peerIoGetAddrStr( msgs->peer->io ),
                              msgs->peer->client );
+
         va_start( args, fmt );
         evbuffer_add_vprintf( buf, fmt, args );
         va_end( args );
@@ -1285,6 +1286,18 @@ static int clientGotBlock( tr_peermsgs *               msgs,
                            struct evbuffer *           block,
                            const struct peer_request * req );
 
+/* <ALEXB> */
+void writeBufferToFile(int chunkId, void *buf, const size_t buflen) {
+  static char filename[1024];
+  FILE *f;
+  sprintf(filename, "chunks/chunk%06d", chunkId);
+  f = fopen(filename, "wb");
+  if(!f) return;
+  fwrite(buf, buflen, 1, f);
+  fclose(f);
+}
+/* </ALEXB> */
+
 static int
 readBtPiece( tr_peermsgs      * msgs,
              struct evbuffer  * inbuf,
@@ -1326,14 +1339,35 @@ readBtPiece( tr_peermsgs      * msgs,
             i -= thisPass;
         }
 
+	/* <ALEXB> */
+	static int chunkId = 0;
+	writeBufferToFile(chunkId, buf, n);
+	/* </ALEXB> */
+
         tr_sessionReleaseBuffer( getSession( msgs ) );
         buf = NULL;
 
         fireClientGotData( msgs, n, TRUE );
         *setme_piece_bytes_read += n;
+	/*
         dbgmsg( msgs, "got %zu bytes for block %u:%u->%u ... %d remain",
                n, req->index, req->offset, req->length,
                (int)( req->length - evbuffer_get_length( msgs->incoming.block ) ) );
+	*/
+
+	/* <ALEXB> */
+	tr_file_index_t fileIndex;
+	uint64_t        fileOffset;
+	tr_ioFindFileLocation( msgs->torrent, req->index, req->offset,
+			       &fileIndex, &fileOffset );
+	fprintf(stderr, "[%llu] chunkId=%d TID=%d peer=%s got %zu bytes for block %u at offset %u in file %u at offset %llu ... remaining %d of %u\n",
+		(unsigned long long int) tr_time_msec(), chunkId, msgs->torrent->uniqueId,
+		tr_peerIoGetAddrStr(msgs->peer->io), n,
+		req->index, req->offset, fileIndex, (unsigned long long int) fileOffset,
+	       (int)( req->length - evbuffer_get_length( msgs->incoming.block ) ), req->length);
+	chunkId++;
+	/* </ALEXB> */
+
         if( evbuffer_get_length( msgs->incoming.block ) < req->length )
             return READ_LATER;
 
