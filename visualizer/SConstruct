@@ -1,0 +1,6 @@
+env = Environment()
+env.Append(LIBS = ['glut', 'liblo'])
+env.Program(target = 'visualizer',
+            source = ['Visualizer.cpp',
+                      'GlWindow.cpp',
+                      'Stopwatch.cpp'])
