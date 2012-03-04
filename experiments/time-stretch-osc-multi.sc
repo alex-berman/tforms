@@ -7,7 +7,6 @@ s.doWhenBooted({
 
 SynthDef("pvrec", { arg fftBuffer, fftData, waveform;
 	var in, chain;
-	Line.kr(1, 1, BufDur.kr(waveform), doneAction: 2);
 	in = PlayBuf.ar(1, waveform, BufRateScale.kr(waveform), loop: 0);
 	chain = FFT(fftBuffer, in, ~hopSize, 1); 
 	chain = PV_RecordBuf(chain, fftData, 0, 1, 0, ~hopSize, 1);
