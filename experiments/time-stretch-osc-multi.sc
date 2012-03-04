@@ -5,7 +5,7 @@
 s.boot;
 s.doWhenBooted({
 
-SynthDef("pvrec", { arg fftBuffer=0, fftData=1, soundBuffer=2;
+SynthDef("pvrec", { arg fftBuffer, fftData, soundBuffer;
 	var in, chain;
 	Line.kr(1, 1, BufDur.kr(soundBuffer), doneAction: 2);
 	in = PlayBuf.ar(1, soundBuffer, BufRateScale.kr(soundBuffer), loop: 0);
@@ -13,7 +13,7 @@ SynthDef("pvrec", { arg fftBuffer=0, fftData=1, soundBuffer=2;
 	chain = PV_RecordBuf(chain, fftData, 0, 1, 0, ~hopSize, 1);
 	}).send(s);
 
-SynthDef("pvplay", { arg out=0, fftBuffer=0, fftData=1, cursor=0.0;
+SynthDef("pvplay", { arg out=0, fftBuffer, fftData, cursor=0.0;
 	var in, chain;
 	chain = PV_BufRd(fftBuffer, fftData, cursor);
 	Out.ar(out, IFFT(chain, 1).dup);

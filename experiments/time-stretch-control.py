@@ -4,7 +4,7 @@ import time
 PORT = 57120
 target = liblo.Address(PORT)
 
-factor = 15.0
+factor = 5.0
 t0 = time.time()
 while True:
     t = time.time()
