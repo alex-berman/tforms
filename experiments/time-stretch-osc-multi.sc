@@ -1,6 +1,10 @@
 (
 ~frameSize = 1024; 
 ~hopSize = 0.25;
+~fftBuffers=[];
+~fftDatas=[];
+~waveforms=[];
+~players=[];
 
 s.boot;
 s.doWhenBooted({
@@ -10,36 +14,39 @@ SynthDef("pvrec", { arg fftBuffer, fftData, waveform;
 	in = PlayBuf.ar(1, waveform, BufRateScale.kr(waveform), loop: 0);
 	chain = FFT(fftBuffer, in, ~hopSize, 1); 
 	chain = PV_RecordBuf(chain, fftData, 0, 1, 0, ~hopSize, 1);
-	}).send(s);
+	}).add;
 
 SynthDef("pvplay", { arg out=0, fftBuffer, fftData, cursor=0.0;
 	var in, chain;
 	chain = PV_BufRd(fftBuffer, fftData, cursor);
 	Out.ar(out, IFFT(chain, 1).dup);
-	}).send(s);
+	}).add;
 
-~soundFilename = "theme-nikolayeva-mono.wav";
-~sf = SoundFile.new;
-~sf.openRead(~soundFilename);
-~sf.close;
-~fftBuffer = Buffer.alloc(s, ~frameSize);
-~fftData = Buffer.alloc(s, ~sf.duration.calcPVRecSize(~frameSize, ~hopSize));
-~waveform = Buffer.read(s, ~soundFilename);
+l = { arg soundFilename;
+	var sf;
+	sf = SoundFile.new;
+	sf.openRead(soundFilename);
+	sf.close;
+	~fftBuffers.add(Buffer.alloc(s, ~frameSize));
+	~fftDatas.add(Buffer.alloc(s, sf.duration.calcPVRecSize(~frameSize, ~hopSize)));
+	~waveforms.add(Buffer.read(s, soundFilename));
+}
 
 });
 
 )
 
-
-Synth("pvrec", [\fftBuffer, ~fftBuffer, \fftData, ~fftData, \waveform, ~waveform]);
-~player = Synth("pvplay", [\out, 0, \fftBuffer, ~fftBuffer, \fftData, ~fftData]);
+~sound1 = l.value("theme-nikolayeva-mono.wav");
+Synth("pvrec", [\fftBuffer, ~fftBuffers[0], \fftData, ~fftDatas[0], \waveform, ~waveforms[0]]);
+~players.add(Synth("pvplay", [\out, 0, \fftBuffer, ~fftBuffers[0], \fftData, ~fftDatas[0]]));
 
 OSCresponder.new(nil, "/cursor",
   { arg t, r, msg;
-    var cursor = msg[1];
+	var player_id = msg[1];
+    var cursor = msg[2];
 	  "cursor:".post;
 	  cursor.postln;
-	~player.set("cursor", cursor);
+	~players[player_id].set("cursor", cursor);
 }).add; 
 
 NetAddr.langPort;
