@@ -1,8 +1,9 @@
-s.boot;
-
 (
 ~frameSize = 1024; 
 ~hopSize = 0.25;
+
+s.boot;
+s.doWhenBooted({
 
 /// this does the analysis and saves it to buffer 1... frees itself when done
 SynthDef("pvrec", { arg fftBuffer=0, fftData=1, soundBufnum=2;
@@ -21,18 +22,20 @@ SynthDef("pvplay", { arg out=0, bufnum=0, fftData=1, cursor=0.0;
 	chain = PV_BufRd(bufnum, fftData, cursor);
 	Out.ar(out, IFFT(chain, 1).dup);
 	}).send(s);
+
+~soundFilename = "theme-nikolayeva-mono.wav";
+~sf = SoundFile.new;
+~sf.openRead(~soundFilename);
+~sf.close;
+~fftBuffer = Buffer.alloc(s, ~frameSize);
+~fftData = Buffer.alloc(s, ~sf.duration.calcPVRecSize(~frameSize, ~hopSize));
+~soundFileBuffer = Buffer.read(s, ~soundFilename);
+
+});
+
 )
 
-(
-var sf;
-~soundFilename = "theme-nikolayeva-mono.wav";
-sf = SoundFile.new;
-sf.openRead(~soundFilename);
-sf.close;
-~fftBuffer = Buffer.alloc(s, ~frameSize);
-~fftData = Buffer.alloc(s, sf.duration.calcPVRecSize(~frameSize, ~hopSize));
-~soundFileBuffer = Buffer.read(s, ~soundFilename);
-)
+
 Synth("pvrec", [\fftBuffer, ~fftBuffer, \fftData, ~fftData, \soundBufnum, ~soundFileBuffer]);
 ~player = Synth("pvplay", [\out, 0, \fftBuffer, ~fftBuffer, \fftData, ~fftData]);
 
