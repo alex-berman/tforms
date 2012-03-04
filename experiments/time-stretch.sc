@@ -20,8 +20,8 @@ SynthDef("pvrec", { arg bufnum=0, recBuf=1, soundBufnum=2;
 	Line.kr(1, 1, BufDur.kr(soundBufnum), doneAction: 2);
 	in = PlayBuf.ar(1, soundBufnum, BufRateScale.kr(soundBufnum), loop: 0);
 	// note the window type and overlaps... this is important for resynth parameters
-	chain = FFT(bufnum, in, 0.25, 1); 
-	chain = PV_RecordBuf(chain, recBuf, 0, 1, 0, 0.25, 1);
+	chain = FFT(bufnum, in, ~hopSize, 1); 
+	chain = PV_RecordBuf(chain, recBuf, 0, 1, 0, ~hopSize, 1);
 	// no ouput ... simply save the analysis to recBuf
 	}).send(s);
 a = Synth("pvrec", [\bufnum, ~fftBuffer, \recBuf, ~fftData, \soundBufnum, ~soundFileBuffer]);
