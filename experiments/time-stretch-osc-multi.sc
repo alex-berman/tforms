@@ -5,10 +5,10 @@
 s.boot;
 s.doWhenBooted({
 
-SynthDef("pvrec", { arg fftBuffer, fftData, soundBuffer;
+SynthDef("pvrec", { arg fftBuffer, fftData, waveform;
 	var in, chain;
-	Line.kr(1, 1, BufDur.kr(soundBuffer), doneAction: 2);
-	in = PlayBuf.ar(1, soundBuffer, BufRateScale.kr(soundBuffer), loop: 0);
+	Line.kr(1, 1, BufDur.kr(waveform), doneAction: 2);
+	in = PlayBuf.ar(1, waveform, BufRateScale.kr(waveform), loop: 0);
 	chain = FFT(fftBuffer, in, ~hopSize, 1); 
 	chain = PV_RecordBuf(chain, fftData, 0, 1, 0, ~hopSize, 1);
 	}).send(s);
@@ -25,14 +25,14 @@ SynthDef("pvplay", { arg out=0, fftBuffer, fftData, cursor=0.0;
 ~sf.close;
 ~fftBuffer = Buffer.alloc(s, ~frameSize);
 ~fftData = Buffer.alloc(s, ~sf.duration.calcPVRecSize(~frameSize, ~hopSize));
-~soundFileBuffer = Buffer.read(s, ~soundFilename);
+~waveform = Buffer.read(s, ~soundFilename);
 
 });
 
 )
 
 
-Synth("pvrec", [\fftBuffer, ~fftBuffer, \fftData, ~fftData, \soundBuffer, ~soundFileBuffer]);
+Synth("pvrec", [\fftBuffer, ~fftBuffer, \fftData, ~fftData, \waveform, ~waveform]);
 ~player = Synth("pvplay", [\out, 0, \fftBuffer, ~fftBuffer, \fftData, ~fftData]);
 
 OSCresponder.new(nil, "/cursor",
