@@ -2,10 +2,7 @@ s.boot;
 
 s.doWhenBooted({
 
-~sounds = [
-	Buffer.read(s, "theme-nikolayeva-mono.wav"),
-	Buffer.read(s, "theme-acad-st-martin-mono.wav")
-];
+~sounds = Dictionary[];
 
 SynthDef(\warp, {arg buffer = 0, begin, end, duration;
         var out, pointer, filelength, pitch, env, dir;
@@ -16,13 +13,21 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration;
         Out.ar(0, out * env);
 }).send(s);
 
+OSCresponder.new(nil, "/load",
+  { arg t, r, msg;
+	  var sound_id = msg[1];
+	  var filename = msg[2];
+	  var buffer = Buffer.read(s, filename);
+	  ~sounds[sound_id] = buffer;
+  }).add;
+
 OSCresponder.new(nil, "/play",
   { arg t, r, msg;
 	  var sound_id = msg[1];
 	  var begin = msg[2];
 	  var end = msg[3];
 	  var duration = msg[4];
-	  "numSynths=".post; s.numSynths.postln;
+	  //"numSynths=".post; s.numSynths.postln;
 	  Synth(\warp, [\buffer, ~sounds[sound_id],
 		  \begin, begin, \end, end, \duration, duration]);
   }).add;
