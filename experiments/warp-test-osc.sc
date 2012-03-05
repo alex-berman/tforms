@@ -4,13 +4,13 @@ s.doWhenBooted({
 
 ~sounds = Dictionary[];
 
-SynthDef(\warp, {arg buffer = 0, begin, end, duration;
-        var out, pointer, filelength, pitch, env, dir;
-        pointer = Line.kr(begin, end, duration);
-        pitch = 1.0;
-        env = EnvGen.kr(Env([0.001, 1, 1, 0.001], [0.1, 14, 0.9], 'exp'), doneAction: 2);
-        out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-        Out.ar(0, out * env);
+SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
+	var out, pointer, filelength, pitch, env, dir;
+	pointer = Line.kr(begin, end, duration);
+	pitch = 1.0;
+	env = EnvGen.kr(Env([0.001, 1, 1, 0.001], [0.1, 14, 0.9], 'exp'), doneAction: 2);
+	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
+	Out.ar(0, Pan2.ar(out * env, pan));
 }).send(s);
 
 OSCresponder.new(nil, "/load",
@@ -27,9 +27,11 @@ OSCresponder.new(nil, "/play",
 	  var begin = msg[2];
 	  var end = msg[3];
 	  var duration = msg[4];
+	  var pan = msg[5] * 2 - 1;
 	  //"numSynths=".post; s.numSynths.postln;
 	  Synth(\warp, [\buffer, ~sounds[sound_id],
-		  \begin, begin, \end, end, \duration, duration]);
+		  \begin, begin, \end, end, \duration, duration,
+		  \pan, pan]);
   }).add;
 
 });

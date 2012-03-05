@@ -18,8 +18,9 @@ while True:
     begin = 0
     end = 1
     duration = random.uniform(1.0, 15.0)
+    pan = random.uniform(0.0, 1.0)
     print sounds[sound_id]
-    liblo.send(target, "/play", sound_id, begin, end, duration)
+    liblo.send(target, "/play", sound_id, begin, end, duration, pan)
     pause = random.uniform(1.0, 2.0)
     time.sleep(pause)
 
