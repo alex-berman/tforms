@@ -22,7 +22,7 @@ OSCresponder.new(nil, "/play",
 	  var begin = msg[2];
 	  var end = msg[3];
 	  var duration = msg[4];
-	  "play sound_id=".post; sound_id.postln;
+	  "numSynths=".post; s.numSynths.postln;
 	  Synth(\warp, [\buffer, ~sounds[sound_id],
 		  \begin, begin, \end, end, \duration, duration]);
   }).add;
