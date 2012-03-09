@@ -1,4 +1,7 @@
+Server.local.options.memSize = 131072;
 s.boot;
+
+"langPort=".post; NetAddr.langPort.postln;
 
 s.doWhenBooted({
 
@@ -20,6 +23,7 @@ OSCresponder.new(nil, "/load",
 	  var filename = msg[2];
 	  var buffer = Buffer.read(s, filename);
 	  ~sounds[sound_id] = buffer;
+	  "loaded ".post; filename.postln;
   }).add;
 
 OSCresponder.new(nil, "/play",

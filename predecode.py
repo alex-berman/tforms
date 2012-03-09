@@ -3,7 +3,7 @@ import subprocess
 import re
 
 class Predecoder:
-    DECODABLE_FORMATS = ['mp3', 'flac']
+    DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
     def __init__(self, tr_log, location, sample_rate=None):
         self.tr_log = tr_log
@@ -48,6 +48,8 @@ class Predecoder:
             if self._sample_rate:
                 cmd += ' -r %d' % self._sample_rate
             cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
+        elif extension == 'm4b':
+            cmd = 'faad -o "%s" "%s"' % (target_filename, source_filename)
         elif extension == 'flac':
             cmd = 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
         subprocess.call(cmd, shell=True)

@@ -19,26 +19,12 @@ parser.add_option("--rt", action="store_true", dest="realtime")
 parser.add_option("-s", "--sessiondir", dest="sessiondir")
 parser.add_option("-t", "--torrent", dest="torrentname", default="")
 parser.add_option("-z", "--timefactor", dest="timefactor", type="float", default=1)
-parser.add_option("--resync-limit", dest="resync_limit", type="int",
-                  default=100000)
 parser.add_option("-q", "--quiet", action="store_true", dest="quiet")
-parser.add_option("-e", "--engine", dest="audio_engine",
-                  choices=Orchestra.SUPPORTED_AUDIO_ENGINES,
-                  default=Orchestra.SUPPORTED_AUDIO_ENGINES[0])
-parser.add_option("-d", "--device", dest="output_device", default="")
 parser.add_option("--pretend-sequential", action="store_true", dest="pretend_sequential")
 parser.add_option("--gui", action="store_true", dest="gui_enabled")
 parser.add_option("--predecode", action="store_true", dest="predecode", default=True)
 parser.add_option("--download-location", dest="download_location", default="../../Downloads")
-parser.add_option("--sm", "--speed-metaphor", dest="speed_metaphor",
-                  choices=[Orchestra.STRETCH,
-                           Orchestra.PITCH],
-                  default=Orchestra.STRETCH)
 parser.add_option("--visualizer", dest="visualizer_enabled", action="store_true")
-parser.add_option("--content", dest="content",
-                  choices=[Orchestra.TRANSFERRED,
-                           Orchestra.NOISE],
-                  default=Orchestra.TRANSFERRED)
 (options, args) = parser.parse_args()
 
 if options.realtime:
@@ -67,15 +53,10 @@ orchestra = Orchestra(sessiondir,
                       tr_log,
                       realtime=options.realtime,
                       timefactor=options.timefactor,
-                      resync_limit=options.resync_limit,
                       quiet=options.quiet,
-                      audio_engine=options.audio_engine,
-                      output_device=options.output_device,
                       predecoded=options.predecode,
                       file_location=options.download_location,
-                      speed_metaphor=options.speed_metaphor,
-                      visualizer_enabled=options.visualizer_enabled,
-                      content=options.content)
+                      visualizer_enabled=options.visualizer_enabled)
 
 def process_chunks_from_queue():
     while True:
