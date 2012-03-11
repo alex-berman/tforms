@@ -6,6 +6,7 @@ s.boot;
 s.doWhenBooted({
 
 ~sounds = Dictionary[];
+~filenames = Dictionary[];
 
 SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
 	var out, pointer, filelength, pitch, env, dir;
@@ -14,16 +15,18 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
 		[0.005*duration, 0.9*duration, 0.06*duration], 'exp'), doneAction: 2);
 	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	Out.ar(0, Pan2.ar(out * env, pan));
+	Out.ar(0, Pan2.ar(out, pan));
 }).send(s);
 
 OSCresponder.new(nil, "/load",
   { arg t, r, msg;
 	  var sound_id = msg[1];
 	  var filename = msg[2];
-	  var buffer = Buffer.read(s, filename);
-	  ~sounds[sound_id] = buffer;
-	  "loaded ".post; filename.postln;
+	  if(~filenames[sound_id] != filename, {
+		  ~sounds[sound_id] = Buffer.read(s, filename);
+		  ~filenames[sound_id] = filename;
+		  "loaded ".post; filename.postln;
+	  }, {});
   }).add;
 
 OSCresponder.new(nil, "/play",

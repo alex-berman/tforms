@@ -63,13 +63,14 @@ class WavPlayer(Player):
                 warn(self.logger, "simultaneous chunks within a peer?")
                 desired_duration = 0.01
 
-            if desired_duration > Orchestra.MAX_GRAIN_DURATION:
-                self.logger.debug("skipping chunk after long pause")
+            rate = (end_secs - start_secs) / desired_duration
+            if rate < Orchestra.MIN_GRAIN_RATE:
+                self.logger.debug("skipping chunk due to slow rate %f (probably caused by long pause)", rate)
                 self._previous_chunk_time = desired_time
                 return False
 
-            self.logger.debug("at %f, playing %s at position %fs with duration %fs" % (
-                    desired_time, filename, start_secs, desired_duration))
+            self.logger.debug("at %f, playing %s at position %fs with duration %fs, rate %f" % (
+                    desired_time, filename, start_secs, desired_duration, rate))
 
             self.orchestra.synth.play_chunk(chunk["filenum"],
                                             start_secs / file_info["duration"],
@@ -81,7 +82,7 @@ class WavPlayer(Player):
 
 class Orchestra:
     SAMPLE_RATE = 44100
-    MAX_GRAIN_DURATION = 0.5
+    MIN_GRAIN_RATE = 0.01
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
 
     _extension_re = re.compile('\.(\w+)$')
