@@ -23,9 +23,8 @@ OSCresponder.new(nil, "/load",
 	  var sound_id = msg[1];
 	  var filename = msg[2];
 	  if(~filenames[sound_id] != filename, {
-		  ~sounds[sound_id] = Buffer.read(s, filename);
+		  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {"loaded ".post; filename.postln;});
 		  ~filenames[sound_id] = filename;
-		  "loaded ".post; filename.postln;
 	  }, {});
   }).add;
 
