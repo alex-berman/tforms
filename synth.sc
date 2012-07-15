@@ -10,7 +10,7 @@ s.doWhenBooted({
 
 
 SynthDef(\limiter,
-{ arg gain=1.0, threshold=0.5;
+{ arg gain=1.0, threshold=0.2;
   var input, effect;
   var sig;
   input=In.ar(0,5);
@@ -25,9 +25,19 @@ SynthDef(\limiter,
   );
   ReplaceOut.ar(0,effect);
 }).send(s);
-
 SystemClock.sched(1.0, { Synth(\limiter, []); });
 
+SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
+	var signal;
+	signal = In.ar(outbus, 2);
+	ReplaceOut.ar(outbus,
+		signal + FreeVerb2.ar(
+			signal[0],
+			signal[1],
+			mix, room, damp, amp));
+}).send(s);
+//WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
+SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
 SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
 	var out, pointer, filelength, pitch, env, dir;
