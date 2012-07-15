@@ -1,6 +1,5 @@
 import time
 import subprocess
-import threading
 from tr_log_reader import TrLogReader
 import random
 import sys
@@ -260,9 +259,7 @@ class Orchestra:
 
     def highlight_chunk(self, chunk):
         if self.gui:
-            self.gui.highlight_chunk(chunk, True)
-            threading.Timer(1.0,
-                            self.gui.highlight_chunk, [chunk, False]).start()
+            self.gui.highlight_chunk(chunk)
 
     def visualize(self, chunk, duration, pan):
         if self.visualizer:

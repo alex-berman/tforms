@@ -229,12 +229,18 @@ class GUI(wx.Frame):
     def update_clock(self):
         self.clock.SetLabel('%.2f' % self.orchestra.get_current_log_time())
 
-    def highlight_chunk(self, chunk, highlighted):
-        if highlighted:
-            self._chunks_being_played[chunk["id"]] = True
-        elif self._chunk_is_being_played(chunk):
-            del self._chunks_being_played[chunk["id"]]
+    def highlight_chunk(self, chunk):
+        self._chunks_being_played[chunk["id"]] = True
         wx.CallAfter(self.timeline.Refresh)
+        self._schedule_to_unhighlight(chunk)
+
+    def _schedule_to_unhighlight(self, chunk):
+        wx.FutureCall(1000, self._unhighlight_chunk, chunk)
+
+    def _unhighlight_chunk(self, chunk):
+        if self._chunk_is_being_played(chunk):
+            del self._chunks_being_played[chunk["id"]]
+            wx.CallAfter(self.timeline.Refresh)
 
     def _chunk_is_being_played(self, chunk):
         return chunk["id"] in self._chunks_being_played
