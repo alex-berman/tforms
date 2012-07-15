@@ -12,6 +12,7 @@ class Session(threading.Thread):
         self.dir = "sessions/%s" % name
         os.mkdir(self.dir)
         os.mkdir("%s/chunks" % self.dir)
+        print "session: %s" % self.dir
         self.logfilename = "%s/session.log" % self.dir
         if realtime:
             (log_pipe_reader_fd, log_pipe_writer_fd) = os.pipe()
