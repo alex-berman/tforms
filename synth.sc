@@ -15,7 +15,7 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
 		[0.005*duration, 0.9*duration, 0.06*duration], 'exp'), doneAction: 2);
 	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	Out.ar(0, Pan2.ar(out, pan));
+	Out.ar(0, Pan2.ar(env * out, pan));
 }).send(s);
 
 OSCresponder.new(nil, "/load",
