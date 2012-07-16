@@ -90,7 +90,8 @@ class Orchestra:
                  realtime=False, timefactor=1,
                  quiet=False,
                  predecoded=False, file_location=None,
-                 visualizer_enabled=False):
+                 visualizer_enabled=False,
+                 loop=False):
         self.sessiondir = sessiondir
         self.logger = logger
         self.tr_log = tr_log
@@ -99,6 +100,7 @@ class Orchestra:
         self.quiet = quiet
         self.predecoded = predecoded
         self.file_location = file_location
+        self._loop = loop
 
         self.gui = None
         self._check_which_files_are_audio()
@@ -171,6 +173,15 @@ class Orchestra:
 
     def play_non_realtime(self):
         self.logger.debug("entering play_non_realtime")
+        if self._loop:
+            while True:
+                self._rewind_and_play()
+        else:
+            self._rewind_and_play()
+        self.logger.debug("leaving play_non_realtime")
+
+    def _rewind_and_play(self):
+        self.set_time_cursor(0)
         self._playing = True
         self.stopwatch.start()
         num_chunks = len(self.chunks)
@@ -179,7 +190,6 @@ class Orchestra:
             chunk = self.chunks[self.current_chunk_index]
             self.handle_chunk(chunk)
             self.current_chunk_index += 1
-        self.logger.debug("leaving play_non_realtime")
 
     def scrub_to_time(self, target_log_time):
         self.logger.debug("scrub_to_time(%s)" % target_log_time)
@@ -263,8 +273,8 @@ class Orchestra:
 
     def visualize(self, chunk, duration, pan):
         if self.visualizer:
-            angle = float(pan * 360)
-            liblo.send(self.visualizer, "/chunk", chunk["end"]-chunk["begin"], duration, angle)
+            liblo.send(self.visualizer, "/chunk",
+                       chunk["begin"], chunk["end"], duration, float(pan))
 
     def get_player_for_chunk(self, chunk):
         try:
