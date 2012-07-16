@@ -17,8 +17,10 @@ class GUI(wx.Frame):
 
         self.width = 800
         self.height = 600
-        self.byte_offset = 0
-        self.byte_size = tr_log.totalsize
+        print 1
+        self.min_byte = min(tr_log.chunks, key=lambda chunk: chunk["begin"])["begin"]
+        self.max_byte = max(tr_log.chunks, key=lambda chunk: chunk["end"])["end"]
+        print 2
         self._chunks_being_played = {}
         self._zoom_selection_taking_place = False
         self._playing = False
@@ -28,7 +30,7 @@ class GUI(wx.Frame):
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
         self.player_pens = map(self.create_pens_with_colour,
                                self.PLAYER_COLOURS)
-        wx.Frame.__init__(self, None, wx.ID_ANY, "byteflakes",
+        wx.Frame.__init__(self, None, wx.ID_ANY, "Torrential Forms",
                           size=wx.Size(self.width, self.height))
         self.Bind(wx.EVT_SIZE, self._OnSize)
         self._vbox = wx.BoxSizer(wx.VERTICAL)
@@ -254,4 +256,4 @@ class GUI(wx.Frame):
             self._displayed_time_end - self._displayed_time_begin) / self.width
 
     def bytepos_to_py(self, pos):
-        return (pos - self.byte_offset) * self.height / self.byte_size
+        return (pos - self.min_byte) * self.height / self.max_byte
