@@ -8,8 +8,14 @@ from orchestra import VISUALIZER_PORT
 
 ESCAPE = '\033'
 
+class Chunk:
+    def __init__(self, begin, end):
+        self.begin = begin
+        self.end = end
+
 class Visualizer:
     def __init__(self):
+        self.chunks = []
         self.setup_osc()
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
@@ -24,7 +30,9 @@ class Visualizer:
         glutMainLoop()
 
     def handle_chunk(self, path, args, types, src, data):
-        print "received message '%s'" % path
+        (begin, end, duration, pan) = args
+        chunk = Chunk(begin, end)
+        self.chunks.append(chunk)
 
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
@@ -57,31 +65,32 @@ class Visualizer:
         self.server.recv(10)
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()					# Reset The View 
+        glLoadIdentity()
 
-        # Move Left 1.5 units and into the screen 6.0 units.
-        glTranslatef(-1.5, 0.0, -6.0)
-
-        # Draw a triangle
-        glBegin(GL_POLYGON)                 # Start drawing a polygon
-        glVertex3f(0.0, 1.0, 0.0)           # Top
-        glVertex3f(1.0, -1.0, 0.0)          # Bottom Right
-        glVertex3f(-1.0, -1.0, 0.0)         # Bottom Left
-        glEnd()                             # We are done with the polygon
-
-
-        # Move Right 3.0 units.
-        glTranslatef(3.0, 0.0, 0.0)
-
-        # Draw a square (quadrilateral)
-        glBegin(GL_QUADS)                   # Start drawing a 4 sided polygon
-        glVertex3f(-1.0, 1.0, 0.0)          # Top Left
-        glVertex3f(1.0, 1.0, 0.0)           # Top Right
-        glVertex3f(1.0, -1.0, 0.0)          # Bottom Right
-        glVertex3f(-1.0, -1.0, 0.0)         # Bottom Left
-        glEnd()                             # We are done with the polygon
+        if len(self.chunks) > 0:
+            self.draw_chunks()
 
         glutSwapBuffers()
+
+
+    def draw_chunks(self):
+        glTranslatef(1.0, 0.0, -16.0)
+        self.y_ratio = 0.0000001
+        for chunk in self.chunks:
+            self.draw_chunk(chunk)
+
+    def draw_chunk(self, chunk):
+        x1 = -1
+        x2 = 1
+        y1 = self.y_ratio * chunk.begin
+        y2 = self.y_ratio * chunk.end
+        print y1, y2
+        glBegin(GL_QUADS)
+        glVertex3f(x1, y2, 0.0)
+        glVertex3f(x2, y2, 0.0)
+        glVertex3f(x2, y1, 0.0)
+        glVertex3f(x1, y1, 0.0)
+        glEnd()
 
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
