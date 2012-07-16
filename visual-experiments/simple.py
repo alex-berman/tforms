@@ -56,6 +56,8 @@ class Visualizer:
         self.width = _width
         self.height = _height
 
+        self.mid_x = self.width / 2
+
         glViewport(0, 0, self.width, self.height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -87,15 +89,16 @@ class Visualizer:
             self.draw_chunk(chunk)
 
     def draw_chunk(self, chunk):
-        x1 = 100
-        x2 = 110
-        y1 = self.y_ratio * chunk.begin
-        y2 = self.y_ratio * chunk.end
         age = time.time() - chunk.arrival_time
         if age > HIGHLIGHT_TIME:
             actuality = 0
         else:
-            actuality = float(age) / HIGHLIGHT_TIME
+            actuality = 1 - float(age) / HIGHLIGHT_TIME
+
+        x1 = self.mid_x - 20 - 10 * actuality
+        x2 = self.mid_x + 20 + 10 * actuality
+        y1 = self.y_ratio * chunk.begin
+        y2 = self.y_ratio * chunk.end
         opacity = 0.5 + actuality / 2
         glColor3f(opacity, opacity, opacity)
         glBegin(GL_QUADS)
