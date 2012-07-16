@@ -81,7 +81,14 @@ def run_realtime():
     log_reader_thread.start()
     process_chunks_from_queue()
 
+def play():
+    global orchestra_thread
+    orchestra_thread = threading.Thread(target=orchestra.play_non_realtime)
+    orchestra_thread.daemon = True
+    orchestra_thread.start()
+
 def wait_for_play_completion_or_interruption():
+    global orchestra_thread
     while orchestra_thread.is_alive():
         time.sleep(0.1)
 
@@ -93,4 +100,5 @@ else:
         gui = GUI(tr_log, orchestra)
         gui.main_loop()
     else:
+        play()
         wait_for_play_completion_or_interruption()
