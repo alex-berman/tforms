@@ -35,7 +35,7 @@ class Chunk:
 class Visualizer:
     def __init__(self, width=640, height=480):
         self.chunks = []
-        self.y_ratio = None
+        self.x_ratio = None
         self._smoothed_min_byte = Smoother()
         self._smoothed_max_byte = Smoother()
 
@@ -107,12 +107,12 @@ class Visualizer:
         else:
             actuality = 1 - float(age) / HIGHLIGHT_TIME
         pan_x = (chunk.pan - 0.5)
-        x1 = int(self.mid_x - 3 + 20 * pan_x * actuality)
-        x2 = int(self.mid_x + 3 + 20 * pan_x * actuality)
-        y1 = int(self.byte_to_coord(chunk.begin))
-        y2 = int(self.byte_to_coord(chunk.end))
-        if y2 == y1:
-            y2 = y1 + 1
+        y1 = int(self.mid_x - 3 + 20 * pan_x * actuality)
+        y2 = int(self.mid_x + 3 + 20 * pan_x * actuality)
+        x1 = int(self.byte_to_coord(chunk.begin))
+        x2 = int(self.byte_to_coord(chunk.end))
+        if x2 == x1:
+            x2 = x1 + 1
         opacity = 0.5 + actuality / 2
         glColor3f(opacity, opacity, opacity)
         glBegin(GL_QUADS)
@@ -123,7 +123,7 @@ class Visualizer:
         glEnd()
 
     def byte_to_coord(self, byte):
-        return self.y_ratio * (byte - self.byte_offset)
+        return self.x_ratio * (byte - self.byte_offset)
 
     def update_scope(self):
         min_byte = min(self.chunks, key=lambda chunk: chunk.begin).begin
@@ -132,10 +132,10 @@ class Visualizer:
         self._smoothed_max_byte.smooth(max_byte)
         self.byte_offset = self._smoothed_min_byte.value()
         if self._smoothed_min_byte == self._smoothed_max_byte:
-            self.y_ratio = 1
+            self.x_ratio = 1
         else:
-            self.y_ratio = float(self.height) / (self._smoothed_max_byte.value() -
-                                                 self._smoothed_min_byte.value())
+            self.x_ratio = float(self.width) / (self._smoothed_max_byte.value() -
+                                                self._smoothed_min_byte.value())
 
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
