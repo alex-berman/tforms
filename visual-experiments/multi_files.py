@@ -144,8 +144,8 @@ class Visualizer:
 
     def draw_file(self, f):
         y = self.filenum_to_y_coord(f.filenum)
+        f.update_x_scope()
         for chunk in f.chunks:
-            f.update_x_scope()
             age = time.time() - chunk.arrival_time
             if age > chunk.duration:
                 actuality = 0
