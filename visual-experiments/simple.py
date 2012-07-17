@@ -8,7 +8,7 @@ sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 
 ESCAPE = '\033'
-HIGHLIGHT_TIME = 3
+HIGHLIGHT_TIME = 0.3
 
 class Chunk:
     def __init__(self, begin, end, arrival_time):
@@ -95,17 +95,19 @@ class Visualizer:
         else:
             actuality = 1 - float(age) / HIGHLIGHT_TIME
 
-        x1 = self.mid_x - 20 - 10 * actuality
-        x2 = self.mid_x + 20 + 10 * actuality
-        y1 = self.y_ratio * chunk.begin
-        y2 = self.y_ratio * chunk.end
+        x1 = int(self.mid_x - 20 - 10 * actuality)
+        x2 = int(self.mid_x + 20 + 10 * actuality)
+        y1 = int(self.y_ratio * chunk.begin)
+        y2 = int(self.y_ratio * chunk.end)
+        if y2 == y1:
+            y2 = y1 + 1
         opacity = 0.5 + actuality / 2
         glColor3f(opacity, opacity, opacity)
         glBegin(GL_QUADS)
-        glVertex3f(x1, y2, 0.0)
-        glVertex3f(x2, y2, 0.0)
-        glVertex3f(x2, y1, 0.0)
-        glVertex3f(x1, y1, 0.0)
+        glVertex2i(x1, y2)
+        glVertex2i(x2, y2)
+        glVertex2i(x2, y1)
+        glVertex2i(x1, y1)
         glEnd()
 
     def keyPressed(self, *args):
