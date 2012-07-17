@@ -10,6 +10,21 @@ from orchestra import VISUALIZER_PORT
 ESCAPE = '\033'
 HIGHLIGHT_TIME = 0.3
 
+class Smoother:
+    RESPONSE_FACTOR = 0.1
+
+    def __init__(self):
+        self._current_value = None
+
+    def smooth(self, new_value):
+        if self._current_value:
+            self._current_value += (new_value - self._current_value) * self.RESPONSE_FACTOR
+        else:
+            self._current_value = new_value
+
+    def value(self):
+        return self._current_value
+
 class Chunk:
     def __init__(self, begin, end, pan, arrival_time):
         self.begin = begin
@@ -21,6 +36,9 @@ class Visualizer:
     def __init__(self, width=640, height=480):
         self.chunks = []
         self.y_ratio = None
+        self._smoothed_min_byte = Smoother()
+        self._smoothed_max_byte = Smoother()
+
         self.setup_osc()
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
@@ -78,14 +96,7 @@ class Visualizer:
 
 
     def draw_chunks(self):
-        min_byte = min(self.chunks, key=lambda chunk: chunk.begin).begin
-        max_byte = max(self.chunks, key=lambda chunk: chunk.end).end
-        target_y_ratio = float(self.height) / max_byte
-        if self.y_ratio:
-            self.y_ratio += (target_y_ratio - self.y_ratio) * 0.1
-        else:
-            self.y_ratio = target_y_ratio
-
+        self.update_scope()
         for chunk in self.chunks:
             self.draw_chunk(chunk)
 
@@ -98,8 +109,8 @@ class Visualizer:
         pan_x = (chunk.pan - 0.5)
         x1 = int(self.mid_x - 3 + 20 * pan_x * actuality)
         x2 = int(self.mid_x + 3 + 20 * pan_x * actuality)
-        y1 = int(self.y_ratio * chunk.begin)
-        y2 = int(self.y_ratio * chunk.end)
+        y1 = int(self.byte_to_coord(chunk.begin))
+        y2 = int(self.byte_to_coord(chunk.end))
         if y2 == y1:
             y2 = y1 + 1
         opacity = 0.5 + actuality / 2
@@ -110,6 +121,21 @@ class Visualizer:
         glVertex2i(x2, y1)
         glVertex2i(x1, y1)
         glEnd()
+
+    def byte_to_coord(self, byte):
+        return self.y_ratio * (byte - self.byte_offset)
+
+    def update_scope(self):
+        min_byte = min(self.chunks, key=lambda chunk: chunk.begin).begin
+        max_byte = max(self.chunks, key=lambda chunk: chunk.end).end
+        self._smoothed_min_byte.smooth(min_byte)
+        self._smoothed_max_byte.smooth(max_byte)
+        self.byte_offset = self._smoothed_min_byte.value()
+        if self._smoothed_min_byte == self._smoothed_max_byte:
+            self.y_ratio = 1
+        else:
+            self.y_ratio = float(self.height) / (self._smoothed_max_byte.value() -
+                                                 self._smoothed_min_byte.value())
 
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
