@@ -8,7 +8,7 @@ sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 
 ESCAPE = '\033'
-HIGHLIGHT_TIME = 0.3
+MIN_DURATION = 0.1
 
 class Smoother:
     RESPONSE_FACTOR = 0.1
@@ -26,7 +26,7 @@ class Smoother:
         return self._current_value
 
 class Chunk:
-    def __init__(self, torrent_position, byte_size, filenum, file_offset, pan, arrival_time):
+    def __init__(self, torrent_position, byte_size, filenum, file_offset, pan, duration, arrival_time):
         self.torrent_position = torrent_position
         self.byte_size = byte_size
         self.filenum = filenum
@@ -34,6 +34,7 @@ class Chunk:
         self.begin = file_position
         self.end = file_position + byte_size
         self.pan = pan
+        self.duration = max(duration, MIN_DURATION)
         self.arrival_time = arrival_time
 
 class File:
@@ -86,7 +87,7 @@ class Visualizer:
 
     def handle_chunk(self, path, args, types, src, data):
         (torrent_position, byte_size, filenum, file_offset, duration, pan) = args
-        chunk = Chunk(torrent_position, byte_size, filenum, file_offset, pan, time.time())
+        chunk = Chunk(torrent_position, byte_size, filenum, file_offset, pan, duration, time.time())
         if not filenum in self.files:
             self.files[filenum] = File(filenum)
         self.files[filenum].add_chunk(chunk)
@@ -136,10 +137,10 @@ class Visualizer:
         y = self.filenum_to_y_coord(f.filenum)
         for chunk in f.chunks:
             age = time.time() - chunk.arrival_time
-            if age > HIGHLIGHT_TIME:
+            if age > chunk.duration:
                 actuality = 0
             else:
-                actuality = 1 - float(age) / HIGHLIGHT_TIME
+                actuality = 1 - float(age) / chunk.duration
             pan_x = (chunk.pan - 0.5)
             y1 = int(y - 3 + 40 * pan_x * actuality)
             y2 = int(y + 3 + 40 * pan_x * actuality)
