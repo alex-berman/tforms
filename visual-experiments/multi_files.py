@@ -4,6 +4,7 @@ from OpenGL.GLU import *
 import sys
 import liblo
 import time
+import threading
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 
@@ -96,6 +97,11 @@ class Visualizer:
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
         self.server.add_method("/chunk", "iiiiff", self.handle_chunk)
+        threading.Thread(target=self.serve_osc).start()
+
+    def serve_osc(self):
+        while True:
+            self.server.recv()
 
     def InitGL(self):
         glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -117,8 +123,6 @@ class Visualizer:
         glMatrixMode(GL_MODELVIEW)
 
     def DrawGLScene(self):
-        self.server.recv(10)
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
