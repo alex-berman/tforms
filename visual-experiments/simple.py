@@ -11,9 +11,10 @@ ESCAPE = '\033'
 HIGHLIGHT_TIME = 0.3
 
 class Chunk:
-    def __init__(self, begin, end, arrival_time):
+    def __init__(self, begin, end, pan, arrival_time):
         self.begin = begin
         self.end = end
+        self.pan = pan
         self.arrival_time = arrival_time
 
 class Visualizer:
@@ -36,7 +37,7 @@ class Visualizer:
 
     def handle_chunk(self, path, args, types, src, data):
         (begin, end, duration, pan) = args
-        chunk = Chunk(begin, end, time.time())
+        chunk = Chunk(begin, end, pan, time.time())
         self.chunks.append(chunk)
 
     def setup_osc(self):
@@ -94,9 +95,9 @@ class Visualizer:
             actuality = 0
         else:
             actuality = 1 - float(age) / HIGHLIGHT_TIME
-
-        x1 = int(self.mid_x - 20 - 10 * actuality)
-        x2 = int(self.mid_x + 20 + 10 * actuality)
+        pan_x = (chunk.pan - 0.5)
+        x1 = int(self.mid_x - 3 + 20 * pan_x * actuality)
+        x2 = int(self.mid_x + 3 + 20 * pan_x * actuality)
         y1 = int(self.y_ratio * chunk.begin)
         y2 = int(self.y_ratio * chunk.end)
         if y2 == y1:
