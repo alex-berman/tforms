@@ -26,9 +26,12 @@ class Smoother:
         return self._current_value
 
 class Chunk:
-    def __init__(self, begin, end, pan, arrival_time):
-        self.begin = begin
-        self.end = end
+    def __init__(self, torrent_position, byte_size, filenum, file_position, pan, arrival_time):
+        self.torrent_position = torrent_position
+        self.byte_size = byte_size
+        self.filenum = filenum
+        self.begin = torrent_position
+        self.end = torrent_position + byte_size
         self.pan = pan
         self.arrival_time = arrival_time
 
@@ -54,13 +57,13 @@ class Visualizer:
         glutMainLoop()
 
     def handle_chunk(self, path, args, types, src, data):
-        (begin, end, duration, pan) = args
-        chunk = Chunk(begin, end, pan, time.time())
+        (torrent_position, byte_size, filenum, file_position, duration, pan) = args
+        chunk = Chunk(torrent_position, byte_size, filenum, file_position, pan, time.time())
         self.chunks.append(chunk)
 
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "ifff", self.handle_chunk)
+        self.server.add_method("/chunk", "iiiiff", self.handle_chunk)
 
     def InitGL(self):
         glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -75,7 +78,7 @@ class Visualizer:
         self.width = _width
         self.height = _height
 
-        self.mid_x = self.width / 2
+        self.mid_y = self.height / 2
 
         glViewport(0, 0, self.width, self.height)
         glMatrixMode(GL_PROJECTION)
@@ -107,8 +110,8 @@ class Visualizer:
         else:
             actuality = 1 - float(age) / HIGHLIGHT_TIME
         pan_x = (chunk.pan - 0.5)
-        y1 = int(self.mid_x - 3 + 20 * pan_x * actuality)
-        y2 = int(self.mid_x + 3 + 20 * pan_x * actuality)
+        y1 = int(self.mid_y - 3 + 20 * pan_x * actuality)
+        y2 = int(self.mid_y + 3 + 20 * pan_x * actuality)
         x1 = int(self.byte_to_coord(chunk.begin))
         x2 = int(self.byte_to_coord(chunk.end))
         if x2 == x1:

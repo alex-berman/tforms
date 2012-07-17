@@ -273,8 +273,13 @@ class Orchestra:
 
     def visualize(self, chunk, duration, pan):
         if self.visualizer:
+            file_info = self.tr_log.files[chunk["filenum"]]
             liblo.send(self.visualizer, "/chunk",
-                       chunk["begin"], chunk["end"], duration, float(pan))
+                       chunk["begin"],
+                       chunk["end"] - chunk["begin"],
+                       chunk["filenum"],
+                       file_info["offset"],
+                       duration, float(pan))
 
     def get_player_for_chunk(self, chunk):
         try:
