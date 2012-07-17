@@ -275,6 +275,7 @@ class Orchestra:
         if self.visualizer:
             file_info = self.tr_log.files[chunk["filenum"]]
             liblo.send(self.visualizer, "/chunk",
+                       chunk["id"],
                        chunk["begin"],
                        chunk["end"] - chunk["begin"],
                        chunk["filenum"],
