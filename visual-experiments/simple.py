@@ -115,7 +115,7 @@ class Visualizer:
             x2 = x1 + 1
         opacity = 0.5 + actuality / 2
         glColor3f(opacity, opacity, opacity)
-        glBegin(GL_QUADS)
+        glBegin(GL_LINE_STRIP)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
         glVertex2i(x2, y1)
