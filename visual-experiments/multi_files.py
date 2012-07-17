@@ -43,18 +43,23 @@ class File:
         self.filenum = filenum
         self._smoothed_min_byte = Smoother()
         self._smoothed_max_byte = Smoother()
+        self.min_byte = None
+        self.max_byte = None
         self.x_ratio = None
         self.chunks = []
 
     def add_chunk(self, chunk):
+        if len(self.chunks) == 0:
+            self.min_byte = chunk.begin
+            self.max_byte = chunk.end
+        else:
+            self.min_byte = min(self.min_byte, chunk.begin)
+            self.max_byte = max(self.max_byte, chunk.end)
         self.chunks.append(chunk)
-        self.update_x_scope()
 
     def update_x_scope(self):
-        min_byte = min(self.chunks, key=lambda chunk: chunk.begin).begin
-        max_byte = max(self.chunks, key=lambda chunk: chunk.end).end
-        self._smoothed_min_byte.smooth(min_byte)
-        self._smoothed_max_byte.smooth(max_byte)
+        self._smoothed_min_byte.smooth(self.min_byte)
+        self._smoothed_max_byte.smooth(self.max_byte)
         self.byte_offset = self._smoothed_min_byte.value()
         diff = self._smoothed_max_byte.value() - self._smoothed_min_byte.value()
         if diff == 0:
@@ -140,6 +145,7 @@ class Visualizer:
     def draw_file(self, f):
         y = self.filenum_to_y_coord(f.filenum)
         for chunk in f.chunks:
+            f.update_x_scope()
             age = time.time() - chunk.arrival_time
             if age > chunk.duration:
                 actuality = 0
