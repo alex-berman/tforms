@@ -17,10 +17,8 @@ class GUI(wx.Frame):
 
         self.width = 800
         self.height = 600
-        print 1
         self.min_byte = min(tr_log.chunks, key=lambda chunk: chunk["begin"])["begin"]
         self.max_byte = max(tr_log.chunks, key=lambda chunk: chunk["end"])["end"]
-        print 2
         self._chunks_being_played = {}
         self._zoom_selection_taking_place = False
         self._playing = False

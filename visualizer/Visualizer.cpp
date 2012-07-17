@@ -115,9 +115,12 @@ Visualizer *visualizer;
 int chunkHandler(const char *path, const char *types,
 		 lo_arg **argv, int argc,
 		 void *data, void *user_data) {
-  int size = argv[0]->i;
-  float duration = argv[1]->f;
-  float angle = argv[2]->f;
+  int begin = argv[0]->i;
+  int end = argv[1]->i;
+  float duration = argv[2]->f;
+  float pan = argv[3]->f;
+  float angle = pan * 360;
+  int size = end - begin;
   visualizer->addChunk(angle, size/50, duration);
   return 0;
 }
@@ -130,7 +133,7 @@ int main(int argc, char **argv) {
   visualizer = new Visualizer(argc, argv);
 
   lo_server_thread st = lo_server_thread_new(PORT, error);
-  lo_server_thread_add_method(st, "/chunk", "iff", chunkHandler, NULL);
+  lo_server_thread_add_method(st, "/chunk", "ifff", chunkHandler, NULL);
   lo_server_thread_start(st);
 
   glutMainLoop();

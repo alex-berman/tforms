@@ -175,13 +175,13 @@ class Orchestra:
         self.logger.debug("entering play_non_realtime")
         if self._loop:
             while True:
-                self._rewind_and_play()
+                self._play_until_end()
+                self.set_time_cursor(0)
         else:
-            self._rewind_and_play()
+            self._play_until_end()
         self.logger.debug("leaving play_non_realtime")
 
-    def _rewind_and_play(self):
-        self.set_time_cursor(0)
+    def _play_until_end(self):
         self._playing = True
         self.stopwatch.start()
         num_chunks = len(self.chunks)

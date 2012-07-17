@@ -37,7 +37,7 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 			mix, room, damp, amp));
 }).send(s);
 //WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
-SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
+	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
 SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
 	var out, pointer, filelength, pitch, env, dir;
