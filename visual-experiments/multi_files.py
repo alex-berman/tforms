@@ -102,14 +102,16 @@ class Visualizer:
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
         self.server.add_method("/chunk", "iiiiiff", self.handle_chunk)
-        threading.Thread(target=self.serve_osc).start()
+        server_thread = threading.Thread(target=self.serve_osc)
+        server_thread.daemon = True
+        server_thread.start()
 
     def serve_osc(self):
         while True:
             self.server.recv()
 
     def InitGL(self):
-        glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClearColor(1.0, 1.0, 1.0, 0.0)
         glClearDepth(1.0)
         glDepthFunc(GL_LESS)
         glEnable(GL_DEPTH_TEST)
@@ -159,8 +161,8 @@ class Visualizer:
             if x2 == x1:
                 x2 = x1 + 1
             opacity = 0.2 + (actuality * 0.8)
-            glColor3f(opacity, opacity, opacity)
-            glBegin(GL_LINE_STRIP)
+            glColor3f(1-opacity, 1-opacity, 1-opacity)
+            glBegin(GL_LINE_LOOP)
             glVertex2i(x1, y2)
             glVertex2i(x2, y2)
             glVertex2i(x2, y1)
