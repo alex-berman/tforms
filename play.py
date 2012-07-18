@@ -19,6 +19,7 @@ parser.add_option("--rt", action="store_true", dest="realtime")
 parser.add_option("-s", "--sessiondir", dest="sessiondir")
 parser.add_option("-t", "--torrent", dest="torrentname", default="")
 parser.add_option("-z", "--timefactor", dest="timefactor", type="float", default=1)
+parser.add_option("--start", dest="start_time", type="float", default=0)
 parser.add_option("-q", "--quiet", action="store_true", dest="quiet")
 parser.add_option("--pretend-sequential", action="store_true", dest="pretend_sequential")
 parser.add_option("--gui", action="store_true", dest="gui_enabled")
@@ -54,6 +55,7 @@ orchestra = Orchestra(sessiondir,
                       tr_log,
                       realtime=options.realtime,
                       timefactor=options.timefactor,
+                      start_time=options.start_time,
                       quiet=options.quiet,
                       predecoded=options.predecode,
                       file_location=options.download_location,

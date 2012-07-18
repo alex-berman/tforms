@@ -87,9 +87,12 @@ class Orchestra:
     _extension_re = re.compile('\.(\w+)$')
 
     def __init__(self, sessiondir, logger, tr_log,
-                 realtime=False, timefactor=1,
+                 realtime=False,
+                 timefactor=1,
+                 start_time=0,
                  quiet=False,
-                 predecoded=False, file_location=None,
+                 predecoded=False,
+                 file_location=None,
                  visualizer_enabled=False,
                  loop=False):
         self.sessiondir = sessiondir
@@ -110,11 +113,10 @@ class Orchestra:
         self._played_bytes = 0
         self._space = StereoSpace()
         self.stopwatch = Stopwatch()
-        self.log_time_played_from = 0
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
         self._playing = False
-        self.current_chunk_index = 0
+        self.set_time_cursor(start_time)
 
         if visualizer_enabled:
             self.visualizer = liblo.Address(VISUALIZER_PORT)
@@ -169,7 +171,7 @@ class Orchestra:
             return int(stdoutdata)
 
     def get_current_log_time(self):
-        return self.log_time_played_from + self.stopwatch.get_elapsed_time()
+        return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
 
     def play_non_realtime(self):
         self.logger.debug("entering play_non_realtime")
