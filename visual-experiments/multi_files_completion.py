@@ -147,7 +147,7 @@ class Visualizer:
             self.server.recv()
 
     def InitGL(self):
-        glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClearColor(1.0, 1.0, 1.0, 1.0)
         glClearDepth(1.0)
         glDepthFunc(GL_LESS)
         glEnable(GL_DEPTH_TEST)
@@ -183,7 +183,7 @@ class Visualizer:
 
     def draw_completions(self, f):
         opacity = COMPLETION_OPACITY
-        glColor3f(opacity, opacity, opacity)
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
         y = int(self.filenum_to_y_coord(f.filenum))
         for completion in f.completions:
             x1 = int(f.byte_to_coord(completion.begin) * self.width)
@@ -209,7 +209,7 @@ class Visualizer:
                 if x2 == x1:
                     x2 = x1 + 1
                 opacity = COMPLETION_OPACITY + actuality * (1 - COMPLETION_OPACITY)
-                glColor3f(opacity, opacity, opacity)
+                glColor3f(1-opacity, 1-opacity, 1-opacity)
                 glBegin(GL_LINE_STRIP)
                 glVertex2i(x1, y2)
                 glVertex2i(x2, y2)

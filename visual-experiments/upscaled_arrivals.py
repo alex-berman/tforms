@@ -154,9 +154,10 @@ class Visualizer:
                 actuality = 0
             else:
                 actuality = 1 - float(age) / chunk.duration
-            pan_x = (chunk.pan - 0.5)
-            y1 = int(y - 3 + 40 * pan_x * actuality)
-            y2 = int(y + 3 + 40 * pan_x * actuality)
+            y_offset = actuality * 10
+            height = 3 + actuality * 10
+            y1 = int(y + y_offset)
+            y2 = int(y + y_offset + height)
             x1 = int(f.byte_to_coord(chunk.begin) * self.width)
             x2 = int(f.byte_to_coord(chunk.end) * self.width)
             x1, x2 = self.upscale(x1, x2, actuality)
