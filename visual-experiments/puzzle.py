@@ -1,21 +1,9 @@
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-import sys
-import liblo
+from visualizer import Visualizer, run
 import time
-import threading
-import argparse
+from OpenGL.GL import *
 
-sys.path.append("..")
-from orchestra import VISUALIZER_PORT
-from synth_controller import SynthController
-
-ESCAPE = '\033'
 MIN_DURATION = 0.1
 ARRIVAL_SIZE = 10
-MARGIN = 30
-BORDER_OPACITY = 0.7
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 
@@ -34,18 +22,6 @@ class Smoother:
     def value(self):
         return self._current_value
 
-class Chunk:
-    def __init__(self, torrent_position, byte_size, filenum, file_offset, pan, duration, arrival_time):
-        self.torrent_position = torrent_position
-        self.byte_size = byte_size
-        self.filenum = filenum
-        file_position = torrent_position - file_offset
-        self.begin = file_position
-        self.end = file_position + byte_size
-        self.pan = pan
-        self.duration = max(duration, MIN_DURATION)
-        self.arrival_time = arrival_time
-
 class File:
     def __init__(self, filenum):
         self.filenum = filenum
@@ -57,6 +33,7 @@ class File:
         self.chunks = []
 
     def add_chunk(self, chunk):
+        chunk.duration = max(chunk.duration, MIN_DURATION)
         if len(self.chunks) == 0:
             self.min_byte = chunk.begin
             self.max_byte = chunk.end
@@ -78,88 +55,25 @@ class File:
     def byte_to_coord(self, byte):
         return self.x_ratio * (byte - self.byte_offset)
 
-class Visualizer:
+class Puzzle(Visualizer):
     def __init__(self, args):
-        self.sync = args.sync
-        self.width = args.width
-        self.height = args.height
-
+        Visualizer.__init__(self, args)
         self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
         self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
         self.chunks = []
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
-        self.first_frame = True
-        self.synth_controller = SynthController()
-        self.setup_osc()
 
-        window_width = self.width + MARGIN*2
-        window_height = self.height + MARGIN*2
-        glutInit(sys.argv)
-        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glutInitWindowSize(window_width, window_height)
-        glutInitWindowPosition(0, 0)
-        glutCreateWindow("")
-        glutDisplayFunc(self.DrawGLScene)
-        glutIdleFunc(self.DrawGLScene)
-        glutReshapeFunc(self.ReSizeGLScene)
-        glutKeyboardFunc(self.keyPressed)
-        self.InitGL()
-        self.ReSizeGLScene(window_width, window_height)
-        glutMainLoop()
-
-    def handle_chunk(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum, file_offset, duration, pan) = args
-        chunk = Chunk(torrent_position, byte_size, filenum, file_offset, pan, duration, time.time())
-        if not filenum in self.files:
-            self.files[filenum] = File(filenum)
-        self.files[filenum].add_chunk(chunk)
+    def add_chunk(self, chunk):
+        if not chunk.filenum in self.files:
+            self.files[chunk.filenum] = File(chunk.filenum)
+        self.files[chunk.filenum].add_chunk(chunk)
         self.chunks.append(chunk)
 
-    def setup_osc(self):
-        self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiff", self.handle_chunk)
-        server_thread = threading.Thread(target=self.serve_osc)
-        server_thread.daemon = True
-        server_thread.start()
-
-    def serve_osc(self):
-        while True:
-            self.server.recv()
-
-    def InitGL(self):
-        glClearColor(1.0, 1.0, 1.0, 0.0)
-        glClearDepth(1.0)
-        glDepthFunc(GL_LESS)
-        glEnable(GL_DEPTH_TEST)
-        glShadeModel(GL_SMOOTH)
-
-    def ReSizeGLScene(self, _width, _height):
-        if _height == 0:
-            _height = 1
-        glViewport(0, 0, _width, _height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glOrtho(0.0, _width, _height, 0.0, -1.0, 1.0);
-        glMatrixMode(GL_MODELVIEW)
-
-    def DrawGLScene(self):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()
-
-        if self.sync:
-            if self.first_frame:
-                self.synth_controller.sync_beep()
-                self.first_frame = False
-
-        glTranslatef(MARGIN, MARGIN, 0)
-        self.draw_border()
+    def render(self):
         if len(self.chunks) > 0:
             self.draw_chunks()
-
-        glutSwapBuffers()
-
 
     def draw_chunks(self):
         self.update_y_scope()
@@ -215,28 +129,4 @@ class Visualizer:
         diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
         self.y_ratio = float(self.height) / (diff + 1)
 
-    def draw_border(self):
-        x1 = y1 = -1
-        x2 = self.width
-        y2 = self.height
-        glColor3f(BORDER_OPACITY, BORDER_OPACITY, BORDER_OPACITY)
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
-
-    def keyPressed(self, *args):
-        if args[0] == ESCAPE:
-                sys.exit()
-
-
-print "Hit ESC key to quit."
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-sync', action='store_true')
-parser.add_argument('-width', dest='width', type=int, default=640)
-parser.add_argument('-height', dest='height', type=int, default=480)
-args = parser.parse_args()
-Visualizer(args)
+run(Puzzle)
