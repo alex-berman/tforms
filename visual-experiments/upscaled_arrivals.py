@@ -5,8 +5,11 @@ import sys
 import liblo
 import time
 import threading
+import argparse
+
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
+from synth_controller import SynthController
 
 ESCAPE = '\033'
 MIN_DURATION = 0.1
@@ -72,11 +75,14 @@ class File:
         return self.x_ratio * (byte - self.byte_offset)
 
 class Visualizer:
-    def __init__(self, width=640, height=480):
+    def __init__(self, args, width=640, height=480):
+        self.sync = args.sync
         self.files = {}
         self.chunks = []
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
+        self.first_frame = True
+        self.synth_controller = SynthController()
 
         self.setup_osc()
         glutInit(sys.argv)
@@ -133,6 +139,11 @@ class Visualizer:
     def DrawGLScene(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
+
+        if self.sync:
+            if self.first_frame:
+                self.synth_controller.sync_beep()
+                self.first_frame = False
 
         if len(self.chunks) > 0:
             self.draw_chunks()
@@ -198,5 +209,10 @@ class Visualizer:
         if args[0] == ESCAPE:
                 sys.exit()
 
+
 print "Hit ESC key to quit."
-Visualizer()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-sync', action='store_true')
+args = parser.parse_args()
+Visualizer(args)

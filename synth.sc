@@ -72,4 +72,20 @@ OSCresponder.new(nil, "/play",
 		  \pan, pan]);
   }).add;
 
+
+
+SynthDef(\sync_beep, {
+    arg freq = 440;
+    var sig;
+    sig = SinOsc.ar(freq, mul:0.9);
+    sig = sig * EnvGen.kr(Env.perc(0, 0.5), doneAction:2);
+    Out.ar(0, sig);
+}).send(s);
+
+OSCresponder.new(nil, "/sync_beep",
+  { arg t, r, msg;
+	  Synth(\sync_beep);
+  }).add;
+
+
 });
