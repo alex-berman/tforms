@@ -8,14 +8,15 @@ APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 
 class Smoother:
-    RESPONSE_FACTOR = 0.2
+    RESPONSE_FACTOR = 5
 
     def __init__(self):
         self._current_value = None
 
-    def smooth(self, new_value):
+    def smooth(self, new_value, time_increment):
         if self._current_value:
-            self._current_value += (new_value - self._current_value) * self.RESPONSE_FACTOR
+            self._current_value += (new_value - self._current_value) * \
+                self.RESPONSE_FACTOR * time_increment
         else:
             self._current_value = new_value
 
@@ -42,9 +43,9 @@ class File:
             self.max_byte = max(self.max_byte, chunk.end)
         self.chunks.append(chunk)
 
-    def update_x_scope(self):
-        self._smoothed_min_byte.smooth(self.min_byte)
-        self._smoothed_max_byte.smooth(self.max_byte)
+    def update_x_scope(self, time_increment):
+        self._smoothed_min_byte.smooth(self.min_byte, time_increment)
+        self._smoothed_max_byte.smooth(self.max_byte, time_increment)
         self.byte_offset = self._smoothed_min_byte.value()
         diff = self._smoothed_max_byte.value() - self._smoothed_min_byte.value()
         if diff == 0:
@@ -82,7 +83,7 @@ class Puzzle(Visualizer):
 
     def draw_file(self, f):
         y = self.filenum_to_y_coord(f.filenum)
-        f.update_x_scope()
+        f.update_x_scope(self.time_increment)
         for chunk in f.chunks:
             age = time.time() - chunk.arrival_time
             if age > chunk.duration:
@@ -123,8 +124,8 @@ class Puzzle(Visualizer):
     def update_y_scope(self):
         min_filenum = min(self.chunks, key=lambda chunk: chunk.filenum).filenum
         max_filenum = max(self.chunks, key=lambda chunk: chunk.filenum).filenum
-        self._smoothed_min_filenum.smooth(float(min_filenum))
-        self._smoothed_max_filenum.smooth(float(max_filenum))
+        self._smoothed_min_filenum.smooth(float(min_filenum), self.time_increment)
+        self._smoothed_max_filenum.smooth(float(max_filenum), self.time_increment)
         self.filenum_offset = self._smoothed_min_filenum.value()
         diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
         self.y_ratio = float(self.height) / (diff + 1)

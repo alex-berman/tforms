@@ -89,16 +89,19 @@ class Visualizer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
-        if self.sync:
-            if self.first_frame:
+        now = time.time()
+        if self.first_frame:
+            if self.sync:
                 self.synth_controller.sync_beep()
-                self.first_frame = False
-
-        glTranslatef(MARGIN, MARGIN, 0)
-        self.draw_border()
-        self.render()
+            self.first_frame = False
+        else:
+            self.time_increment = now - self.previous_frame_time
+            glTranslatef(MARGIN, MARGIN, 0)
+            self.draw_border()
+            self.render()
 
         glutSwapBuffers()
+        self.previous_frame_time = now
 
     def draw_border(self):
         x1 = y1 = -1
