@@ -14,9 +14,13 @@ from synth_controller import SynthController
 ESCAPE = '\033'
 MIN_DURATION = 0.1
 ARRIVAL_SIZE = 10
+MARGIN = 30
+BORDER_OPACITY = 0.7
+APPEND_MARGIN = 0.15
+PREPEND_MARGIN = 0.05
 
 class Smoother:
-    RESPONSE_FACTOR = 0.1
+    RESPONSE_FACTOR = 0.2
 
     def __init__(self):
         self._current_value = None
@@ -75,19 +79,26 @@ class File:
         return self.x_ratio * (byte - self.byte_offset)
 
 class Visualizer:
-    def __init__(self, args, width=640, height=480):
+    def __init__(self, args):
         self.sync = args.sync
+        self.width = args.width
+        self.height = args.height
+
+        self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
+        self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
         self.chunks = []
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
         self.first_frame = True
         self.synth_controller = SynthController()
-
         self.setup_osc()
+
+        window_width = self.width + MARGIN*2
+        window_height = self.height + MARGIN*2
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glutInitWindowSize(width, height)
+        glutInitWindowSize(window_width, window_height)
         glutInitWindowPosition(0, 0)
         glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
@@ -95,7 +106,7 @@ class Visualizer:
         glutReshapeFunc(self.ReSizeGLScene)
         glutKeyboardFunc(self.keyPressed)
         self.InitGL()
-        self.ReSizeGLScene(width, height)
+        self.ReSizeGLScene(window_width, window_height)
         glutMainLoop()
 
     def handle_chunk(self, path, args, types, src, data):
@@ -126,14 +137,11 @@ class Visualizer:
 
     def ReSizeGLScene(self, _width, _height):
         if _height == 0:
-                _height = 1
-        self.width = _width
-        self.height = _height
-
-        glViewport(0, 0, self.width, self.height)
+            _height = 1
+        glViewport(0, 0, _width, _height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0.0, self.width, self.height, 0.0, -1.0, 1.0);
+        glOrtho(0.0, _width, _height, 0.0, -1.0, 1.0);
         glMatrixMode(GL_MODELVIEW)
 
     def DrawGLScene(self):
@@ -145,6 +153,8 @@ class Visualizer:
                 self.synth_controller.sync_beep()
                 self.first_frame = False
 
+        glTranslatef(MARGIN, MARGIN, 0)
+        self.draw_border()
         if len(self.chunks) > 0:
             self.draw_chunks()
 
@@ -169,8 +179,8 @@ class Visualizer:
             height = 3 + actuality * 10
             y1 = int(y + y_offset)
             y2 = int(y + y_offset + height)
-            x1 = int(f.byte_to_coord(chunk.begin) * self.width)
-            x2 = int(f.byte_to_coord(chunk.end) * self.width)
+            x1 = self.prepend_margin_width + int(f.byte_to_coord(chunk.begin) * self.safe_width)
+            x2 = self.prepend_margin_width + int(f.byte_to_coord(chunk.end) * self.safe_width)
             x1, x2 = self.upscale(x1, x2, actuality)
             if x2 == x1:
                 x2 = x1 + 1
@@ -205,6 +215,18 @@ class Visualizer:
         diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
         self.y_ratio = float(self.height) / (diff + 1)
 
+    def draw_border(self):
+        x1 = y1 = -1
+        x2 = self.width
+        y2 = self.height
+        glColor3f(BORDER_OPACITY, BORDER_OPACITY, BORDER_OPACITY)
+        glBegin(GL_LINE_LOOP)
+        glVertex2i(x1, y2)
+        glVertex2i(x2, y2)
+        glVertex2i(x2, y1)
+        glVertex2i(x1, y1)
+        glEnd()
+
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
                 sys.exit()
@@ -214,5 +236,7 @@ print "Hit ESC key to quit."
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-sync', action='store_true')
+parser.add_argument('-width', dest='width', type=int, default=640)
+parser.add_argument('-height', dest='height', type=int, default=480)
 args = parser.parse_args()
 Visualizer(args)
