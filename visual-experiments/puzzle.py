@@ -85,7 +85,7 @@ class Puzzle(Visualizer):
         y = self.filenum_to_y_coord(f.filenum)
         f.update_x_scope(self.time_increment)
         for chunk in f.chunks:
-            age = time.time() - chunk.arrival_time
+            age = self.now - chunk.arrival_time
             if age > chunk.duration:
                 actuality = 0
             else:

@@ -6,6 +6,7 @@ import liblo
 import time
 import threading
 import argparse
+import collections
 
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
@@ -32,9 +33,13 @@ class Visualizer:
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
+        self.show_fps = args.show_fps
 
         self.first_frame = True
         self.synth_controller = SynthController()
+        if self.show_fps:
+            self.fps_history = collections.deque(maxlen=10)
+            self.previous_shown_fps_time = None
         self.setup_osc()
 
     def run(self):
@@ -89,19 +94,37 @@ class Visualizer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
-        now = time.time()
+        self.now = time.time()
         if self.first_frame:
             if self.sync:
                 self.synth_controller.sync_beep()
             self.first_frame = False
         else:
-            self.time_increment = now - self.previous_frame_time
+            self.time_increment = self.now - self.previous_frame_time
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
             self.render()
+            if self.show_fps:
+                self.update_fps_history()
+                self.show_fps_if_timely()
 
         glutSwapBuffers()
-        self.previous_frame_time = now
+        self.previous_frame_time = self.now
+
+    def update_fps_history(self):
+        fps = 1.0 / self.time_increment
+        self.fps_history.append(fps)
+
+    def show_fps_if_timely(self):
+        if self.previous_shown_fps_time:
+            if (self.now - self.previous_shown_fps_time) > 1.0:
+                self.calculate_and_show_fps()
+        else:
+            self.calculate_and_show_fps()
+
+    def calculate_and_show_fps(self):
+        print sum(self.fps_history) / len(self.fps_history)
+        self.previous_shown_fps_time = self.now
 
     def draw_border(self):
         x1 = y1 = -1
@@ -127,6 +150,7 @@ def run(visualizer_class):
     parser.add_argument('-sync', action='store_true')
     parser.add_argument('-width', dest='width', type=int, default=640)
     parser.add_argument('-height', dest='height', type=int, default=480)
+    parser.add_argument('-show-fps', dest='show_fps', action='store_true')
     args = parser.parse_args()
 
     visualizer_class(args).run()
