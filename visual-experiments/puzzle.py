@@ -62,7 +62,6 @@ class Puzzle(Visualizer):
         self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
         self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
-        self.chunks = []
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
 
@@ -70,10 +69,9 @@ class Puzzle(Visualizer):
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.filenum)
         self.files[chunk.filenum].add_chunk(chunk)
-        self.chunks.append(chunk)
 
     def render(self):
-        if len(self.chunks) > 0:
+        if len(self.files) > 0:
             self.draw_chunks()
 
     def draw_chunks(self):
@@ -122,8 +120,8 @@ class Puzzle(Visualizer):
         return self.y_ratio * (filenum - self.filenum_offset + 1)
 
     def update_y_scope(self):
-        min_filenum = min(self.chunks, key=lambda chunk: chunk.filenum).filenum
-        max_filenum = max(self.chunks, key=lambda chunk: chunk.filenum).filenum
+        min_filenum = min(self.files.keys())
+        max_filenum = max(self.files.keys())
         self._smoothed_min_filenum.smooth(float(min_filenum), self.time_increment)
         self._smoothed_max_filenum.smooth(float(max_filenum), self.time_increment)
         self.filenum_offset = self._smoothed_min_filenum.value()
