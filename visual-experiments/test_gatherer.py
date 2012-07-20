@@ -51,3 +51,11 @@ class GathererTest(unittest.TestCase):
         expected_pieces = [Piece(10, 20),
                            Piece(30, 50)]
         self.assertEquals(expected_pieces, gatherer.pieces())
+
+    # def test_fit_hole(self):
+    #     gatherer = Gatherer()
+    #     gatherer.add(Piece(10, 20))
+    #     gatherer.add(Piece(40, 50))
+    #     gatherer.add(Piece(20, 40))
+    #     expected_pieces = [Piece(10, 50)]
+    #     self.assertEquals(expected_pieces, gatherer.pieces())
