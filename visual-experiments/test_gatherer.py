@@ -10,6 +10,9 @@ class Piece:
         return self.begin == other.begin and \
             self.end == other.end
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __repr__(self):
         return 'Piece(%s, %s)' % (self.begin, self.end)
 
@@ -18,6 +21,20 @@ class Piece:
 
     def prepend(self, other):
         self.begin = other.begin
+
+    def __hash__(self):
+        return hash((self.begin, self.end))
+
+class PieceTest(unittest.TestCase):
+    def test_eq(self):
+        self.assertEquals(Piece(10, 20),
+                          Piece(10, 20))
+
+    def test_not_eq(self):
+        self.assertTrue(Piece(10, 20) != Piece(11, 20))
+        piece = Piece(11, 20)
+        piece.begin = 10
+        self.assertFalse(Piece(10, 20) != piece)
 
 class GathererTest(unittest.TestCase):
     def test_add_first_piece(self):
@@ -52,10 +69,10 @@ class GathererTest(unittest.TestCase):
                            Piece(30, 50)]
         self.assertEquals(expected_pieces, gatherer.pieces())
 
-    # def test_fit_hole(self):
-    #     gatherer = Gatherer()
-    #     gatherer.add(Piece(10, 20))
-    #     gatherer.add(Piece(40, 50))
-    #     gatherer.add(Piece(20, 40))
-    #     expected_pieces = [Piece(10, 50)]
-    #     self.assertEquals(expected_pieces, gatherer.pieces())
+    def test_fit_hole(self):
+        gatherer = Gatherer()
+        gatherer.add(Piece(10, 20))
+        gatherer.add(Piece(40, 50))
+        gatherer.add(Piece(20, 40))
+        expected_pieces = [Piece(10, 50)]
+        self.assertEquals(expected_pieces, gatherer.pieces())
