@@ -17,7 +17,8 @@ MARGIN = 30
 BORDER_OPACITY = 0.7
 
 class Chunk:
-    def __init__(self, torrent_position, byte_size, filenum, file_offset, pan, duration, arrival_time):
+    def __init__(self, chunk_id, torrent_position, byte_size, filenum, file_offset, pan, duration, arrival_time):
+        self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
         self.filenum = filenum
@@ -27,6 +28,12 @@ class Chunk:
         self.pan = pan
         self.duration = duration
         self.arrival_time = arrival_time
+
+    def append(self, other):
+        self.end = other.end
+
+    def prepend(self, other):
+        self.begin = other.begin
 
 class Visualizer:
     def __init__(self, args):
@@ -60,7 +67,7 @@ class Visualizer:
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum, file_offset, duration, pan) = args
-        chunk = Chunk(torrent_position, byte_size, filenum, file_offset, pan, duration, time.time())
+        chunk = Chunk(chunk_id, torrent_position, byte_size, filenum, file_offset, pan, duration, time.time())
         self.add_chunk(chunk)
 
     def setup_osc(self):
