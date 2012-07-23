@@ -46,6 +46,11 @@ class Puzzle(Visualizer):
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
 
+    def InitGL(self):
+        Visualizer.InitGL(self)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
     def add_chunk(self, chunk):
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length)
@@ -86,8 +91,8 @@ class Puzzle(Visualizer):
             x1, x2 = self.position_from_left(chunk, actuality, f)
         else:
             x1, x2 = self.position_from_right(chunk, actuality, f)
-        opacity = 0.2 + actuality * 0.8
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        opacity = self.opacity_from_actuality(actuality)
+        glColor4f(0.0, 0.0, 0.0, opacity)
         glBegin(GL_POLYGON)
         glVertex2i(x1, int(y1))
         glVertex2i(x2, int(y))
@@ -95,6 +100,12 @@ class Puzzle(Visualizer):
         glVertex2i(x1, int(y1 + height))
         glVertex2i(x1, int(y1))
         glEnd()
+
+    def opacity_from_actuality(self, actuality):
+        if actuality < 0.5:
+            return actuality
+        else:
+            return 1.0 - actuality
 
     def draw_completed_piece(self, chunk, f, y):
         height = 3
@@ -105,7 +116,7 @@ class Puzzle(Visualizer):
         if x2 == x1:
             x2 = x1 + 1
         opacity = 0.2
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glColor4f(1-opacity, 1-opacity, 1-opacity, 1.0)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
