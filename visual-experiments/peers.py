@@ -5,7 +5,7 @@ from OpenGL.GL import *
 from collections import OrderedDict
 
 MIN_DURATION = 0.1
-ARRIVAL_SIZE = 10
+ARRIVAL_SIZE = 100
 INNER_MARGIN = 0.1
 
 class Smoother:
@@ -85,7 +85,10 @@ class Puzzle(Visualizer):
         height = 3 + actuality * 10
         y1 = int(y + y_offset)
         y2 = int(y + y_offset + height)
-        x1, x2 = self.position_from_right(chunk, actuality, f)
+        if chunk.pan < 0.5:
+            x1, x2 = self.position_from_left(chunk, actuality, f)
+        else:
+            x1, x2 = self.position_from_right(chunk, actuality, f)
         if x2 == x1:
             x2 = x1 + 1
         opacity = 0.2 + (actuality * 0.8)
@@ -114,11 +117,20 @@ class Puzzle(Visualizer):
         glVertex2i(x1, y1)
         glEnd()
 
+    def position_from_left(self, chunk, actuality, f):
+        width = actuality * ARRIVAL_SIZE
+        departure_x1 = MARGIN - width
+        destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
+        x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
+        x2 = x1 + width
+        return (int(x1), int(x2))
+
     def position_from_right(self, chunk, actuality, f):
+        width = actuality * ARRIVAL_SIZE
         departure_x1 = MARGIN + self.width
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
         x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
-        x2 = x1 + actuality * ARRIVAL_SIZE
+        x2 = x1 + width
         return (int(x1), int(x2))
 
     def filenum_to_y_coord(self, filenum):
