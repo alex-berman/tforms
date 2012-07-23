@@ -22,16 +22,13 @@ class Predecoder:
             file_info["decoded_name"] = source_filename
         elif self._decodable(source_filename):
             self.logger.debug("decoding %s" % source_filename)
-            if os.path.isfile(source_filename):
-                target_filename = self._target_filename(source_filename)
-                file_info["decoded_name"] = target_filename
-                if self._already_decoded(target_filename):
-                    self.logger.debug("file already decoded")
-                else:
-                    self._decode_file(source_filename,
-                                      target_filename)
+            target_filename = self._target_filename(source_filename)
+            file_info["decoded_name"] = target_filename
+            if self._already_decoded(target_filename):
+                self.logger.debug("file already decoded")
             else:
-                self.logger.debug("file not downloaded - not decoding")
+                self._decode_file(source_filename,
+                                  target_filename)
 
     def _decodable(self, filename):
         extension = self._extension(filename)
@@ -49,15 +46,18 @@ class Predecoder:
         return os.path.exists(filename)
 
     def _decode_file(self, source_filename, target_filename):
-        extension = self._extension(source_filename)
-        if extension == 'mp3':
-            cmd = 'mpg123'
-            if self._sample_rate:
-                cmd += ' -r %d' % self._sample_rate
-            cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
-        elif extension == 'm4b':
-            cmd = 'faad -o "%s" "%s"' % (target_filename, source_filename)
-        elif extension == 'flac':
-            cmd = 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
-        self.logger.debug("decode command: %s" % cmd)
-        subprocess.call(cmd, shell=True)
+        if os.path.isfile(source_filename):
+            extension = self._extension(source_filename)
+            if extension == 'mp3':
+                cmd = 'mpg123'
+                if self._sample_rate:
+                    cmd += ' -r %d' % self._sample_rate
+                cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
+            elif extension == 'm4b':
+                cmd = 'faad -o "%s" "%s"' % (target_filename, source_filename)
+            elif extension == 'flac':
+                cmd = 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
+            self.logger.debug("decode command: %s" % cmd)
+            subprocess.call(cmd, shell=True)
+        else:
+            self.logger.debug("file not downloaded - not decoding")
