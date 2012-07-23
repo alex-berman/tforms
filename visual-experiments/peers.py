@@ -1,11 +1,10 @@
-from visualizer import Visualizer, run, MARGIN
+from visualizer import Visualizer, run
 from gatherer import Gatherer
 import time
 from OpenGL.GL import *
 from collections import OrderedDict
 
 MIN_DURATION = 0.1
-ARRIVAL_SIZE = 100
 INNER_MARGIN = 0.1
 
 class Smoother:
@@ -81,23 +80,20 @@ class Puzzle(Visualizer):
                 self.draw_chunk(chunk, actuality, f, y)
 
     def draw_chunk(self, chunk, actuality, f, y):
-        y_offset = actuality * 10
-        height = 3 + actuality * 10
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
+        height = 3
+        y1 = int(chunk.height * self.height)
         if chunk.pan < 0.5:
             x1, x2 = self.position_from_left(chunk, actuality, f)
         else:
             x1, x2 = self.position_from_right(chunk, actuality, f)
-        if x2 == x1:
-            x2 = x1 + 1
-        opacity = 0.2 + (actuality * 0.8)
+        opacity = 0.2 + actuality * 0.8
         glColor3f(1-opacity, 1-opacity, 1-opacity)
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
+        glBegin(GL_POLYGON)
+        glVertex2i(x1, int(y1))
+        glVertex2i(x2, int(y))
+        glVertex2i(x2, int(y + height))
+        glVertex2i(x1, int(y1 + height))
+        glVertex2i(x1, int(y1))
         glEnd()
 
     def draw_completed_piece(self, chunk, f, y):
@@ -118,19 +114,13 @@ class Puzzle(Visualizer):
         glEnd()
 
     def position_from_left(self, chunk, actuality, f):
-        width = actuality * ARRIVAL_SIZE
-        departure_x1 = MARGIN - width
-        destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
-        x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
-        x2 = x1 + width
+        x1 = 0
+        x2 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
         return (int(x1), int(x2))
 
     def position_from_right(self, chunk, actuality, f):
-        width = actuality * ARRIVAL_SIZE
-        departure_x1 = MARGIN + self.width
-        destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
-        x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
-        x2 = x1 + width
+        x1 = self.width
+        x2 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
         return (int(x1), int(x2))
 
     def filenum_to_y_coord(self, filenum):

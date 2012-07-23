@@ -20,11 +20,12 @@ def clamp(value, mini, maxi):
 
 
 class Player:
-    def __init__(self, orchestra, _id, pan):
+    def __init__(self, orchestra, _id, pan, height):
         self.orchestra = orchestra
         self.logger = orchestra.logger
         self.id = _id
         self.pan = pan
+        self.height = height
         self.enabled = True
         self._previous_chunk_time = None
 
@@ -82,7 +83,7 @@ class WavPlayer(Player):
                                         end_secs / file_info["duration"],
                                         desired_duration,
                                         float(self.pan))
-        self.orchestra.visualize(chunk, desired_duration, self.pan)
+        self.orchestra.visualize(chunk, desired_duration, self.pan, self.height)
 
     def _file_was_downloaded(self, file_info):
         return "decoded_name" in file_info
@@ -281,7 +282,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
-    def visualize(self, chunk, duration, pan):
+    def visualize(self, chunk, duration, pan, height):
         if self.visualizer:
             file_info = self.tr_log.files[chunk["filenum"]]
             liblo.send(self.visualizer, "/chunk",
@@ -291,7 +292,9 @@ class Orchestra:
                        chunk["filenum"],
                        file_info["offset"],
                        file_info["length"],
-                       duration, float(pan))
+                       duration,
+                       float(pan),
+                       height)
 
     def get_player_for_chunk(self, chunk):
         try:
@@ -311,8 +314,10 @@ class Orchestra:
     def _create_player(self):
         count = len(self.players)
         pan = random.choice([0.0, 1.0])
-        self.logger.debug("creating player number %d with pan %f" % (count, pan))
-        return self._player_class(self, count, pan)
+        height = random.uniform(0.0, 1.0)
+        self.logger.debug("creating player number %d with pan %f, height %f" % (
+                count, pan, height))
+        return self._player_class(self, count, pan, height)
 
     def set_time_cursor(self, log_time):
         assert not self.realtime
