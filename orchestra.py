@@ -34,9 +34,9 @@ class Player:
             self.orchestra.highlight_chunk(chunk)
 
     def interpret_sonically(self, chunk, desired_time):
-        command = self.perform_sonic_interpretation(chunk, desired_time)
+        result = self.perform_sonic_interpretation(chunk, desired_time)
         self._previous_chunk_time = desired_time
-        return command
+        return result
 
     def _bytecount_to_secs(self, byte_count, file_info):
         duration_secs = file_info["duration"]
@@ -48,36 +48,46 @@ class Player:
 
 class WavPlayer(Player):
     def perform_sonic_interpretation(self, chunk, desired_time):
-        if self._previous_chunk_time:
-            file_info = self.orchestra.tr_log.files[chunk["filenum"]]
-            filename = file_info["decoded_name"]
-            start_secs = self._bytecount_to_secs(chunk["begin"]-file_info["offset"], file_info)
-            end_secs = self._bytecount_to_secs(chunk["end"]-file_info["offset"], file_info)
-
-            if desired_time == None:
-                raise Exception("what does this happen?")
-
-            desired_duration = desired_time - self._previous_chunk_time
-            if desired_duration == 0:
-                warn(self.logger, "simultaneous chunks within a peer?")
-                desired_duration = 0.01
-
-            rate = (end_secs - start_secs) / desired_duration
-            if rate < Orchestra.MIN_GRAIN_RATE:
-                self.logger.debug("skipping chunk due to slow rate %f (probably caused by long pause)", rate)
-                self._previous_chunk_time = desired_time
-                return False
-
-            self.logger.debug("at %f, playing %s at position %fs with duration %fs, rate %f" % (
-                    desired_time, filename, start_secs, desired_duration, rate))
-
-            self.orchestra.synth.play_chunk(chunk["filenum"],
-                                            start_secs / file_info["duration"],
-                                            end_secs / file_info["duration"],
-                                            desired_duration,
-                                            float(self.pan))
-            self.orchestra.visualize(chunk, desired_duration, self.pan)
+        file_info = self.orchestra.tr_log.files[chunk["filenum"]]
+        if self._file_was_downloaded(file_info):
+            if self._previous_chunk_time:
+                self._play_chunk(chunk, desired_time, file_info)
             return True
+        else:
+            self.logger.debug("skipping chunk in non-downloaded file")
+
+    def _play_chunk(self, chunk, desired_time, file_info):
+        filename = file_info["decoded_name"]
+        start_secs = self._bytecount_to_secs(chunk["begin"]-file_info["offset"], file_info)
+        end_secs = self._bytecount_to_secs(chunk["end"]-file_info["offset"], file_info)
+
+        if desired_time == None:
+            raise Exception("why does this happen?")
+
+        desired_duration = desired_time - self._previous_chunk_time
+        if desired_duration == 0:
+            warn(self.logger, "simultaneous chunks within a peer?")
+            desired_duration = 0.01
+
+        rate = (end_secs - start_secs) / desired_duration
+        if rate < Orchestra.MIN_GRAIN_RATE:
+            self.logger.debug("skipping chunk due to slow rate %f (probably caused by long pause)", rate)
+            self._previous_chunk_time = desired_time
+            return False
+
+        self.logger.debug("at %f, playing %s at position %fs with duration %fs, rate %f" % (
+                desired_time, filename, start_secs, desired_duration, rate))
+
+        self.orchestra.synth.play_chunk(chunk["filenum"],
+                                        start_secs / file_info["duration"],
+                                        end_secs / file_info["duration"],
+                                        desired_duration,
+                                        float(self.pan))
+        self.orchestra.visualize(chunk, desired_duration, self.pan)
+
+    def _file_was_downloaded(self, file_info):
+        return "decoded_name" in file_info
+
 
 class Orchestra:
     SAMPLE_RATE = 44100

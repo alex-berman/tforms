@@ -47,7 +47,7 @@ tr_log = TrLogReader(logfilename, options.torrentname,
 
 if options.predecode:
     from predecode import Predecoder
-    predecoder = Predecoder(tr_log, options.download_location, Orchestra.SAMPLE_RATE)
+    predecoder = Predecoder(tr_log, options.download_location, logger, Orchestra.SAMPLE_RATE)
     predecoder.decode()
 
 orchestra = Orchestra(sessiondir,

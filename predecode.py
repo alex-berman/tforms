@@ -5,10 +5,11 @@ import re
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
-    def __init__(self, tr_log, location, sample_rate=None):
+    def __init__(self, tr_log, location, logger, sample_rate=None):
         self.tr_log = tr_log
         self.location = location
         self._sample_rate = sample_rate
+        self.logger = logger
         self._extension_re = re.compile('\.(\w+)$')
 
     def decode(self):
@@ -20,11 +21,17 @@ class Predecoder:
         if self._extension(source_filename) == 'wav':
             file_info["decoded_name"] = source_filename
         elif self._decodable(source_filename):
-            target_filename = self._target_filename(source_filename)
-            file_info["decoded_name"] = target_filename
-            if not self._already_decoded(target_filename):
-                self._decode_file(source_filename,
-                                  target_filename)
+            self.logger.debug("decoding %s" % source_filename)
+            if os.path.isfile(source_filename):
+                target_filename = self._target_filename(source_filename)
+                file_info["decoded_name"] = target_filename
+                if self._already_decoded(target_filename):
+                    self.logger.debug("file already decoded")
+                else:
+                    self._decode_file(source_filename,
+                                      target_filename)
+            else:
+                self.logger.debug("file not downloaded - not decoding")
 
     def _decodable(self, filename):
         extension = self._extension(filename)
@@ -52,4 +59,5 @@ class Predecoder:
             cmd = 'faad -o "%s" "%s"' % (target_filename, source_filename)
         elif extension == 'flac':
             cmd = 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
+        self.logger.debug("decode command: %s" % cmd)
         subprocess.call(cmd, shell=True)
