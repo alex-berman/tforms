@@ -5,7 +5,6 @@ import random
 import sys
 import os
 import re
-from space import StereoSpace
 import liblo
 from synth_controller import SynthController
 
@@ -121,7 +120,6 @@ class Orchestra:
         self._prepare_players()
         self._total_bytes = 0
         self._played_bytes = 0
-        self._space = StereoSpace()
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
@@ -312,8 +310,7 @@ class Orchestra:
 
     def _create_player(self):
         count = len(self.players)
-        pan = self._space.position_with_max_distance_to_nodes()
-        self._space.add_node(pan)
+        pan = random.choice([0.0, 1.0])
         self.logger.debug("creating player number %d with pan %f" % (count, pan))
         return self._player_class(self, count, pan)
 

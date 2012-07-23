@@ -40,13 +40,14 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
 SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
-	var out, pointer, filelength, pitch, env, dir;
+	var out, pointer, filelength, pitch, env, dir, pan_line;
 	pointer = Line.kr(begin, end, duration);
+	pan_line = Line.kr(pan, 0, duration);
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
 		[0.005*duration, 0.9*duration, 0.06*duration], 'exp'), doneAction: 2);
 	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	Out.ar(0, Pan2.ar(env * out, pan));
+	Out.ar(0, Pan2.ar(env * out, pan_line));
 }).send(s);
 
 OSCresponder.new(nil, "/load",
