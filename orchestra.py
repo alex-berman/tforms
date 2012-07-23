@@ -292,6 +292,7 @@ class Orchestra:
                        chunk["end"] - chunk["begin"],
                        chunk["filenum"],
                        file_info["offset"],
+                       file_info["length"],
                        duration, float(pan))
 
     def get_player_for_chunk(self, chunk):
