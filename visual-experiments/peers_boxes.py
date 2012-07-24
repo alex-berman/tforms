@@ -5,7 +5,7 @@ from OpenGL.GL import *
 from collections import OrderedDict
 
 MIN_DURATION = 0.1
-ARRIVAL_SIZE = 100
+ARRIVAL_SIZE = 10
 INNER_MARGIN = 0.1
 
 class Smoother:
@@ -62,9 +62,17 @@ class Puzzle(Visualizer):
             self.draw_file(f)
 
     def draw_file(self, f):
+        self.process_chunks(f)
         y = self.filenum_to_y_coord(f.filenum)
         self.draw_gathered_chunks(f, y)
         self.draw_arriving_chunks(f, y)
+
+    def process_chunks(self, f):
+        for chunk in f.arriving_chunks.values():
+            chunk.age = self.now - chunk.arrival_time
+            if chunk.age > chunk.duration:
+                del f.arriving_chunks[chunk.id]
+                f.gatherer.add(chunk)
 
     def draw_gathered_chunks(self, f, y):
         for chunk in f.gatherer.pieces():
@@ -72,15 +80,10 @@ class Puzzle(Visualizer):
 
     def draw_arriving_chunks(self, f, y):
         for chunk in f.arriving_chunks.values():
-            chunk.age = self.now - chunk.arrival_time
-            if chunk.age > chunk.duration:
-                del f.arriving_chunks[chunk.id]
-                f.gatherer.add(chunk)
-            else:
-                actuality = 1 - chunk.age / chunk.duration
-                self.draw_chunk(chunk, actuality, f, y)
+            self.draw_chunk(chunk, f, y)
 
-    def draw_chunk(self, chunk, actuality, f, y):
+    def draw_chunk(self, chunk, f, y):
+        actuality = 1 - chunk.age / chunk.duration
         y_offset = actuality * 10
         height = 3 + actuality * 10
         y1 = int(y + y_offset)
