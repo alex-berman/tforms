@@ -32,7 +32,15 @@ class File:
         self.radius = 50.0
         self.x = random.uniform(self.radius, visualizer.width - self.radius*2)
         self.y = random.uniform(self.radius, visualizer.height - self.radius*2)
+        self.angle = random.uniform(0, 2*math.pi)
+        self.speed = random.uniform(0, 0.5)
 
+    def move(self, time_increment):
+        self.angle += time_increment * random.uniform(-0.1, 0.1)
+        self.speed += time_increment * random.uniform(-0.1, 0.1)
+        self.x += self.speed * time_increment * math.cos(self.angle)
+        self.y += self.speed * time_increment * math.cos(self.angle)
+        
     def add_chunk(self, chunk):
         sounding_duration = chunk.duration - chunk.fade_in
         if sounding_duration < MIN_SOUNDING_DURATION:
@@ -56,6 +64,7 @@ class Puzzle(Visualizer):
 
     def draw_chunks(self):
         for f in self.files.values():
+            f.move(self.time_increment)
             self.draw_file(f)
 
     def draw_file(self, f):
