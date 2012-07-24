@@ -8,7 +8,7 @@ MIN_SOUNDING_DURATION = 0.1
 ARRIVAL_SIZE = 10
 INNER_MARGIN = 0.1
 GATHERED_HEIGHT = 20
-ARRIVAL_HEIGHT = 3
+DEPARTURE_HEIGHT = 3
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -93,16 +93,17 @@ class Puzzle(Visualizer):
         else:
             self.draw_sounding_chunk(chunk, f, y)
 
-    def draw_travelling_chunk(self, chunk, f, y):
-        actuality = 1 - chunk.age / chunk.fade_in
-        y_offset = actuality * 10
-        height = ARRIVAL_HEIGHT + (1-actuality) * (GATHERED_HEIGHT - ARRIVAL_HEIGHT)
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
+    def draw_travelling_chunk(self, chunk, f, destination_y):
+        relative_age = chunk.age / chunk.fade_in
+        height = DEPARTURE_HEIGHT + relative_age * (GATHERED_HEIGHT - DEPARTURE_HEIGHT)
+        departure_y = chunk.height * self.height
+        y = departure_y + (destination_y - departure_y) * relative_age
+        y1 = int(y)
+        y2 = int(y + height)
         if chunk.pan < 0.5:
-            x1, x2 = self.position_from_left(chunk, actuality, f)
+            x1, x2 = self.position_from_left(chunk, relative_age, f)
         else:
-            x1, x2 = self.position_from_right(chunk, actuality, f)
+            x1, x2 = self.position_from_right(chunk, relative_age, f)
         if x2 == x1:
             x2 = x1 + 1
         opacity = 0.2
@@ -138,19 +139,19 @@ class Puzzle(Visualizer):
         glVertex2i(x1, y1)
         glEnd()
 
-    def position_from_left(self, chunk, actuality, f):
-        width = actuality * ARRIVAL_SIZE
+    def position_from_left(self, chunk, relative_age, f):
+        width = relative_age * ARRIVAL_SIZE
         departure_x1 = -width
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
-        x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
+        x1 = departure_x1 + relative_age * (destination_x1 - departure_x1)
         x2 = x1 + width
         return (int(x1), int(x2))
 
-    def position_from_right(self, chunk, actuality, f):
-        width = actuality * ARRIVAL_SIZE
+    def position_from_right(self, chunk, relative_age, f):
+        width = relative_age * ARRIVAL_SIZE
         departure_x1 = self.width
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
-        x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
+        x1 = departure_x1 + relative_age * (destination_x1 - departure_x1)
         x2 = x1 + width
         return (int(x1), int(x2))
 
