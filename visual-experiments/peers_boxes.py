@@ -1,10 +1,10 @@
-from visualizer import Visualizer, run, MARGIN
+from visualizer import Visualizer, run
 from gatherer import Gatherer
 import time
 from OpenGL.GL import *
 from collections import OrderedDict
 
-MIN_DURATION = 0.1
+MIN_SOUNDING_DURATION = 0.1
 ARRIVAL_SIZE = 10
 INNER_MARGIN = 0.1
 
@@ -32,7 +32,10 @@ class File:
         self.x_ratio = 1.0 / length
 
     def add_chunk(self, chunk):
-        chunk.duration = max(chunk.duration, MIN_DURATION)
+        sounding_duration = chunk.duration - chunk.fade_in
+        if sounding_duration < MIN_SOUNDING_DURATION:
+            chunk.duration += MIN_SOUNDING_DURATION - sounding_duration
+        chunk.age = 0
         self.arriving_chunks[chunk.id] = chunk
 
     def byte_to_coord(self, byte):
@@ -83,7 +86,13 @@ class Puzzle(Visualizer):
             self.draw_chunk(chunk, f, y)
 
     def draw_chunk(self, chunk, f, y):
-        actuality = 1 - chunk.age / chunk.duration
+        if chunk.age < chunk.fade_in:
+            self.draw_travelling_chunk(chunk, f, y)
+        else:
+            self.draw_sounding_chunk(chunk, f, y)
+
+    def draw_travelling_chunk(self, chunk, f, y):
+        actuality = 1 - chunk.age / chunk.fade_in
         y_offset = actuality * 10
         height = 3 + actuality * 10
         y1 = int(y + y_offset)
@@ -92,30 +101,6 @@ class Puzzle(Visualizer):
             x1, x2 = self.position_from_left(chunk, actuality, f)
         else:
             x1, x2 = self.position_from_right(chunk, actuality, f)
-        if x2 == x1:
-            x2 = x1 + 1
-        opacity = self.opacity_for_arriving_chunk(chunk, actuality)
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
-
-    def opacity_for_arriving_chunk(self, chunk, actuality):
-        if chunk.age < chunk.fade_in:
-            return 0.2
-        else:
-            return 1
-            return 0.2 + 0.8 * actuality
-
-    def draw_completed_piece(self, chunk, f, y):
-        height = 3
-        y1 = int(y)
-        y2 = int(y + height)
-        x1 = self.inner_margin_width + int(f.byte_to_coord(chunk.begin) * self.safe_width)
-        x2 = self.inner_margin_width + int(f.byte_to_coord(chunk.end) * self.safe_width)
         if x2 == x1:
             x2 = x1 + 1
         opacity = 0.2
@@ -127,9 +112,33 @@ class Puzzle(Visualizer):
         glVertex2i(x1, y1)
         glEnd()
 
+    def draw_completed_piece(self, chunk, f, y):
+        opacity = 0.2
+        self.draw_sitting_piece(chunk, f, y, opacity)
+
+    def draw_sounding_chunk(self, chunk, f, y):
+        opacity = 1
+        self.draw_sitting_piece(chunk, f, y, opacity)
+
+    def draw_sitting_piece(self, chunk, f, y, opacity):
+        height = 3
+        y1 = int(y)
+        y2 = int(y + height)
+        x1 = self.inner_margin_width + int(f.byte_to_coord(chunk.begin) * self.safe_width)
+        x2 = self.inner_margin_width + int(f.byte_to_coord(chunk.end) * self.safe_width)
+        if x2 == x1:
+            x2 = x1 + 1
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glBegin(GL_LINE_LOOP)
+        glVertex2i(x1, y2)
+        glVertex2i(x2, y2)
+        glVertex2i(x2, y1)
+        glVertex2i(x1, y1)
+        glEnd()
+
     def position_from_left(self, chunk, actuality, f):
         width = actuality * ARRIVAL_SIZE
-        departure_x1 = MARGIN - width
+        departure_x1 = -width
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
         x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
         x2 = x1 + width
@@ -137,7 +146,7 @@ class Puzzle(Visualizer):
 
     def position_from_right(self, chunk, actuality, f):
         width = actuality * ARRIVAL_SIZE
-        departure_x1 = MARGIN + self.width
+        departure_x1 = self.width
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
         x1 = destination_x1 + actuality * (departure_x1 - destination_x1)
         x2 = x1 + width
