@@ -5,6 +5,7 @@ from OpenGL.GL import *
 from collections import OrderedDict
 import math
 import random
+from boid import Boid, PVector
 
 MIN_SOUNDING_DURATION = 0.1
 CIRCLE_PRECISION = 10
@@ -27,27 +28,36 @@ class Smoother:
 
 class File:
     def __init__(self, length, visualizer):
+        self.visualizer = visualizer
         self.arriving_chunks = OrderedDict()
         self.gatherer = Gatherer()
         self.radius = 50.0
         self.x = random.uniform(self.radius, visualizer.width - self.radius*2)
         self.y = random.uniform(self.radius, visualizer.height - self.radius*2)
-        self.angle = random.uniform(0, 2*math.pi)
-        self.speed = random.uniform(0, 0.5)
-
-    def move(self, time_increment):
-        self.angle += time_increment * random.uniform(-0.1, 0.1)
-        self.speed += time_increment * random.uniform(-0.1, 0.1)
-        self.x += self.speed * time_increment * math.cos(self.angle)
-        self.y += self.speed * time_increment * math.cos(self.angle)
         
     def add_chunk(self, chunk):
-        sounding_duration = chunk.duration - chunk.fade_in
-        if sounding_duration < MIN_SOUNDING_DURATION:
-            chunk.duration += MIN_SOUNDING_DURATION - sounding_duration
-        chunk.age = 0
+        chunk.duration = max(chunk.duration, MIN_SOUNDING_DURATION)
+        chunk.boid = Boid(self.get_departure_position(chunk), 10.0, 3.0)
+        chunk.arrival_position = self.get_arrival_position(chunk)
+        chunk.boid.arrive(chunk.arrival_position)
+        chunk.arrived = False
+        chunk.playing = False
         self.arriving_chunks[chunk.id] = chunk
 
+    def get_departure_position(self, chunk):
+        if chunk.pan < 0.5:
+            x = 0
+        else:
+            x = self.visualizer.width
+        y = chunk.height * self.visualizer.height
+        return PVector(x, y)
+
+    def get_arrival_position(self, chunk):
+        angle = 2 * math.pi * chunk.begin / chunk.file_length
+        x = self.x + self.radius * math.cos(angle)
+        y = self.y + self.radius * math.sin(angle)
+        return PVector(x, y)
+        
 class Puzzle(Visualizer):
     def __init__(self, args):
         Visualizer.__init__(self, args)
@@ -64,7 +74,6 @@ class Puzzle(Visualizer):
 
     def draw_chunks(self):
         for f in self.files.values():
-            f.move(self.time_increment)
             self.draw_file(f)
 
     def draw_file(self, f):
@@ -74,11 +83,21 @@ class Puzzle(Visualizer):
 
     def process_chunks(self, f):
         for chunk in f.arriving_chunks.values():
-            chunk.age = self.now - chunk.arrival_time
-            if chunk.age > chunk.duration:
-                del f.arriving_chunks[chunk.id]
-                f.gatherer.add(chunk)
+            if not chunk.arrived:
+                if self.arrived(chunk):
+                    chunk.arrived = True
+                    chunk.playing = True
+                    chunk.started_playing = self.now
+            if chunk.arrived:
+                if chunk.playing:
+                    if self.now - chunk.started_playing > chunk.duration:
+                        del f.arriving_chunks[chunk.id]
+                        f.gatherer.add(chunk)
 
+    def arrived(self, chunk):
+        distance = chunk.arrival_position.sub(chunk.boid.loc).mag()
+        return distance < 1.0
+        
     def draw_gathered_chunks(self, f):
         for chunk in f.gatherer.pieces():
             self.draw_completed_piece(chunk, f)
@@ -88,13 +107,28 @@ class Puzzle(Visualizer):
             self.draw_chunk(chunk, f)
 
     def draw_chunk(self, chunk, f):
-        if chunk.age < chunk.fade_in:
-            self.draw_travelling_chunk(chunk, f)
-        else:
+        if chunk.playing:
             self.draw_sounding_chunk(chunk, f)
+        else:
+            self.draw_travelling_chunk(chunk, f)
 
     def draw_travelling_chunk(self, chunk, f):
-        pass
+        chunk.boid.update()
+        self.draw_boid(chunk.boid)
+
+    def draw_boid(self, boid):
+        size = 1
+        x1 = boid.loc.x - size
+        x2 = boid.loc.x + size
+        y1 = boid.loc.y - size
+        y2 = boid.loc.y + size
+        glBegin(GL_POLYGON)
+        glVertex2f(x1, y1)
+        glVertex2f(x1, y2)
+        glVertex2f(x2, y2)
+        glVertex2f(x2, y1)
+        glVertex2f(x1, y1)
+        glEnd()
 
     def draw_completed_piece(self, chunk, f):
         opacity = 0.3
