@@ -34,9 +34,11 @@ class Chunk:
 
     def append(self, other):
         self.end = other.end
+        self.byte_size = self.end - self.begin
 
     def prepend(self, other):
         self.begin = other.begin
+        self.byte_size = self.end - self.begin
 
 class Visualizer:
     def __init__(self, args):
@@ -142,6 +144,7 @@ class Visualizer:
         x1 = y1 = -1
         x2 = self.width
         y2 = self.height
+        glLineWidth(1)
         glColor3f(BORDER_OPACITY, BORDER_OPACITY, BORDER_OPACITY)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
