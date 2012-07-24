@@ -6,6 +6,8 @@ import sys
 import os
 import re
 import liblo
+import sched
+import threading
 from synth_controller import SynthController
 
 VISUALIZER_PORT = 51234
@@ -51,12 +53,12 @@ class WavPlayer(Player):
         file_info = self.orchestra.tr_log.files[chunk["filenum"]]
         if self._file_was_downloaded(file_info):
             if self._previous_chunk_time:
-                self._play_chunk(chunk, desired_time, file_info)
+                self._schedule_to_play_chunk(chunk, desired_time, file_info)
             return True
         else:
             self.logger.debug("skipping chunk in non-downloaded file")
 
-    def _play_chunk(self, chunk, desired_time, file_info):
+    def _schedule_to_play_chunk(self, chunk, desired_time, file_info):
         filename = file_info["decoded_name"]
         start_secs = self._bytecount_to_secs(chunk["begin"]-file_info["offset"], file_info)
         end_secs = self._bytecount_to_secs(chunk["end"]-file_info["offset"], file_info)
@@ -78,12 +80,20 @@ class WavPlayer(Player):
         self.logger.debug("at %f, playing %s at position %fs with duration %fs, rate %f" % (
                 desired_time, filename, start_secs, desired_duration, rate))
 
-        self.orchestra.synth.play_chunk(chunk["filenum"],
-                                        start_secs / file_info["duration"],
-                                        end_secs / file_info["duration"],
-                                        desired_duration,
-                                        float(self.pan))
-        self.orchestra.visualize(chunk, desired_duration, self.pan, self.height)
+        self.orchestra.visualize(chunk,
+                                 desired_duration + self.orchestra.prebuffering,
+                                 self.orchestra.prebuffering,
+                                 self.pan,
+                                 self.height)
+
+        self.orchestra.scheduler.enter(
+            self.orchestra.prebuffering, 1,
+            self.orchestra.synth.play_chunk,
+            (chunk["filenum"],
+             start_secs / file_info["duration"],
+             end_secs / file_info["duration"],
+             desired_duration,
+             float(self.pan)))
 
     def _file_was_downloaded(self, file_info):
         return "decoded_name" in file_info
@@ -104,7 +114,8 @@ class Orchestra:
                  predecoded=False,
                  file_location=None,
                  visualizer_enabled=False,
-                 loop=False):
+                 loop=False,
+                 prebuffering=0):
         self.sessiondir = sessiondir
         self.logger = logger
         self.tr_log = tr_log
@@ -114,7 +125,10 @@ class Orchestra:
         self.predecoded = predecoded
         self.file_location = file_location
         self._loop = loop
+        self.prebuffering = prebuffering
 
+        self.scheduler = sched.scheduler(time.time, time.sleep)
+        self._run_scheduler_thread()
         self.gui = None
         self._check_which_files_are_audio()
         self.synth = SynthController()
@@ -131,6 +145,16 @@ class Orchestra:
             self.visualizer = liblo.Address(VISUALIZER_PORT)
         else:
             self.visualizer = None
+
+    def _run_scheduler_thread(self):
+        scheduler_thread = threading.Thread(target=self._process_scheduled_events)
+        scheduler_thread.daemon = True
+        scheduler_thread.start()
+
+    def _process_scheduled_events(self):
+        while True:
+            self.scheduler.run()
+            time.sleep(0.01)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -282,7 +306,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
-    def visualize(self, chunk, duration, pan, height):
+    def visualize(self, chunk, duration, fade_in, pan, height):
         if self.visualizer:
             file_info = self.tr_log.files[chunk["filenum"]]
             liblo.send(self.visualizer, "/chunk",
@@ -293,6 +317,7 @@ class Orchestra:
                        file_info["offset"],
                        file_info["length"],
                        duration,
+                       fade_in,
                        float(pan),
                        height)
 

@@ -17,7 +17,7 @@ MARGIN = 30
 BORDER_OPACITY = 0.7
 
 class Chunk:
-    def __init__(self, chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height, duration, arrival_time):
+    def __init__(self, chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height, duration, fade_in, arrival_time):
         self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
@@ -29,6 +29,7 @@ class Chunk:
         self.pan = pan
         self.height = height
         self.duration = duration
+        self.fade_in = fade_in
         self.arrival_time = arrival_time
 
     def append(self, other):
@@ -69,14 +70,14 @@ class Visualizer:
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum,
-         file_offset, file_length, duration, pan, height) = args
+         file_offset, file_length, duration, fade_in, pan, height) = args
         chunk = Chunk(chunk_id, torrent_position, byte_size, filenum,
-                      file_offset, file_length, pan, height, duration, time.time())
+                      file_offset, file_length, pan, height, duration, fade_in, time.time())
         self.add_chunk(chunk)
 
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiifff", self.handle_chunk_message)
+        self.server.add_method("/chunk", "iiiiiiffff", self.handle_chunk_message)
         server_thread = threading.Thread(target=self.serve_osc)
         server_thread.daemon = True
         server_thread.start()
