@@ -7,6 +7,8 @@ from collections import OrderedDict
 MIN_SOUNDING_DURATION = 0.1
 ARRIVAL_SIZE = 10
 INNER_MARGIN = 0.1
+GATHERED_HEIGHT = 20
+ARRIVAL_HEIGHT = 3
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -94,7 +96,7 @@ class Puzzle(Visualizer):
     def draw_travelling_chunk(self, chunk, f, y):
         actuality = 1 - chunk.age / chunk.fade_in
         y_offset = actuality * 10
-        height = 3 + actuality * 10
+        height = ARRIVAL_HEIGHT + (1-actuality) * (GATHERED_HEIGHT - ARRIVAL_HEIGHT)
         y1 = int(y + y_offset)
         y2 = int(y + y_offset + height)
         if chunk.pan < 0.5:
@@ -121,7 +123,7 @@ class Puzzle(Visualizer):
         self.draw_sitting_piece(chunk, f, y, opacity)
 
     def draw_sitting_piece(self, chunk, f, y, opacity):
-        height = 3
+        height = GATHERED_HEIGHT
         y1 = int(y)
         y2 = int(y + height)
         x1 = self.inner_margin_width + int(f.byte_to_coord(chunk.begin) * self.safe_width)
