@@ -100,10 +100,7 @@ class Puzzle(Visualizer):
         y = departure_y + (destination_y - departure_y) * relative_age
         y1 = int(y)
         y2 = int(y + height)
-        if chunk.pan < 0.5:
-            x1, x2 = self.position_from_left(chunk, relative_age, f)
-        else:
-            x1, x2 = self.position_from_right(chunk, relative_age, f)
+        x1, x2 = self.travel_position(chunk, relative_age, f)
         if x2 == x1:
             x2 = x1 + 1
         opacity = 0.2
@@ -139,18 +136,11 @@ class Puzzle(Visualizer):
         glVertex2i(x1, y1)
         glEnd()
 
-    def position_from_left(self, chunk, relative_age, f):
-        width = relative_age * ARRIVAL_SIZE
-        departure_x1 = -width
+    def travel_position(self, chunk, relative_age, f):
         destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
-        x1 = departure_x1 + relative_age * (destination_x1 - departure_x1)
-        x2 = x1 + width
-        return (int(x1), int(x2))
-
-    def position_from_right(self, chunk, relative_age, f):
-        width = relative_age * ARRIVAL_SIZE
-        departure_x1 = self.width
-        destination_x1 = self.inner_margin_width + f.byte_to_coord(chunk.begin) * self.safe_width
+        destination_x2 = self.inner_margin_width + f.byte_to_coord(chunk.end) * self.safe_width
+        departure_x1 = 0
+        width = destination_x2 - destination_x1
         x1 = departure_x1 + relative_age * (destination_x1 - departure_x1)
         x2 = x1 + width
         return (int(x1), int(x2))
