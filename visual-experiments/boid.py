@@ -33,20 +33,20 @@ class PVector:
 
 class Boid:
     def __init__(self, l, maxspeed, maxforce):
-        self.acc = PVector(0,0)
+        self.target = None
         self.vel = PVector(0,0)
         self.loc = copy.copy(l)
         self.maxspeed = maxspeed
         self.maxforce = maxforce
 
     def update(self):
-        self.vel = self.vel.add(self.acc)
+        acc = self.steer(self.target, True)
+        self.vel = self.vel.add(acc)
         self.vel.limit(self.maxspeed)
         self.loc = self.loc.add(self.vel)
-        self.acc.mult(0)
 
     def arrive(self, target):
-        self.acc = self.acc.add(self.steer(target, True))
+        self.target = target
 
     def steer(self, target, slowdown):
         desired = target.sub(self.loc)

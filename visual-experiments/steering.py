@@ -7,11 +7,11 @@ class Steering(Visualizer):
         Visualizer.__init__(self, args)
         self.boids = []
         boid = Boid(PVector(10, 10), 3.0, 3.0)
+        boid.arrive(PVector(400, 200))
         self.boids.append(boid)
 
     def render(self):
         for boid in self.boids:
-            boid.arrive(PVector(400, 200))
             boid.update()
             self.draw_boid(boid)
 
