@@ -27,7 +27,6 @@ parser.add_option("--predecode", action="store_true", dest="predecode", default=
 parser.add_option("--download-location", dest="download_location", default="../../Downloads")
 parser.add_option("--visualizer", dest="visualizer_enabled", action="store_true")
 parser.add_option("--loop", dest="loop", action="store_true")
-parser.add_option("--prebuffering", type=int, dest="prebuffering", default=0)
 (options, args) = parser.parse_args()
 
 if options.realtime:
@@ -61,8 +60,7 @@ orchestra = Orchestra(sessiondir,
                       predecoded=options.predecode,
                       file_location=options.download_location,
                       visualizer_enabled=options.visualizer_enabled,
-                      loop=options.loop,
-                      prebuffering=options.prebuffering)
+                      loop=options.loop)
 
 def process_chunks_from_queue():
     while True:

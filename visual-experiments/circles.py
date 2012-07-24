@@ -85,6 +85,7 @@ class Puzzle(Visualizer):
         for chunk in f.arriving_chunks.values():
             if not chunk.arrived:
                 if self.arrived(chunk):
+                    self.play_chunk(chunk)
                     chunk.arrived = True
                     chunk.playing = True
                     chunk.started_playing = self.now
@@ -122,6 +123,8 @@ class Puzzle(Visualizer):
         x2 = boid.loc.x + size
         y1 = boid.loc.y - size
         y2 = boid.loc.y + size
+        opacity = 0.3
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_POLYGON)
         glVertex2f(x1, y1)
         glVertex2f(x1, y2)

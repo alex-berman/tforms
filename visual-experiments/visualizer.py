@@ -17,19 +17,23 @@ MARGIN = 30
 BORDER_OPACITY = 0.7
 
 class Chunk:
-    def __init__(self, chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height, duration, fade_in, arrival_time):
+    def __init__(self, chunk_id, torrent_position, byte_size,
+                 filenum, file_offset, file_length, file_duration,
+                 start_time_in_file, end_time_in_file, pan, height, duration, arrival_time):
         self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
         self.filenum = filenum
         file_position = torrent_position - file_offset
         self.file_length = file_length
+        self.file_duration = file_duration
+        self.start_time_in_file = start_time_in_file
+        self.end_time_in_file = end_time_in_file
         self.begin = file_position
         self.end = file_position + byte_size
         self.pan = pan
         self.height = height
         self.duration = duration
-        self.fade_in = fade_in
         self.arrival_time = arrival_time
 
     def append(self, other):
@@ -48,7 +52,7 @@ class Visualizer:
         self.show_fps = args.show_fps
 
         self.first_frame = True
-        self.synth_controller = SynthController()
+        self.synth = SynthController()
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
@@ -71,15 +75,19 @@ class Visualizer:
         glutMainLoop()
 
     def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum,
-         file_offset, file_length, duration, fade_in, pan, height) = args
-        chunk = Chunk(chunk_id, torrent_position, byte_size, filenum,
-                      file_offset, file_length, pan, height, duration, fade_in, time.time())
+        (chunk_id, torrent_position, byte_size,
+         filenum, file_offset, file_length, file_duration, start_time_in_file, end_time_in_file,
+         duration, pan, height) = args
+        chunk = Chunk(
+            chunk_id, torrent_position, byte_size,
+            filenum, file_offset, file_length, file_duration,
+            start_time_in_file, end_time_in_file,
+            pan, height, duration, time.time())
         self.add_chunk(chunk)
 
     def setup_osc(self):
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiiffff", self.handle_chunk_message)
+        self.server.add_method("/chunk", "iiiiiiffffff", self.handle_chunk_message)
         server_thread = threading.Thread(target=self.serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -111,7 +119,7 @@ class Visualizer:
         self.now = time.time()
         if self.first_frame:
             if self.sync:
-                self.synth_controller.sync_beep()
+                self.synth.sync_beep()
             self.first_frame = False
         else:
             self.time_increment = self.now - self.previous_frame_time
@@ -156,6 +164,14 @@ class Visualizer:
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
             sys.exit()
+
+    def play_chunk(self, chunk):
+        self.synth.play_chunk(
+            chunk.filenum,
+            chunk.start_time_in_file / chunk.file_duration,
+            chunk.end_time_in_file / chunk.file_duration,
+            chunk.duration,
+            chunk.pan)
 
 
 def run(visualizer_class):
