@@ -61,7 +61,7 @@ class Puzzle(Visualizer):
     def draw_file(self, f):
         self.process_chunks(f)
         self.draw_gathered_chunks(f)
-        #self.draw_arriving_chunks(f)
+        self.draw_arriving_chunks(f)
 
     def process_chunks(self, f):
         for chunk in f.arriving_chunks.values():
@@ -84,6 +84,9 @@ class Puzzle(Visualizer):
         else:
             self.draw_sounding_chunk(chunk, f)
 
+    def draw_travelling_chunk(self, chunk, f):
+        pass
+
     def draw_completed_piece(self, chunk, f):
         opacity = 0.3
         self.draw_sitting_piece(chunk, f, opacity)
@@ -95,7 +98,7 @@ class Puzzle(Visualizer):
     def draw_sitting_piece(self, chunk, f, opacity):
         num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
         num_vertices = max(num_vertices, 2)
-        glLineWidth(2)
+        glLineWidth(4)
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_STRIP)
         for i in range(num_vertices):
