@@ -7,7 +7,6 @@ import math
 import random
 from boid import Boid, PVector
 
-MIN_SOUNDING_DURATION = 0.1
 CIRCLE_PRECISION = 10
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
@@ -39,13 +38,16 @@ class File:
         self.y = random.uniform(self.radius, visualizer.height - self.radius*2)
         
     def add_chunk(self, chunk):
-        chunk.duration = max(chunk.duration, MIN_SOUNDING_DURATION)
         chunk.boid = Boid(self.get_departure_position(chunk), 10.0, 3.0)
         chunk.arrival_position = self.get_arrival_position(chunk)
         chunk.boid.arrive(chunk.arrival_position)
         chunk.arrived = False
-        chunk.playing = False
         self.arriving_chunks[chunk.id] = chunk
+
+    def stopped_playing(self, chunk_id):
+        chunk = self.arriving_chunks[chunk_id]
+        del self.arriving_chunks[chunk_id]
+        self.gatherer.add(chunk)
 
     def get_departure_position(self, chunk):
         if chunk.pan < 0.5:
@@ -77,6 +79,9 @@ class Puzzle(Visualizer):
             self.files[chunk.filenum] = File(chunk.file_length, self)
         self.files[chunk.filenum].add_chunk(chunk)
 
+    def stopped_playing(self, chunk_id, filenum):
+        self.files[filenum].stopped_playing(chunk_id)
+
     def render(self):
         for f in self.files.values():
             self.process_chunks(f)
@@ -91,13 +96,6 @@ class Puzzle(Visualizer):
                 if self.arrived(chunk):
                     self.play_chunk(chunk)
                     chunk.arrived = True
-                    chunk.playing = True
-                    chunk.started_playing = self.now
-            if chunk.arrived:
-                if chunk.playing:
-                    if self.now - chunk.started_playing > chunk.duration:
-                        del f.arriving_chunks[chunk.id]
-                        f.gatherer.add(chunk)
 
     def arrived(self, chunk):
         distance = chunk.arrival_position.sub(chunk.boid.loc).mag()

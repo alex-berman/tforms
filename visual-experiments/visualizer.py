@@ -11,6 +11,7 @@ import collections
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
+from orchestra_controller import OrchestraController
 
 ESCAPE = '\033'
 MARGIN = 30
@@ -18,23 +19,19 @@ BORDER_OPACITY = 0.7
 
 class Chunk:
     def __init__(self, chunk_id, torrent_position, byte_size,
-                 filenum, file_offset, file_length, file_duration,
-                 start_time_in_file, end_time_in_file, pan, height, duration, arrival_time):
+                 filenum, file_offset, file_length, pan, height, arrival_time):
         self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
         self.filenum = filenum
-        file_position = torrent_position - file_offset
         self.file_length = file_length
-        self.file_duration = file_duration
-        self.start_time_in_file = start_time_in_file
-        self.end_time_in_file = end_time_in_file
+        file_position = torrent_position - file_offset
         self.begin = file_position
         self.end = file_position + byte_size
         self.pan = pan
         self.height = height
-        self.duration = duration
         self.arrival_time = arrival_time
+        self.playing = False
 
     def append(self, other):
         self.end = other.end
@@ -50,7 +47,7 @@ class Visualizer:
         self.width = args.width
         self.height = args.height
         self.show_fps = args.show_fps
-
+        self.lock = threading.Lock()
         self.first_frame = True
         self.synth = SynthController()
         if self.show_fps:
@@ -75,19 +72,26 @@ class Visualizer:
         glutMainLoop()
 
     def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size,
-         filenum, file_offset, file_length, file_duration, start_time_in_file, end_time_in_file,
-         duration, pan, height) = args
+        (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height) = args
         chunk = Chunk(
             chunk_id, torrent_position, byte_size,
-            filenum, file_offset, file_length, file_duration,
-            start_time_in_file, end_time_in_file,
-            pan, height, duration, time.time())
-        self.add_chunk(chunk)
+            filenum, file_offset, file_length, pan, height, time.time())
+        with self.lock:
+            self.add_chunk(chunk)
+
+    def handle_stopped_playing_message(self, path, args, types, src, data):
+        (chunk_id, filenum) = args
+        with self.lock:
+            self.stopped_playing(chunk_id, filenum)
+
+    def stopped_playing(self, chunk_id):
+        pass
 
     def setup_osc(self):
+        self.orchestra = OrchestraController()
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiiffffff", self.handle_chunk_message)
+        self.server.add_method("/chunk", "iiiiiiff", self.handle_chunk_message)
+        self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
         server_thread = threading.Thread(target=self.serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -123,7 +127,8 @@ class Visualizer:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
-            self.render()
+            with self.lock:
+                self.render()
             if self.show_fps:
                 self.update_fps_history()
                 self.show_fps_if_timely()
@@ -164,12 +169,8 @@ class Visualizer:
             sys.exit()
 
     def play_chunk(self, chunk):
-        self.synth.play_chunk(
-            chunk.filenum,
-            chunk.start_time_in_file / chunk.file_duration,
-            chunk.end_time_in_file / chunk.file_duration,
-            chunk.duration,
-            chunk.pan)
+        self.orchestra.play_chunk(chunk.id)
+        chunk.playing = True
 
 
 def run(visualizer_class):

@@ -7,18 +7,11 @@ import os
 import re
 import liblo
 import threading
+import sched
 from synth_controller import SynthController
 
+PORT = 51233
 VISUALIZER_PORT = 51234
-
-def clamp(value, mini, maxi):
-    if value < mini:
-        return mini
-    elif value > maxi:
-        return maxi
-    else:
-        return value
-
 
 class Player:
     def __init__(self, orchestra, _id, pan, height):
@@ -30,9 +23,20 @@ class Player:
         self.enabled = True
         self._previous_chunk_time = None
 
+    def dispatch(self, chunk, desired_time):
+        chunk["desired_time"] = desired_time
+        self.orchestra.visualize(chunk,
+                                 self.pan,
+                                 self.height)
+
     def play(self, chunk, desired_time=None):
+        if not desired_time:
+            if "desired_time" in chunk:
+                desired_time = chunk["desired_time"]
         if self.interpret_sonically(chunk, desired_time):
             self.orchestra.highlight_chunk(chunk)
+        else:
+            self.orchestra.stopped_playing(chunk)
 
     def interpret_sonically(self, chunk, desired_time):
         result = self.perform_sonic_interpretation(chunk, desired_time)
@@ -49,15 +53,11 @@ class Player:
 
 class WavPlayer(Player):
     def perform_sonic_interpretation(self, chunk, desired_time):
-        file_info = self.orchestra.tr_log.files[chunk["filenum"]]
-        if self._file_was_downloaded(file_info):
-            if self._previous_chunk_time:
-                self._schedule_to_play_chunk(chunk, desired_time, file_info)
-            return True
-        else:
-            self.logger.debug("skipping chunk in non-downloaded file")
+        if self._previous_chunk_time:
+            return self._play_chunk(chunk, desired_time)
 
-    def _schedule_to_play_chunk(self, chunk, desired_time, file_info):
+    def _play_chunk(self, chunk, desired_time):
+        file_info = self.orchestra.tr_log.files[chunk["filenum"]]
         filename = file_info["decoded_name"]
         start_time_in_file = self._bytecount_to_secs(chunk["begin"]-file_info["offset"], file_info)
         end_time_in_file = self._bytecount_to_secs(chunk["end"]-file_info["offset"], file_info)
@@ -79,23 +79,12 @@ class WavPlayer(Player):
         self.logger.debug("at %f, playing %s at position %fs with duration %fs, rate %f" % (
                 desired_time, filename, start_time_in_file, desired_duration, rate))
 
-        if self.orchestra.visualizer:
-            self.orchestra.visualize(chunk,
-                                     start_time_in_file,
-                                     end_time_in_file,
-                                     desired_duration,
-                                     self.pan,
-                                     self.height)
-        else:
-            self.orchestra.synth.play_chunk(
-                chunk["filenum"],
-                start_time_in_file / file_info["duration"],
-                end_time_in_file / file_info["duration"],
-                desired_duration,
-                float(self.pan))
-
-    def _file_was_downloaded(self, file_info):
-        return "decoded_name" in file_info
+        chunk["start_time_in_file"] = start_time_in_file
+        chunk["end_time_in_file"] = end_time_in_file
+        chunk["desired_duration"] = desired_duration
+        chunk["pan"] = self.pan
+        self.orchestra.play_chunk(chunk)
+        return True
 
 
 class Orchestra:
@@ -133,13 +122,45 @@ class Orchestra:
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
+        self._chunks_by_id = {}
         self._playing = False
+        self._quitting = False
         self.set_time_cursor(start_time)
+        self.scheduler = sched.scheduler(time.time, time.sleep)
+        self._run_scheduler_thread()
 
         if visualizer_enabled:
             self.visualizer = liblo.Address(VISUALIZER_PORT)
+            self._setup_osc()
         else:
             self.visualizer = None
+
+    def _run_scheduler_thread(self):
+        self._scheduler_thread = threading.Thread(target=self._process_scheduled_events)
+        self._scheduler_thread.daemon = True
+        self._scheduler_thread.start()
+
+    def _process_scheduled_events(self):
+        while not self._quitting:
+            self.scheduler.run()
+            time.sleep(0.01)
+
+    def _setup_osc(self):
+        self.server = liblo.Server(PORT)
+        self.server.add_method("/play", "i", self._handle_play_message)
+        server_thread = threading.Thread(target=self._serve_osc)
+        server_thread.daemon = True
+        server_thread.start()
+
+    def _serve_osc(self):
+        while True:
+            self.server.recv()
+
+    def _handle_play_message(self, path, args, types, src, data):
+        chunk_id = args[0]
+        chunk = self._chunks_by_id[chunk_id]
+        self.logger.debug("playing chunk %s" % chunk)
+        chunk["player"].play(chunk)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -199,6 +220,8 @@ class Orchestra:
                 self.set_time_cursor(0)
         else:
             self._play_until_end()
+            self.quitting = True
+            self._scheduler_thread.join()
         self.logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
@@ -257,15 +280,22 @@ class Orchestra:
         self.logger.debug("handling chunk %s" % chunk)
         chunk_start_time = chunk["t"]
         if self._chunk_is_audio(chunk):
-            self.play_chunk(chunk, chunk_start_time)
+            file_info = self.tr_log.files[chunk["filenum"]]
+            if self._file_was_downloaded(file_info):
+                self.dispatch_chunk(chunk, chunk_start_time)
+            else:
+                self.logger.debug("skipping chunk in non-downloaded file")
         else:
             self.logger.debug("skipping non-audio chunk")
+
+    def _file_was_downloaded(self, file_info):
+        return "decoded_name" in file_info
 
     def _chunk_is_audio(self, chunk):
         file_info = self.tr_log.files[chunk["filenum"]]
         return file_info["is_audio"]
 
-    def play_chunk(self, chunk, chunk_start_time):
+    def dispatch_chunk(self, chunk, chunk_start_time):
         now = self.get_current_log_time()
         time_margin = chunk_start_time - now
         self.logger.debug("time_margin=%f-%f=%f" % (chunk_start_time, now, time_margin))
@@ -279,8 +309,9 @@ class Orchestra:
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
-            self.logger.debug("playing chunk")
-            player.play(chunk, now)
+            self.logger.debug("dispatching chunk")
+            self._chunks_by_id[chunk["id"]] = chunk
+            player.dispatch(chunk, now)
             self._played_bytes += chunk_size
         self._total_bytes += chunk_size
         self.logger.debug("recall rate: %f (%d/%d)" % (
@@ -291,7 +322,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
-    def visualize(self, chunk, start_time_in_file, end_time_in_file, duration, pan, height):
+    def visualize(self, chunk, pan, height):
         file_info = self.tr_log.files[chunk["filenum"]]
         liblo.send(self.visualizer, "/chunk",
                    chunk["id"],
@@ -300,12 +331,25 @@ class Orchestra:
                    chunk["filenum"],
                    file_info["offset"],
                    file_info["length"],
-                   file_info["duration"],
-                   start_time_in_file,
-                   end_time_in_file,
-                   duration,
                    float(pan),
                    height)
+
+    def stopped_playing(self, chunk):
+        if self.visualizer:
+            liblo.send(self.visualizer, "/stopped_playing",
+                       chunk["id"], chunk["filenum"])
+
+    def play_chunk(self, chunk):
+        file_info = self.tr_log.files[chunk["filenum"]]
+        self.synth.play_chunk(
+            chunk["filenum"],
+            chunk["start_time_in_file"] / file_info["duration"],
+            chunk["end_time_in_file"] / file_info["duration"],
+            chunk["desired_duration"],
+            chunk["pan"])
+        self.scheduler.enter(
+            chunk["desired_duration"], 1,
+            self.stopped_playing, [chunk])
 
     def get_player_for_chunk(self, chunk):
         try:
