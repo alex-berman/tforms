@@ -11,6 +11,7 @@ MIN_SOUNDING_DURATION = 0.1
 CIRCLE_PRECISION = 10
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
+MAX_CHUNK_SIZE = 5.0 / 640
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -69,6 +70,7 @@ class Puzzle(Visualizer):
         Visualizer.InitGL(self)
         glEnable(GL_POINT_SMOOTH)
         glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+        glDisable(GL_BLEND)
 
     def add_chunk(self, chunk):
         if not chunk.filenum in self.files:
@@ -76,21 +78,16 @@ class Puzzle(Visualizer):
         self.files[chunk.filenum].add_chunk(chunk)
 
     def render(self):
-        if len(self.files) > 0:
-            self.draw_chunks()
-
-    def draw_chunks(self):
         for f in self.files.values():
-            self.draw_file(f)
-
-    def draw_file(self, f):
-        self.process_chunks(f)
-        self.draw_gathered_chunks(f)
-        self.draw_arriving_chunks(f)
+            self.process_chunks(f)
+        self.draw_gathered_chunks()
+        self.draw_arriving_chunks()
+        self.draw_sounding_chunks()
 
     def process_chunks(self, f):
         for chunk in f.arriving_chunks.values():
             if not chunk.arrived:
+                chunk.boid.update()
                 if self.arrived(chunk):
                     self.play_chunk(chunk)
                     chunk.arrived = True
@@ -106,30 +103,33 @@ class Puzzle(Visualizer):
         distance = chunk.arrival_position.sub(chunk.boid.loc).mag()
         return distance < 1.0
         
-    def draw_gathered_chunks(self, f):
-        for chunk in f.gatherer.pieces():
-            self.draw_completed_piece(chunk, f)
+    def draw_gathered_chunks(self):
+        for f in self.files.values():
+            for chunk in f.gatherer.pieces():
+                self.draw_completed_piece(chunk, f)
 
-    def draw_arriving_chunks(self, f):
-        for chunk in f.arriving_chunks.values():
-            self.draw_chunk(chunk, f)
+    def draw_arriving_chunks(self):
+        for f in self.files.values():
+            for chunk in f.arriving_chunks.values():
+                if not chunk.playing:
+                    self.draw_travelling_chunk(chunk, f)
 
-    def draw_chunk(self, chunk, f):
-        if chunk.playing:
-            self.draw_sounding_chunk(chunk, f)
-        else:
-            self.draw_travelling_chunk(chunk, f)
+    def draw_sounding_chunks(self):
+        for f in self.files.values():
+            for chunk in f.arriving_chunks.values():
+                if chunk.playing:
+                    self.draw_sounding_chunk(chunk, f)
 
     def draw_travelling_chunk(self, chunk, f):
-        chunk.boid.update()
         opacity = 0.3
         size = chunk.byte_size * CHUNK_SIZE_FACTOR * self.width
-        size = max(size, 1.0)
         self.draw_point(chunk.boid.loc.x,
                         chunk.boid.loc.y,
                         size, opacity)
 
     def draw_point(self, x, y, size, opacity):
+        size = min(size, MAX_CHUNK_SIZE * self.width)
+        size = max(size, 1.0)
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glPointSize(size)
         glBegin(GL_POINTS)

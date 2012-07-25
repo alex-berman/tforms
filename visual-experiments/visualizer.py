@@ -99,8 +99,6 @@ class Visualizer:
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
         glClearDepth(1.0)
-        glDepthFunc(GL_LESS)
-        glEnable(GL_DEPTH_TEST)
         glShadeModel(GL_SMOOTH)
 
     def ReSizeGLScene(self, _width, _height):
