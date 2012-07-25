@@ -1,6 +1,5 @@
 from visualizer import Visualizer, run
 from gatherer import Gatherer
-import time
 from OpenGL.GL import *
 from collections import OrderedDict
 import math
@@ -11,22 +10,6 @@ CIRCLE_PRECISION = 10
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
 MAX_CHUNK_SIZE = 5.0 / 640
-
-class Smoother:
-    RESPONSE_FACTOR = 5
-
-    def __init__(self):
-        self._current_value = None
-
-    def smooth(self, new_value, time_increment):
-        if self._current_value:
-            self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
-        else:
-            self._current_value = new_value
-
-    def value(self):
-        return self._current_value
 
 class File:
     def __init__(self, length, visualizer):
