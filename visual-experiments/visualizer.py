@@ -42,7 +42,8 @@ class Chunk:
         self.byte_size = self.end - self.begin
 
 class Visualizer:
-    def __init__(self, args):
+    def __init__(self, args, chunk_class=Chunk):
+        self.chunk_class = chunk_class
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
@@ -73,7 +74,7 @@ class Visualizer:
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height) = args
-        chunk = Chunk(
+        chunk = self.chunk_class(
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length, pan, height, time.time())
         with self.lock:

@@ -17,10 +17,13 @@ class Gatherer:
     def pieces(self):
         return self._pieces.values()
 
+    def piece(self, key):
+        return self._pieces[key]
+
     def _fit_piece_in_hole(self, new_piece):
-        appendable_piece_key = self._find_appendable_piece(new_piece)
+        appendable_piece_key = self.find_appendable_piece(new_piece)
         if appendable_piece_key:
-            prependable_piece_key = self._find_prependable_piece(new_piece)
+            prependable_piece_key = self.find_prependable_piece(new_piece)
             if prependable_piece_key:
                 prependable_piece = self._pieces[prependable_piece_key]
                 del self._pieces[prependable_piece_key]
@@ -29,23 +32,23 @@ class Gatherer:
                 return True
             
     def _append_piece(self, new_piece):
-        appendable_piece = self._find_appendable_piece(new_piece)
+        appendable_piece = self.find_appendable_piece(new_piece)
         if appendable_piece:
             self._pieces[appendable_piece].append(new_piece)
             return True
 
-    def _find_appendable_piece(self, new_piece):
+    def find_appendable_piece(self, new_piece):
         for key, piece in self._pieces.iteritems():
             if piece.end == new_piece.begin:
                 return key
 
     def _prepend_piece(self, new_piece):
-        prependable_piece = self._find_prependable_piece(new_piece)
+        prependable_piece = self.find_prependable_piece(new_piece)
         if prependable_piece:
             self._pieces[prependable_piece].prepend(new_piece)
             return True
 
-    def _find_prependable_piece(self, new_piece):
+    def find_prependable_piece(self, new_piece):
         for key, piece in self._pieces.iteritems():
             if piece.begin == new_piece.end:
                 return key
