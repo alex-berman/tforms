@@ -9,6 +9,8 @@ from boid import Boid, PVector
 
 MIN_SOUNDING_DURATION = 0.1
 CIRCLE_PRECISION = 10
+CHUNK_SIZE_FACTOR = 0.000001
+SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -63,6 +65,11 @@ class Puzzle(Visualizer):
         Visualizer.__init__(self, args)
         self.files = {}
 
+    def InitGL(self):
+        Visualizer.InitGL(self)
+        glEnable(GL_POINT_SMOOTH)
+        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+
     def add_chunk(self, chunk):
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.file_length, self)
@@ -115,22 +122,18 @@ class Puzzle(Visualizer):
 
     def draw_travelling_chunk(self, chunk, f):
         chunk.boid.update()
-        self.draw_boid(chunk.boid)
-
-    def draw_boid(self, boid):
-        size = 1
-        x1 = boid.loc.x - size
-        x2 = boid.loc.x + size
-        y1 = boid.loc.y - size
-        y2 = boid.loc.y + size
         opacity = 0.3
+        size = chunk.byte_size * CHUNK_SIZE_FACTOR * self.width
+        size = max(size, 1.0)
+        self.draw_point(chunk.boid.loc.x,
+                        chunk.boid.loc.y,
+                        size, opacity)
+
+    def draw_point(self, x, y, size, opacity):
         glColor3f(1-opacity, 1-opacity, 1-opacity)
-        glBegin(GL_POLYGON)
-        glVertex2f(x1, y1)
-        glVertex2f(x1, y2)
-        glVertex2f(x2, y2)
-        glVertex2f(x2, y1)
-        glVertex2f(x1, y1)
+        glPointSize(size)
+        glBegin(GL_POINTS)
+        glVertex2f(x, y)
         glEnd()
 
     def draw_completed_piece(self, chunk, f):
@@ -139,7 +142,10 @@ class Puzzle(Visualizer):
 
     def draw_sounding_chunk(self, chunk, f):
         opacity = 1
-        self.draw_sitting_piece(chunk, f, opacity)
+        size = chunk.byte_size * SOUNDING_CHUNK_SIZE_FACTOR * self.width
+        mid_byte = (chunk.begin + chunk.end) / 2
+        x, y = self.completion_position(chunk, mid_byte, f)
+        self.draw_point(x, y, size, opacity)
 
     def draw_sitting_piece(self, chunk, f, opacity):
         num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
@@ -149,10 +155,14 @@ class Puzzle(Visualizer):
         glBegin(GL_LINE_STRIP)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
-            angle = 2 * math.pi * byte_position / chunk.file_length
-            x = f.x + f.radius * math.cos(angle)
-            y = f.y + f.radius * math.sin(angle)
+            x, y = self.completion_position(chunk, byte_position, f)
             glVertex2f(x, y)
         glEnd()
+
+    def completion_position(self, chunk, byte_position, f):
+        angle = 2 * math.pi * byte_position / chunk.file_length
+        x = f.x + f.radius * math.cos(angle)
+        y = f.y + f.radius * math.sin(angle)
+        return x, y
 
 run(Puzzle)
