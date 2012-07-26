@@ -51,7 +51,10 @@ class File:
 
     def stopped_playing(self, chunk_id):
         chunk = self.arriving_chunks[chunk_id]
-        del self.arriving_chunks[chunk_id]
+        self.gather_chunk(chunk)
+
+    def gather_chunk(self, chunk):
+        del self.arriving_chunks[chunk.id]
         # TODO: verify that these positions are really OK
         chunk.begin_position = Vector(chunk.boid.loc.x, chunk.boid.loc.y)
         chunk.end_position = Vector(chunk.boid.loc.x, chunk.boid.loc.y)
@@ -154,7 +157,7 @@ class File:
         piece.end_force.limit(3.0)
 
     def desired_piece_length(self, piece):
-        return 100.0
+        return piece.byte_size / 10
 
     def consider_desired_length(self, piece, force, position, opposite_position):
         force += spring_force(position, opposite_position, piece.desired_length)
@@ -168,8 +171,9 @@ class File:
             if not chunk.arrived:
                 chunk.boid.update()
                 if self.arrived(chunk):
-                    self.visualizer.play_chunk(chunk)
+                    #self.visualizer.play_chunk(chunk) # TEMP
                     chunk.arrived = True
+                    self.gather_chunk(chunk) # TEMP
 
     def arrived(self, chunk):
         if chunk.target_type in [TargetType.PIECE,
@@ -179,7 +183,7 @@ class File:
         else:
             return False
 
-class ForcedDirectedForms(visualizer.Visualizer):
+class ForceDirectedForms(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, Chunk)
         self.files = {}
@@ -255,4 +259,5 @@ class ForcedDirectedForms(visualizer.Visualizer):
                         chunk.target_position.y,
                         size, opacity)
 
-visualizer.run(ForcedDirectedForms)
+if __name__ == '__main__':
+    visualizer.run(ForceDirectedForms)
