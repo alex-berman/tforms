@@ -1,0 +1,145 @@
+import visualizer
+from gatherer import Gatherer
+from OpenGL.GL import *
+from collections import OrderedDict
+from vector import Vector
+import copy
+import math
+import random
+from springs import spring_force
+
+CHUNK_SIZE_FACTOR = 0.000001
+MAX_CHUNK_SIZE = 5.0 / 640
+INNER_MARGIN = 20.0 / 640
+
+class Joint:
+    def __init__(self, chunk, byte_position, neighbour_type):
+        self.chunk = chunk
+        self.byte_position = byte_position
+        self.neighbour_type = neighbour_type
+        self.neighbour_joint = self.find_neighbour_joint()
+
+    def find_neighbour_joint(self):
+        joint = self.find_neighbour_joint_among_chunks(
+            self.chunk.file.arriving_chunks.values())
+        if joint:
+            return joint
+        else:
+            return self.find_neighbour_joint_among_chunks(
+                self.chunk.file.gatherer.pieces())
+
+    def find_neighbour_joint_among_chunks(self, chunks):
+        for chunk in chunks:
+            if chunk != self.chunk:
+                joint = chunk.joints[self.neighbour_type]
+                if joint.byte_position == self.byte_position:
+                    return joint
+
+class Chunk(visualizer.Chunk):
+    def setup(self):
+        self.joints = {"begin": Joint(self, self.begin, "end"),
+                       "end":   Joint(self, self.end, "begin")}
+        self.position = self.get_departure_position()
+        self.angle = random.uniform(0, 2*math.pi)
+
+    def get_departure_position(self):
+        if self.pan < 0.5:
+            x = 0
+        else:
+            x = self.visualizer.width
+        y = self.height * self.visualizer.height
+        return Vector(x, y)
+
+    def update(self):
+        self.force = Vector(0,0)
+        self.attract_to_neighbours()
+        self.force.limit(3.0)
+        self.position += self.force
+
+    def attract_to_neighbours(self):
+        for joint in self.joints.values():
+            if joint.neighbour_joint:
+                self.force += spring_force(self.position,
+                                           joint.neighbour_joint.chunk.position,
+                                           1.0)
+
+class File:
+    def __init__(self, length, visualizer):
+        self.visualizer = visualizer
+        self.arriving_chunks = OrderedDict()
+        self.gatherer = Gatherer()
+        
+    def add_chunk(self, chunk):
+        self.arriving_chunks[chunk.id] = chunk
+        chunk.setup()
+        # TEMP: place first chunk in the middle
+        if len(self.gatherer.pieces()) == 0:
+            chunk.position = Vector(320.0, 240.0)
+            del self.arriving_chunks[chunk.id]
+            self.gatherer.add(chunk)
+
+    def update(self):
+        self.update_arriving_chunks()
+
+    def update_arriving_chunks(self):
+        for chunk in self.arriving_chunks.values():
+            chunk.update()
+
+class Joints(visualizer.Visualizer):
+    def __init__(self, args):
+        visualizer.Visualizer.__init__(self, args, Chunk)
+        self.inner_margin = self.width * INNER_MARGIN
+        self.files = {}
+
+    def InitGL(self):
+        visualizer.Visualizer.InitGL(self)
+        glEnable(GL_POINT_SMOOTH)
+        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+        glDisable(GL_BLEND)
+
+    def add_chunk(self, chunk):
+        try:
+            f = self.files[chunk.filenum]
+        except KeyError:
+            f = File(chunk.file_length, self)
+            self.files[chunk.filenum] = f
+        chunk.file = f
+        self.files[chunk.filenum].add_chunk(chunk)
+
+    def stopped_playing(self, chunk_id, filenum):
+        self.files[filenum].stopped_playing(chunk_id)
+
+    def render(self):
+        for f in self.files.values():
+            f.update()
+        self.draw_gathered_chunks()
+        self.draw_arriving_chunks()
+
+    def draw_gathered_chunks(self):
+        for f in self.files.values():
+            for chunk in f.gatherer.pieces():
+                self.draw_chunk(chunk, f)
+
+    def draw_arriving_chunks(self):
+        for f in self.files.values():
+            for chunk in f.arriving_chunks.values():
+                self.draw_chunk(chunk, f)
+
+    def draw_chunk(self, chunk, f):
+        opacity = 0.5
+        size = chunk.byte_size * CHUNK_SIZE_FACTOR * self.width
+        self.draw_point(chunk.position.x,
+                        chunk.position.y,
+                        size, opacity)
+
+    def draw_point(self, x, y, size, opacity):
+        size = min(size, MAX_CHUNK_SIZE * self.width)
+        size = max(size, 1.0)
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glPointSize(size)
+        glBegin(GL_POINTS)
+        glVertex2f(x, y)
+        glEnd()
+
+if __name__ == '__main__':
+    visualizer.run(Particles)
