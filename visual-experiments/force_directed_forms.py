@@ -7,6 +7,7 @@ from vector import Vector
 import copy
 import math
 import random
+from springs import spring_force
 
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
@@ -139,17 +140,28 @@ class File:
 
     def update_pieces(self):
         for piece in self.gatherer.pieces():
-            self.update_piece(piece)
+            self.get_piece_force(piece)
+        for piece in self.gatherer.pieces():
+            self.apply_piece_force(piece)
 
-    def update_piece(self, piece):
-        return
+    def get_piece_force(self, piece):
         piece.desired_length = self.desired_piece_length(piece)
-        piece.force = Vector(0, 0)
-        self.update_piece_position(piece, piece.begin_position, piece.end_position)
-        self.update_piece_position(piece, piece.end_position, piece.begin_position)
+        piece.begin_force = Vector(0,0)
+        piece.end_force = Vector(0,0)
+        self.consider_desired_length(piece, piece.begin_force, piece.begin_position, piece.end_position)
+        self.consider_desired_length(piece, piece.end_force, piece.end_position, piece.begin_position)
+        piece.begin_force.limit(3.0)
+        piece.end_force.limit(3.0)
 
-    def update_piece_position(self, piece, position, opposite_position):
-        piece.force += self.spring_force(position, opposite_position, piece.desired_length)
+    def desired_piece_length(self, piece):
+        return 100.0
+
+    def consider_desired_length(self, piece, force, position, opposite_position):
+        force += spring_force(position, opposite_position, piece.desired_length)
+
+    def apply_piece_force(self, piece):
+        piece.begin_position += piece.begin_force
+        piece.end_position += piece.end_force
 
     def update_arriving_chunks(self):
         for chunk in self.arriving_chunks.values():
