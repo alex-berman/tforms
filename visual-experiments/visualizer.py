@@ -19,7 +19,7 @@ BORDER_OPACITY = 0.7
 
 class Chunk:
     def __init__(self, chunk_id, torrent_position, byte_size,
-                 filenum, file_offset, file_length, pan, height, arrival_time):
+                 filenum, file_offset, file_length, pan, height, arrival_time, visualizer):
         self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
@@ -31,6 +31,7 @@ class Chunk:
         self.pan = pan
         self.height = height
         self.arrival_time = arrival_time
+        self.visualizer = visualizer
         self.playing = False
 
     def append(self, other):
@@ -76,7 +77,7 @@ class Visualizer:
         (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height) = args
         chunk = self.chunk_class(
             chunk_id, torrent_position, byte_size,
-            filenum, file_offset, file_length, pan, height, time.time())
+            filenum, file_offset, file_length, pan, height, time.time(), self)
         with self.lock:
             self.add_chunk(chunk)
 
