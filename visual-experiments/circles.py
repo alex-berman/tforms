@@ -4,7 +4,8 @@ from OpenGL.GL import *
 from collections import OrderedDict
 import math
 import random
-from boid import Boid, PVector
+from boid import Boid
+from vector import Vector
 
 CIRCLE_PRECISION = 10
 CHUNK_SIZE_FACTOR = 0.000001
@@ -38,13 +39,13 @@ class File:
         else:
             x = self.visualizer.width
         y = chunk.height * self.visualizer.height
-        return PVector(x, y)
+        return Vector(x, y)
 
     def get_arrival_position(self, chunk):
         angle = 2 * math.pi * chunk.begin / chunk.file_length
         x = self.x + self.radius * math.cos(angle)
         y = self.y + self.radius * math.sin(angle)
-        return PVector(x, y)
+        return Vector(x, y)
         
 class Puzzle(Visualizer):
     def __init__(self, args):
@@ -81,7 +82,7 @@ class Puzzle(Visualizer):
                     chunk.arrived = True
 
     def arrived(self, chunk):
-        distance = chunk.arrival_position.sub(chunk.boid.loc).mag()
+        distance = (chunk.arrival_position - chunk.boid.loc).mag()
         return distance < 1.0
         
     def draw_gathered_chunks(self):

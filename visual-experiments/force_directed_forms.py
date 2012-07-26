@@ -2,7 +2,8 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from boid import Boid, PVector
+from boid import Boid
+from vector import Vector
 import copy
 import math
 import random
@@ -11,6 +12,9 @@ CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
 MAX_CHUNK_SIZE = 5.0 / 640
 INNER_MARGIN = 20.0 / 640
+
+class TargetType:
+    (PIECE, CHUNK, NEW_PIECE) = range(3)
 
 class Chunk(visualizer.Chunk):
     def append(self, other):
@@ -24,9 +28,9 @@ class Chunk(visualizer.Chunk):
     def move_randomly(self, position):
         angle = random.uniform(0, 2 * math.pi)
         distance = 1.0
-        movement = PVector(distance * math.cos(angle),
-                           distance * math.sin(angle))
-        self.end_position = self.end_position.add(movement)
+        movement = Vector(distance * math.cos(angle),
+                          distance * math.sin(angle))
+        self.end_position += movement
 
 class File:
     def __init__(self, length, visualizer):
@@ -36,7 +40,8 @@ class File:
         
     def add_chunk(self, chunk):
         chunk.boid = Boid(self.get_departure_position(chunk), 10.0, 3.0)
-        chunk.targeting_piece = False
+        chunk.target = None
+        chunk.target_type = None
         chunk.target_position = None
         chunk.target_position = self.get_target_position(chunk)
         chunk.boid.arrive(chunk.target_position)
@@ -47,8 +52,8 @@ class File:
         chunk = self.arriving_chunks[chunk_id]
         del self.arriving_chunks[chunk_id]
         # TODO: verify that these positions are really OK
-        chunk.begin_position = PVector(chunk.boid.loc.x, chunk.boid.loc.y)
-        chunk.end_position = PVector(chunk.boid.loc.x, chunk.boid.loc.y)
+        chunk.begin_position = Vector(chunk.boid.loc.x, chunk.boid.loc.y)
+        chunk.end_position = Vector(chunk.boid.loc.x, chunk.boid.loc.y)
         self.gatherer.add(chunk)
         self.reorient_chunks_following(chunk)
 
@@ -58,7 +63,7 @@ class File:
         else:
             x = self.visualizer.width
         y = chunk.height * self.visualizer.height
-        return PVector(x, y)
+        return Vector(x, y)
 
     def get_target_position(self, chunk):
         if not chunk.target_position:
@@ -68,27 +73,29 @@ class File:
     def find_target(self, chunk):
         position = self.find_joinable_piece(chunk)
         if position:
-            chunk.targeting_piece = True
+            chunk.target_type = TargetType.PIECE
             chunk.target_position = position
             return
 
-        position = self.find_other_huntable_chunk(chunk)
-        if position:
-            chunk.target_position = position
+        other_chunk = self.find_other_huntable_chunk(chunk)
+        if other_chunk:
+            chunk.target_type = TargetType.CHUNK
+            chunk.target = other_chunk
+            chunk.target_position = other_chunk.boid.loc
             return
 
         if len(self.gatherer.pieces()) > 0:
             chunk.target_position = self.close_to_existing_piece()
             return
 
-        chunk.targeting_piece = True
+        chunk.target_type = TargetType.NEW_PIECE
         chunk.target_position = self.anywhere()
 
     def anywhere(self):
-        return PVector(random.uniform(self.visualizer.width * INNER_MARGIN,
-                                      self.visualizer.width * (1 - INNER_MARGIN*2)),
-                       random.uniform(self.visualizer.height * INNER_MARGIN,
-                                      self.visualizer.height * (1 - INNER_MARGIN*2)))
+        return Vector(random.uniform(self.visualizer.width * INNER_MARGIN,
+                                     self.visualizer.width * (1 - INNER_MARGIN*2)),
+                      random.uniform(self.visualizer.height * INNER_MARGIN,
+                                     self.visualizer.height * (1 - INNER_MARGIN*2)))
 
     def close_to_existing_piece(self):
         piece = random.choice(self.gatherer.pieces())
@@ -96,9 +103,9 @@ class File:
                                   piece.end_position])
         angle = random.uniform(0, 2 * math.pi)
         distance = 1.0
-        movement = PVector(distance * math.cos(angle),
-                           distance * math.sin(angle))
-        return position.add(movement)
+        movement = Vector(distance * math.cos(angle),
+                          distance * math.sin(angle))
+        return position + movement
 
     def find_joinable_piece(self, chunk):
         appendable_piece_key = self.gatherer.find_appendable_piece(chunk)
@@ -106,8 +113,7 @@ class File:
         if appendable_piece_key and prependable_piece_key:
             appendable_position = self.gatherer.piece(appendable_piece_key).begin_position
             prepandable_position = self.gatherer.piece(prependable_piece_key).end_position
-            chunk.target_position = appendable_position.add(prepandable_position)
-            chunk.target_position.mult(0.5)
+            chunk.target_position = (appendable_position + prepandable_position) / 2
         elif appendable_piece_key:
             return self.gatherer.piece(appendable_piece_key).begin_position
         elif prependable_piece_key:
@@ -117,14 +123,49 @@ class File:
         # optimization: iterate appendables in reverse order, or use some kind of cache
         for other in self.arriving_chunks.values():
             if other.end == chunk.begin:
-                return other.boid.loc
+                return other
             if other.begin == chunk.end:
-                return other.boid.loc
+                return other
 
     def reorient_chunks_following(self, targeted_chunk):
         for chunk in self.arriving_chunks.values():
-            if chunk.target_position == targeted_chunk.boid.loc:
-                chunk.find_target()
+            if chunk.target_type == TargetType.CHUNK and \
+                    chunk.target == targeted_chunk:
+                self.find_target(chunk)
+
+    def update(self):
+        self.update_pieces()
+        self.update_arriving_chunks()
+
+    def update_pieces(self):
+        for piece in self.gatherer.pieces():
+            self.update_piece(piece)
+
+    def update_piece(self, piece):
+        return
+        piece.desired_length = self.desired_piece_length(piece)
+        piece.force = Vector(0, 0)
+        self.update_piece_position(piece, piece.begin_position, piece.end_position)
+        self.update_piece_position(piece, piece.end_position, piece.begin_position)
+
+    def update_piece_position(self, piece, position, opposite_position):
+        piece.force += self.spring_force(position, opposite_position, piece.desired_length)
+
+    def update_arriving_chunks(self):
+        for chunk in self.arriving_chunks.values():
+            if not chunk.arrived:
+                chunk.boid.update()
+                if self.arrived(chunk):
+                    self.visualizer.play_chunk(chunk)
+                    chunk.arrived = True
+
+    def arrived(self, chunk):
+        if chunk.target_type in [TargetType.PIECE,
+                                 TargetType.NEW_PIECE]:
+            distance = (chunk.target_position - chunk.boid.loc).mag()
+            return distance < 1.0
+        else:
+            return False
 
 class ForcedDirectedForms(visualizer.Visualizer):
     def __init__(self, args):
@@ -147,25 +188,10 @@ class ForcedDirectedForms(visualizer.Visualizer):
 
     def render(self):
         for f in self.files.values():
-            self.process_chunks(f)
+            f.update()
         self.draw_gathered_chunks()
         self.draw_arriving_chunks()
         self.draw_sounding_chunks()
-
-    def process_chunks(self, f):
-        for chunk in f.arriving_chunks.values():
-            if not chunk.arrived:
-                chunk.boid.update()
-                if self.arrived(chunk):
-                    self.play_chunk(chunk)
-                    chunk.arrived = True
-
-    def arrived(self, chunk):
-        if chunk.targeting_piece:
-            distance = chunk.target_position.sub(chunk.boid.loc).mag()
-            return distance < 1.0
-        else:
-            return False
         
     def draw_gathered_chunks(self):
         for f in self.files.values():
