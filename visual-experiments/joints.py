@@ -7,6 +7,7 @@ import copy
 import math
 import random
 from springs import spring_force
+from bezier import make_bezier
 
 JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
@@ -67,6 +68,7 @@ class Chunk(visualizer.Chunk):
         self.position = self.get_departure_position()
         self.joints = {"begin": Joint(self, self.begin, "end", -1),
                        "end":   Joint(self, self.end, "begin", 1)}
+        self.mid_points = []
         self.begin_position = self.joints["begin"].position
         self.end_position = self.joints["end"].position
         self.has_arrived = False
@@ -100,7 +102,7 @@ class Chunk(visualizer.Chunk):
         self.position += self.force
         for joint in self.joints.values():
             joint.reposition()
-        self.angle = self.move_angle_towards(self.angle, self.force.angle(), 0.2)
+        self.angle = self.move_angle_towards(self.angle, self.force.angle(), 0.05)
 
     def move_angle_towards(self, angle, target, amount):
         return self.clamp_angle(angle + self.subtract_angle(target, angle) * amount)
@@ -133,16 +135,21 @@ class Chunk(visualizer.Chunk):
                 return True
 
     def append(self, other):
+        self.mid_points.append(copy.copy(self.end_position))
         visualizer.Chunk.append(self, other)
         self.joints["end"].position.set(other.joints["end"].position)
 
     def prepend(self, other):
+        self.mid_points.append(copy.copy(self.begin_position))
         visualizer.Chunk.append(self, other)
         self.joints["begin"].position.set(other.joints["begin"].position)
 
     def draw(self):
         self.draw_joints()
-        self.draw_line()
+        if len(self.mid_points) > 0:
+            self.draw_curve()
+        else:
+            self.draw_line()
 
     def draw_joints(self):
         opacity = 1.0
@@ -171,6 +178,20 @@ class Chunk(visualizer.Chunk):
         glVertex2f(self.end_position.x, self.end_position.y)
         glEnd()
 
+    def draw_curve(self):
+        points = [self.begin_position]
+        points.extend(self.mid_points)
+        points.append(self.end_position)
+        bezier = make_bezier([(p.x, p.y) for p in points])
+        points = bezier([t/10.0 for t in range(11)])
+        opacity = 0.5
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glLineWidth(2.0)
+        glBegin(GL_LINE_STRIP)
+        for x,y in points:
+            glVertex2f(x, y)
+        glEnd()
+        
 class File:
     def __init__(self, length, visualizer):
         self.visualizer = visualizer
