@@ -55,3 +55,9 @@ class Vector:
 
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.x, self.y)
+
+class DirectionalVector(Vector):
+    def __init__(self, angle, magnitude):
+        Vector.__init__(self,
+                        math.cos(angle) * magnitude,
+                        math.sin(angle) * magnitude)

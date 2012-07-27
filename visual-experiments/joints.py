@@ -2,14 +2,13 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector
+from vector import Vector, DirectionalVector
 import copy
 import math
 import random
 from springs import spring_force
 
-CHUNK_SIZE_FACTOR = 0.000001
-MAX_CHUNK_SIZE = 5.0 / 640
+JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
 
 class Joint:
@@ -41,6 +40,7 @@ class Chunk(visualizer.Chunk):
                        "end":   Joint(self, self.end, "begin")}
         self.position = self.get_departure_position()
         self.angle = random.uniform(0, 2*math.pi)
+        self.length = 7.0 # TEMP
 
     def get_departure_position(self):
         if self.pan < 0.5:
@@ -62,6 +62,39 @@ class Chunk(visualizer.Chunk):
                 self.force += spring_force(self.position,
                                            joint.neighbour_joint.chunk.position,
                                            1.0)
+
+    def draw(self):
+        self.begin_position = self.position - DirectionalVector(self.angle, self.length/2)
+        self.end_position = self.position + DirectionalVector(self.angle, self.length/2)
+        self.draw_joints()
+        self.draw_line()
+
+    def draw_joints(self):
+        opacity = 1.0
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        self.draw_joint(self.begin_position)
+        self.draw_joint(self.end_position)
+
+    def draw_joint(self, position):
+        size = JOINT_SIZE * self.visualizer.width
+        self.draw_point(position.x,
+                        position.y,
+                        size)
+
+    def draw_point(self, x, y, size):
+        glPointSize(size)
+        glBegin(GL_POINTS)
+        glVertex2f(x, y)
+        glEnd()
+
+    def draw_line(self):
+        opacity = 0.5
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glLineWidth(2.0)
+        glBegin(GL_LINES)
+        glVertex2f(self.begin_position.x, self.begin_position.y)
+        glVertex2f(self.end_position.x, self.end_position.y)
+        glEnd()
 
 class File:
     def __init__(self, length, visualizer):
@@ -118,28 +151,12 @@ class Joints(visualizer.Visualizer):
     def draw_gathered_chunks(self):
         for f in self.files.values():
             for chunk in f.gatherer.pieces():
-                self.draw_chunk(chunk, f)
+                chunk.draw()
 
     def draw_arriving_chunks(self):
         for f in self.files.values():
             for chunk in f.arriving_chunks.values():
-                self.draw_chunk(chunk, f)
-
-    def draw_chunk(self, chunk, f):
-        opacity = 0.5
-        size = chunk.byte_size * CHUNK_SIZE_FACTOR * self.width
-        self.draw_point(chunk.position.x,
-                        chunk.position.y,
-                        size, opacity)
-
-    def draw_point(self, x, y, size, opacity):
-        size = min(size, MAX_CHUNK_SIZE * self.width)
-        size = max(size, 1.0)
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
-        glPointSize(size)
-        glBegin(GL_POINTS)
-        glVertex2f(x, y)
-        glEnd()
+                chunk.draw()
 
 if __name__ == '__main__':
     visualizer.run(Particles)

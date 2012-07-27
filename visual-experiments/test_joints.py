@@ -32,7 +32,7 @@ def add_chunk(filenum, begin, end):
     visualizer.add_chunk(chunk)
     
 sleep(1); add_chunk(0, 1000, 2000)
-sleep(2); add_chunk(0, 2000, 3000)
+sleep(1); add_chunk(0, 2000, 3000)
 sleep(0.1); add_chunk(0, 3000, 4000)
 sleep(0.1); add_chunk(0, 4000, 5000)
 
