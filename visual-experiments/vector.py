@@ -57,6 +57,9 @@ class Vector:
         self.x = other.x
         self.y = other.y
 
+    def angle(self):
+        return math.atan2(self.y, self.x)
+
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.x, self.y)
 

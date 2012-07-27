@@ -36,4 +36,4 @@ sleep(1); add_chunk(0, 2000, 3000)
 sleep(0.1); add_chunk(0, 3000, 4000)
 sleep(0.1); add_chunk(0, 4000, 5000)
 
-sleep(2); add_chunk(0, 10000, 11000)
+#sleep(2); add_chunk(0, 10000, 11000)

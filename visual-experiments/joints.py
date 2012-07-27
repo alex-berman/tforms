@@ -45,7 +45,7 @@ class Joint:
 
 class Chunk(visualizer.Chunk):
     def setup(self):
-        self.length = 7.0 # TEMP
+        self.length = 15.0 # TEMP
         self.angle = random.uniform(0, 2*math.pi)
         self.position = self.get_departure_position()
         self.joints = {"begin": Joint(self, self.begin, "end", -1),
@@ -64,16 +64,18 @@ class Chunk(visualizer.Chunk):
     def update(self):
         self.force = Vector(0,0)
         self.attract_to_neighbours()
-        self.force.limit(3.0)
-        self.position += self.force
-        for joint in self.joints.values():
-            joint.reposition()
+        if self.force.mag() > 0.1:
+            self.force.limit(3.0)
+            self.position += self.force
+            self.angle += (self.force.angle() - self.angle) * 0.5
+            for joint in self.joints.values():
+                joint.reposition()
 
     def attract_to_neighbours(self):
         for joint in self.joints.values():
             if joint.neighbour_joint:
-                self.force += spring_force(self.position,
-                                           joint.neighbour_joint.chunk.position,
+                self.force += spring_force(joint.position,
+                                           joint.neighbour_joint.position,
                                            1.0) * 0.1
 
     def draw(self):
