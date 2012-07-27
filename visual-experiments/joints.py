@@ -17,18 +17,20 @@ class Joint:
         self.byte_position = byte_position
         self.neighbour_type = neighbour_type
         self.direction = direction
-        self.neighbour_joint = self.find_neighbour_joint()
+        self.target_position = self.find_target_position()
         self.position = Vector(0,0)
         self.reposition()
 
-    def find_neighbour_joint(self):
+    def find_target_position(self):
         joint = self.find_neighbour_joint_among_chunks(
             self.chunk.file.arriving_chunks.values())
         if joint:
-            return joint
-        else:
-            return self.find_neighbour_joint_among_chunks(
-                self.chunk.file.gatherer.pieces())
+            return joint.position
+
+        joint = self.find_neighbour_joint_among_chunks(
+            self.chunk.file.gatherer.pieces())
+        if joint:
+            return joint.position
 
     def find_neighbour_joint_among_chunks(self, chunks):
         for chunk in chunks:
@@ -43,8 +45,8 @@ class Joint:
                                             self.chunk.length/2) * self.direction)
 
     def arrived(self):
-        if self.neighbour_joint:
-            distance = (self.neighbour_joint.position - self.position).mag()
+        if self.target_position:
+            distance = (self.target_position - self.position).mag()
             return distance < 2.0
 
 class Chunk(visualizer.Chunk):
@@ -56,6 +58,18 @@ class Chunk(visualizer.Chunk):
                        "end":   Joint(self, self.end, "begin", 1)}
         self.begin_position = self.joints["begin"].position
         self.end_position = self.joints["end"].position
+        if not self.has_target():
+            self.pick_random_target()
+
+    def has_target(self):
+        for joint in self.joints.values():
+            if joint.target_position:
+                return True
+
+    def pick_random_target(self):
+        self.joints["begin"].target_position = Vector(
+            random.uniform(0, self.visualizer.width),
+            random.uniform(0, self.visualizer.height))
 
     def get_departure_position(self):
         if self.pan < 0.5:
@@ -77,9 +91,9 @@ class Chunk(visualizer.Chunk):
 
     def attract_to_neighbours(self):
         for joint in self.joints.values():
-            if joint.neighbour_joint:
+            if joint.target_position:
                 self.force += spring_force(joint.position,
-                                           joint.neighbour_joint.position,
+                                           joint.target_position,
                                            1.0) * 0.1
 
     def arrived(self):
@@ -135,13 +149,6 @@ class File:
     def add_chunk(self, chunk):
         self.arriving_chunks[chunk.id] = chunk
         chunk.setup()
-        # TEMP: place first chunk in the middle
-        if len(self.gatherer.pieces()) == 0:
-            chunk.position = Vector(320.0, 240.0)
-            for joint in chunk.joints.values():
-                joint.reposition()
-            del self.arriving_chunks[chunk.id]
-            self.gatherer.add(chunk)
 
     def update(self):
         self.update_arriving_chunks()
