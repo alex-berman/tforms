@@ -53,6 +53,10 @@ class Vector:
         if m > desired_magnitude:
             self *= desired_magnitude / m
 
+    def set(self, other):
+        self.x = other.x
+        self.y = other.y
+
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.x, self.y)
 

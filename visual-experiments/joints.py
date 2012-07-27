@@ -12,11 +12,14 @@ JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
 
 class Joint:
-    def __init__(self, chunk, byte_position, neighbour_type):
+    def __init__(self, chunk, byte_position, neighbour_type, direction):
         self.chunk = chunk
         self.byte_position = byte_position
         self.neighbour_type = neighbour_type
+        self.direction = direction
         self.neighbour_joint = self.find_neighbour_joint()
+        self.position = Vector(0,0)
+        self.reposition()
 
     def find_neighbour_joint(self):
         joint = self.find_neighbour_joint_among_chunks(
@@ -34,13 +37,21 @@ class Joint:
                 if joint.byte_position == self.byte_position:
                     return joint
 
+    def reposition(self):
+        self.position.set(self.chunk.position +
+                          DirectionalVector(self.chunk.angle,
+                                            self.chunk.length/2) * self.direction)
+
+
 class Chunk(visualizer.Chunk):
     def setup(self):
-        self.joints = {"begin": Joint(self, self.begin, "end"),
-                       "end":   Joint(self, self.end, "begin")}
-        self.position = self.get_departure_position()
-        self.angle = random.uniform(0, 2*math.pi)
         self.length = 7.0 # TEMP
+        self.angle = random.uniform(0, 2*math.pi)
+        self.position = self.get_departure_position()
+        self.joints = {"begin": Joint(self, self.begin, "end", -1),
+                       "end":   Joint(self, self.end, "begin", 1)}
+        self.begin_position = self.joints["begin"].position
+        self.end_position = self.joints["end"].position
 
     def get_departure_position(self):
         if self.pan < 0.5:
@@ -55,17 +66,17 @@ class Chunk(visualizer.Chunk):
         self.attract_to_neighbours()
         self.force.limit(3.0)
         self.position += self.force
+        for joint in self.joints.values():
+            joint.reposition()
 
     def attract_to_neighbours(self):
         for joint in self.joints.values():
             if joint.neighbour_joint:
                 self.force += spring_force(self.position,
                                            joint.neighbour_joint.chunk.position,
-                                           1.0)
+                                           1.0) * 0.1
 
     def draw(self):
-        self.begin_position = self.position - DirectionalVector(self.angle, self.length/2)
-        self.end_position = self.position + DirectionalVector(self.angle, self.length/2)
         self.draw_joints()
         self.draw_line()
 
@@ -108,6 +119,8 @@ class File:
         # TEMP: place first chunk in the middle
         if len(self.gatherer.pieces()) == 0:
             chunk.position = Vector(320.0, 240.0)
+            for joint in chunk.joints.values():
+                joint.reposition()
             del self.arriving_chunks[chunk.id]
             self.gatherer.add(chunk)
 
