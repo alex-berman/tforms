@@ -10,6 +10,7 @@ from springs import spring_force
 
 JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
+OUTER_MARGIN = 40
 
 class JointPosition(Vector):
     def __init__(self, joint):
@@ -79,32 +80,52 @@ class Chunk(visualizer.Chunk):
 
     def pick_random_target(self):
         self.joints["begin"].target_position = Vector(
-            random.uniform(0, self.visualizer.width),
-            random.uniform(0, self.visualizer.height))
+            random.uniform(self.visualizer.width * INNER_MARGIN,
+                           self.visualizer.width * (1 - INNER_MARGIN*2)),
+            random.uniform(self.visualizer.height * INNER_MARGIN,
+                           self.visualizer.height * (1 - INNER_MARGIN*2)))
 
     def get_departure_position(self):
         if self.pan < 0.5:
-            x = 0
+            x = -OUTER_MARGIN
         else:
-            x = self.visualizer.width
+            x = self.visualizer.width + OUTER_MARGIN
         y = self.height * self.visualizer.height
         return Vector(x, y)
 
     def update(self):
         self.force = Vector(0,0)
         self.attract_to_neighbours()
-        self.force.limit(3.0)
+        self.force.limit(6.0)
         self.position += self.force
-        self.angle += (self.force.angle() - self.angle) * 0.1
         for joint in self.joints.values():
             joint.reposition()
+        self.angle = self.move_angle_towards(self.angle, self.force.angle(), 0.2)
 
+    def move_angle_towards(self, angle, target, amount):
+        return self.clamp_angle(angle + self.subtract_angle(target, angle) * amount)
+
+    def subtract_angle(self, x, y):
+        if abs(x - y) < math.pi:
+            return x - y
+        elif x > y:
+            return -2*math.pi - x + y
+        else:
+            return 2*math.pi + x - y
+
+    def clamp_angle(self, x):
+        while x < 0:
+            x += 2*math.pi
+        while x > 2*math.pi:
+            x -= 2*math.pi
+        return x
+        
     def attract_to_neighbours(self):
         for joint in self.joints.values():
             if joint.target_position:
                 self.force += spring_force(joint.position,
                                            joint.target_position,
-                                           1.0) * 0.1
+                                           1.0) * 0.3
 
     def arrived(self):
         for joint in self.joints.values():
