@@ -11,6 +11,14 @@ from springs import spring_force
 JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
 
+class JointPosition(Vector):
+    def __init__(self, joint):
+        self.joint = joint
+        Vector.__init__(self, 0,0)
+
+    def __repr__(self):
+        return 'JointPosition(%s, %s, %s)' % (self.joint, self.x, self.y)
+
 class Joint:
     def __init__(self, chunk, byte_position, neighbour_type, direction):
         self.chunk = chunk
@@ -18,7 +26,7 @@ class Joint:
         self.neighbour_type = neighbour_type
         self.direction = direction
         self.target_position = self.find_target_position()
-        self.position = Vector(0,0)
+        self.position = JointPosition(self)
         self.reposition()
 
     def find_target_position(self):
@@ -46,8 +54,10 @@ class Joint:
 
     def arrived(self):
         if self.target_position:
-            distance = (self.target_position - self.position).mag()
-            return distance < 2.0
+            if not (isinstance(self.target_position, JointPosition) \
+                        and not self.target_position.joint.chunk.has_arrived):
+                distance = (self.target_position - self.position).mag()
+                return distance < 2.0
 
 class Chunk(visualizer.Chunk):
     def setup(self):
@@ -58,6 +68,7 @@ class Chunk(visualizer.Chunk):
                        "end":   Joint(self, self.end, "begin", 1)}
         self.begin_position = self.joints["begin"].position
         self.end_position = self.joints["end"].position
+        self.has_arrived = False
         if not self.has_target():
             self.pick_random_target()
 
@@ -82,12 +93,11 @@ class Chunk(visualizer.Chunk):
     def update(self):
         self.force = Vector(0,0)
         self.attract_to_neighbours()
-        if self.force.mag() > 0.1:
-            self.force.limit(3.0)
-            self.position += self.force
-            self.angle += (self.force.angle() - self.angle) * 0.1
-            for joint in self.joints.values():
-                joint.reposition()
+        self.force.limit(3.0)
+        self.position += self.force
+        self.angle += (self.force.angle() - self.angle) * 0.1
+        for joint in self.joints.values():
+            joint.reposition()
 
     def attract_to_neighbours(self):
         for joint in self.joints.values():
@@ -161,6 +171,7 @@ class File:
 
     def gather_chunk(self, chunk):
         del self.arriving_chunks[chunk.id]
+        chunk.has_arrived = True
         self.gatherer.add(chunk)
 
 
@@ -205,4 +216,4 @@ class Joints(visualizer.Visualizer):
                 chunk.draw()
 
 if __name__ == '__main__':
-    visualizer.run(Particles)
+    visualizer.run(Joints)
