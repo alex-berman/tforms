@@ -102,7 +102,8 @@ class Chunk(visualizer.Chunk):
         self.position += self.force
         for joint in self.joints.values():
             joint.reposition()
-        self.angle = self.move_angle_towards(self.angle, self.force.angle(), 0.05)
+        if self.force.mag() > 0.5:
+            self.angle = self.move_angle_towards(self.angle, self.force.angle(), 0.05)
 
     def move_angle_towards(self, angle, target, amount):
         return self.clamp_angle(angle + self.subtract_angle(target, angle) * amount)
@@ -148,6 +149,7 @@ class Chunk(visualizer.Chunk):
         self.draw_joints()
         if len(self.mid_points) > 0:
             self.draw_curve()
+            self.draw_mid_points() # TEMP
         else:
             self.draw_line()
 
@@ -183,7 +185,7 @@ class Chunk(visualizer.Chunk):
         points.extend(self.mid_points)
         points.append(self.end_position)
         bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier([t/10.0 for t in range(11)])
+        points = bezier([t/50.0 for t in range(51)])
         opacity = 0.5
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glLineWidth(2.0)
@@ -191,7 +193,13 @@ class Chunk(visualizer.Chunk):
         for x,y in points:
             glVertex2f(x, y)
         glEnd()
-        
+
+    def draw_mid_points(self): #TEMP
+        opacity = 0.5
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        for point in self.mid_points:
+            self.draw_joint(point)
+
 class File:
     def __init__(self, length, visualizer):
         self.visualizer = visualizer
