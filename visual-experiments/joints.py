@@ -67,7 +67,7 @@ class Chunk(visualizer.Chunk):
         if self.force.mag() > 0.1:
             self.force.limit(3.0)
             self.position += self.force
-            self.angle += (self.force.angle() - self.angle) * 0.5
+            self.angle += (self.force.angle() - self.angle) * 0.1
             for joint in self.joints.values():
                 joint.reposition()
 
