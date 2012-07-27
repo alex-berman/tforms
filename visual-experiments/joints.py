@@ -42,6 +42,10 @@ class Joint:
                           DirectionalVector(self.chunk.angle,
                                             self.chunk.length/2) * self.direction)
 
+    def arrived(self):
+        if self.neighbour_joint:
+            distance = (self.neighbour_joint.position - self.position).mag()
+            return distance < 2.0
 
 class Chunk(visualizer.Chunk):
     def setup(self):
@@ -77,6 +81,19 @@ class Chunk(visualizer.Chunk):
                 self.force += spring_force(joint.position,
                                            joint.neighbour_joint.position,
                                            1.0) * 0.1
+
+    def arrived(self):
+        for joint in self.joints.values():
+            if joint.arrived():
+                return True
+
+    def append(self, other):
+        visualizer.Chunk.append(self, other)
+        self.joints["end"].position.set(other.joints["end"].position)
+
+    def prepend(self, other):
+        visualizer.Chunk.append(self, other)
+        self.joints["begin"].position.set(other.joints["begin"].position)
 
     def draw(self):
         self.draw_joints()
@@ -132,6 +149,13 @@ class File:
     def update_arriving_chunks(self):
         for chunk in self.arriving_chunks.values():
             chunk.update()
+            if chunk.arrived():
+                self.gather_chunk(chunk)
+
+    def gather_chunk(self, chunk):
+        del self.arriving_chunks[chunk.id]
+        self.gatherer.add(chunk)
+
 
 class Joints(visualizer.Visualizer):
     def __init__(self, args):
