@@ -19,7 +19,8 @@ BORDER_OPACITY = 0.7
 
 class Chunk:
     def __init__(self, chunk_id, torrent_position, byte_size,
-                 filenum, file_offset, file_length, pan, height, arrival_time, visualizer):
+                 filenum, file_offset, file_length, peer_id, pan, height,
+                 arrival_time, visualizer):
         self.id = chunk_id
         self.torrent_position = torrent_position
         self.byte_size = byte_size
@@ -28,6 +29,7 @@ class Chunk:
         file_position = torrent_position - file_offset
         self.begin = file_position
         self.end = file_position + byte_size
+        self.peer_id = peer_id
         self.pan = pan
         self.height = height
         self.arrival_time = arrival_time
@@ -74,10 +76,12 @@ class Visualizer:
         glutMainLoop()
 
     def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length, pan, height) = args
+        (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length,
+         peer_id, pan, height) = args
         chunk = self.chunk_class(
             chunk_id, torrent_position, byte_size,
-            filenum, file_offset, file_length, pan, height, time.time(), self)
+            filenum, file_offset, file_length,
+            peer_id, pan, height, time.time(), self)
         with self.lock:
             self.add_chunk(chunk)
 
@@ -92,7 +96,7 @@ class Visualizer:
     def setup_osc(self):
         self.orchestra = OrchestraController()
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiiff", self.handle_chunk_message)
+        self.server.add_method("/chunk", "iiiiiiiff", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
         server_thread = threading.Thread(target=self.serve_osc)
         server_thread.daemon = True

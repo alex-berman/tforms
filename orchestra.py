@@ -26,6 +26,7 @@ class Player:
     def dispatch(self, chunk, desired_time):
         chunk["desired_time"] = desired_time
         self.orchestra.visualize(chunk,
+                                 self.id,
                                  self.pan,
                                  self.height)
 
@@ -322,7 +323,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
-    def visualize(self, chunk, pan, height):
+    def visualize(self, chunk, player_id, pan, height):
         file_info = self.tr_log.files[chunk["filenum"]]
         liblo.send(self.visualizer, "/chunk",
                    chunk["id"],
@@ -331,6 +332,7 @@ class Orchestra:
                    chunk["filenum"],
                    file_info["offset"],
                    file_info["length"],
+                   player_id,
                    float(pan),
                    height)
 
