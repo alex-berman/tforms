@@ -2,7 +2,7 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector, DirectionalVector
+from vector import Vector, DirectionalVector, Angle
 import copy
 import math
 import random
@@ -58,14 +58,16 @@ class Joint:
 
     def get_target_angle(self):
         if self.target_joint:
-            getter_function_name = "get_%s_angle" % self.neighbour_type
-            return getattr(self.target_joint.chunk, getter_function_name)()
+            if self.neighbour_type == "begin":
+                return self.target_joint.chunk.get_begin_angle() + Angle(math.pi)
+            else:
+                return self.target_joint.chunk.get_end_angle()
         else:
             return self.random_target_angle
 
     def reposition(self):
         self.position.set(self.chunk.position +
-                          DirectionalVector(self.chunk.angle,
+                          DirectionalVector(self.chunk.angle.get(),
                                             self.chunk.length/2) * self.direction)
 
     def arrived(self):
@@ -78,7 +80,7 @@ class Joint:
 class Chunk(visualizer.Chunk):
     def setup(self):
         self.length = 15.0 # TEMP
-        self.angle = random.uniform(0, 2*math.pi)
+        self.angle = Angle(random.uniform(0, 2*math.pi))
         self.position = self.get_departure_position()
         self.joints = {"begin": Joint(self, self.begin, "end", -1),
                        "end":   Joint(self, self.end, "begin", 1)}
@@ -100,7 +102,7 @@ class Chunk(visualizer.Chunk):
                            self.visualizer.width * (1 - INNER_MARGIN*2)),
             random.uniform(self.visualizer.height * INNER_MARGIN,
                            self.visualizer.height * (1 - INNER_MARGIN*2)))
-        self.random_target_angle = random.uniform(0, 2*math.pi)
+        self.random_target_angle = Angle(random.uniform(0, 2*math.pi))
 
     def get_departure_position(self):
         if self.pan < 0.5:
@@ -118,7 +120,7 @@ class Chunk(visualizer.Chunk):
         for joint in self.joints.values():
             joint.reposition()
         if self.force.mag() > 0.5:
-            self.angle = self.move_angle_towards(self.angle, self.get_target_angle(), 0.05)
+            self.angle += (self.get_target_angle() - self.angle) * 0.1
 
     def get_target_angle(self):
         if self.has_target():
@@ -129,24 +131,6 @@ class Chunk(visualizer.Chunk):
         else:
             return self.random_target_angle
 
-    def move_angle_towards(self, angle, target, amount):
-        return self.clamp_angle(angle + self.subtract_angle(target, angle) * amount)
-
-    def subtract_angle(self, x, y):
-        if abs(x - y) < math.pi:
-            return x - y
-        elif x > y:
-            return -2*math.pi - x + y
-        else:
-            return 2*math.pi + x - y
-
-    def clamp_angle(self, x):
-        while x < 0:
-            x += 2*math.pi
-        while x > 2*math.pi:
-            x -= 2*math.pi
-        return x
-        
     def attract_to_neighbours(self):
         for joint in self.joints.values():
             if joint.target_position:
@@ -165,7 +149,7 @@ class Chunk(visualizer.Chunk):
         self.joints["end"].position.set(other.joints["end"].position)
 
     def prepend(self, other):
-        self.mid_points.append(copy.copy(self.begin_position))
+        self.mid_points.insert(0, copy.copy(self.begin_position))
         visualizer.Chunk.append(self, other)
         self.joints["begin"].position.set(other.joints["begin"].position)
 

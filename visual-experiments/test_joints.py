@@ -39,7 +39,7 @@ for i in range(10):
     add_chunk(0, 1000 + i*10, 1000 + (i+1)*10)
     sleep(0.1)
 
-sleep(1)
+sleep(0.5)
 add_chunk(0, 0, 1000)
 
 while(True): sleep(1.0)

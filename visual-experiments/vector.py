@@ -1,5 +1,38 @@
 import math
 
+class Angle:
+    def __init__(self, value):
+        self.value = self._clamp(value)
+
+    def get(self):
+        return self.value
+
+    def __add__(self, other):
+        return Angle(self.value + other.get())
+
+    def __sub__(self, other):
+        other_value = other.get()
+        if abs(self.value - other_value) < math.pi:
+            return Angle(self.value - other_value)
+        elif self.value > other_value:
+            return Angle(-2*math.pi - self.value + other_value)
+        else:
+            return Angle(2*math.pi + self.value - other_value)
+
+    def __mul__(self, factor):
+        return Angle(self.value * factor)
+
+    def __iadd__(self, other):
+        self.value = self._clamp(self.value + other.get())
+        return self
+
+    def _clamp(self, x):
+        while x < 0:
+            x += 2*math.pi
+        while x > 2*math.pi:
+            x -= 2*math.pi
+        return x
+        
 class Vector:
     def __init__(self, x, y):
         self.x = x
@@ -58,7 +91,7 @@ class Vector:
         self.y = other.y
 
     def angle(self):
-        return math.atan2(self.y, self.x)
+        return Angle(math.atan2(self.y, self.x))
 
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.x, self.y)
