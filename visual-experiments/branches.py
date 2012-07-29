@@ -8,6 +8,7 @@ from boid import Boid
 from vector import Vector
 import colorsys
 import time
+from bezier import make_bezier
 
 CIRCLE_PRECISION = 10
 MAX_BRANCH_AGE = 2.0
@@ -43,7 +44,7 @@ class Peer:
 
     def add_chunk(self, chunk):
         if len(self.branches) == 0:
-            self.branching_position = (self.departure_position + chunk.arrival_position) / 2
+            self.branching_position = (self.departure_position*0.4) + (chunk.arrival_position*0.6)
         branch = self.find_branch(chunk)
         if not branch:
             branch = Branch(chunk.filenum, chunk.file_length, self.visualizer)
@@ -78,12 +79,25 @@ class Peer:
                 glColor3f(relative_age + color[0] * (1-relative_age),
                           relative_age + color[1] * (1-relative_age),
                           relative_age + color[2] * (1-relative_age))
-                self.draw_line(self.branching_position, branch.target_position())
+                self.draw_curve(branch.target_position())
 
     def draw_line(self, p, q):
         glBegin(GL_LINES)
         glVertex2f(p.x, p.y)
         glVertex2f(q.x, q.y)
+        glEnd()
+
+    def draw_curve(self, target):
+        points = []
+        for i in range(5):
+            points.append(self.departure_position * (1-i/4.0)+
+                          self.branching_position * i/4.0)
+        points.append(target)
+        bezier = make_bezier([(p.x, p.y) for p in points])
+        points = bezier([t/50.0 for t in range(51)])
+        glBegin(GL_LINE_STRIP)
+        for x,y in points:
+            glVertex2f(x, y)
         glEnd()
 
 class File:
