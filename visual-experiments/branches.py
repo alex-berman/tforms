@@ -9,22 +9,46 @@ from vector import Vector
 
 CIRCLE_PRECISION = 10
 
+class Branch:
+    def __init__(self, filenum, file_length, visualizer):
+        self.filenum = filenum
+        self.file_length = file_length
+        self.f = visualizer.files[filenum]
+
+    def target_position(self):
+        angle = 2 * math.pi * self.cursor / self.file_length
+        x = self.f.x + self.f.radius * math.cos(angle)
+        y = self.f.y + self.f.radius * math.sin(angle)
+        return Vector(x, y)
+
 class Peer:
-    def __init__(self, departure_position):
+    def __init__(self, departure_position, visualizer):
         self.departure_position = departure_position
+        self.visualizer = visualizer
         self.branching_position = None
         self.branches = []
 
     def add_chunk(self, chunk):
         if len(self.branches) == 0:
-            self.branches.append(chunk)
             self.branching_position = (self.departure_position + chunk.arrival_position) / 2
+        branch = self.find_branch(chunk)
+        if not branch:
+            branch = Branch(chunk.filenum, chunk.file_length, self.visualizer)
+            self.branches.append(branch)
+        branch.cursor = chunk.end
+
+    def find_branch(self, chunk):
+        for branch in self.branches:
+            if branch.filenum == chunk.filenum and branch.cursor == chunk.begin:
+                return branch
 
     def draw(self):
         if len(self.branches) > 0:
             glColor3f(0.5, 1.0, 0.5)
             glLineWidth(1.0)
             self.draw_line(self.departure_position, self.branching_position)
+            for branch in self.branches:
+                self.draw_line(self.branching_position, branch.target_position())
 
     def draw_line(self, p, q):
         glBegin(GL_LINES)
@@ -77,7 +101,7 @@ class Branches(Visualizer):
         self.files[chunk.filenum].add_chunk(chunk)
 
         if not chunk.peer_id in self.peers:
-            self.peers[chunk.peer_id] = Peer(chunk.departure_position)
+            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
 
     def render(self):
