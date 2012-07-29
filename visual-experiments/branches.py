@@ -6,14 +6,25 @@ import math
 import random
 from boid import Boid
 from vector import Vector
+import colorsys
+import time
 
 CIRCLE_PRECISION = 10
+MAX_BRANCH_AGE = 2.0
 
 class Branch:
     def __init__(self, filenum, file_length, visualizer):
         self.filenum = filenum
         self.file_length = file_length
+        self.visualizer = visualizer
         self.f = visualizer.files[filenum]
+
+    def set_cursor(self, cursor):
+        self.cursor = cursor
+        self.last_updated = time.time()
+
+    def age(self):
+        return self.visualizer.now - self.last_updated
 
     def target_position(self):
         angle = 2 * math.pi * self.cursor / self.file_length
@@ -26,7 +37,9 @@ class Peer:
         self.departure_position = departure_position
         self.visualizer = visualizer
         self.branching_position = None
-        self.branches = []
+        self.branches = {}
+        self.branch_count = 0
+        self.hue = random.uniform(0, 1)
 
     def add_chunk(self, chunk):
         if len(self.branches) == 0:
@@ -34,20 +47,37 @@ class Peer:
         branch = self.find_branch(chunk)
         if not branch:
             branch = Branch(chunk.filenum, chunk.file_length, self.visualizer)
-            self.branches.append(branch)
-        branch.cursor = chunk.end
+            self.branches[self.branch_count] = branch
+            self.branch_count += 1
+        branch.set_cursor(chunk.end)
 
     def find_branch(self, chunk):
-        for branch in self.branches:
+        for branch in self.branches.values():
             if branch.filenum == chunk.filenum and branch.cursor == chunk.begin:
                 return branch
 
+    def update(self):
+        outdated = filter(lambda branch_id:
+                              self.branches[branch_id].age() > MAX_BRANCH_AGE,
+                          self.branches)
+        for branch_id in outdated:
+            del self.branches[branch_id]
+
     def draw(self):
         if len(self.branches) > 0:
-            glColor3f(0.5, 1.0, 0.5)
             glLineWidth(1.0)
+            color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
+            relative_age = min([branch.age() for branch in self.branches.values()]) \
+                / MAX_BRANCH_AGE
+            glColor3f(relative_age + color[0] * (1-relative_age),
+                      relative_age + color[1] * (1-relative_age),
+                      relative_age + color[2] * (1-relative_age))
             self.draw_line(self.departure_position, self.branching_position)
-            for branch in self.branches:
+            for branch in self.branches.values():
+                relative_age = branch.age() / MAX_BRANCH_AGE
+                glColor3f(relative_age + color[0] * (1-relative_age),
+                          relative_age + color[1] * (1-relative_age),
+                          relative_age + color[2] * (1-relative_age))
                 self.draw_line(self.branching_position, branch.target_position())
 
     def draw_line(self, p, q):
@@ -115,6 +145,7 @@ class Branches(Visualizer):
 
     def draw_branches(self):
         for peer in self.peers.values():
+            peer.update()
             peer.draw()
 
     def draw_completed_piece(self, chunk, f):
