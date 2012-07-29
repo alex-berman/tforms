@@ -337,6 +337,7 @@ class Orchestra:
                    height)
 
     def stopped_playing(self, chunk):
+        self.logger.debug("stopped chunk %s" % chunk)
         if self.visualizer:
             liblo.send(self.visualizer, "/stopped_playing",
                        chunk["id"], chunk["filenum"])

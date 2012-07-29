@@ -93,7 +93,7 @@ class Visualizer:
         with self.lock:
             self.stopped_playing(chunk_id, filenum)
 
-    def stopped_playing(self, chunk_id):
+    def stopped_playing(self, chunk_id, filenum):
         pass
 
     def setup_osc(self):

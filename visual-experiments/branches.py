@@ -13,6 +13,9 @@ from bezier import make_bezier
 
 CIRCLE_PRECISION = 10
 MAX_BRANCH_AGE = 2.0
+CHUNK_SIZE_FACTOR = 0.000001
+SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
+MAX_CHUNK_SIZE = 5.0 / 640
 
 class Branch:
     def __init__(self, filenum, file_length, visualizer):
@@ -106,6 +109,7 @@ class Chunk(visualizer.Chunk):
 class File:
     def __init__(self, length, visualizer):
         self.visualizer = visualizer
+        self.arriving_chunks = OrderedDict()
         self.gatherer = Gatherer()
         self.radius = 50.0
         self.x = random.uniform(self.radius, visualizer.width - self.radius*2)
@@ -114,9 +118,12 @@ class File:
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
         chunk.arrival_position = self.get_arrival_position(chunk)
+        chunk.arrived = False
+        self.arriving_chunks[chunk.id] = chunk
 
-    def gather_chunk(self, chunk):
-        self.gatherer.add(chunk)
+    def stopped_playing(self, chunk_id):
+        chunk = self.arriving_chunks[chunk_id]
+        del self.arriving_chunks[chunk_id]
 
     def get_departure_position(self, chunk):
         if chunk.pan < 0.5:
@@ -145,6 +152,8 @@ class Branches(Visualizer):
         glDisable(GL_BLEND)
 
     def add_chunk(self, chunk):
+        self.play_chunk(chunk)
+
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.file_length, self)
         self.files[chunk.filenum].add_chunk(chunk)
@@ -153,16 +162,25 @@ class Branches(Visualizer):
             self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
 
-        self.files[chunk.filenum].gather_chunk(chunk)
+        self.files[chunk.filenum].gatherer.add(chunk)
+
+    def stopped_playing(self, chunk_id, filenum):
+        self.files[filenum].stopped_playing(chunk_id)
 
     def render(self):
         self.draw_gathered_chunks()
+        self.draw_arriving_chunks()
         self.draw_branches()
  
     def draw_gathered_chunks(self):
         for f in self.files.values():
             for chunk in f.gatherer.pieces():
                 self.draw_completed_piece(chunk, f)
+
+    def draw_arriving_chunks(self):
+        for f in self.files.values():
+            for chunk in f.arriving_chunks.values():
+                self.draw_sounding_chunk(chunk, f)
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -182,6 +200,21 @@ class Branches(Visualizer):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
             x, y = self.completion_position(chunk, byte_position, f)
             glVertex2f(x, y)
+        glEnd()
+
+    def draw_sounding_chunk(self, chunk, f):
+        size = chunk.byte_size * SOUNDING_CHUNK_SIZE_FACTOR * self.width
+        mid_byte = (chunk.begin + chunk.end) / 2
+        x, y = self.completion_position(chunk, mid_byte, f)
+        chunk.peer.set_color(0.0)
+        self.draw_point(x, y, size)
+
+    def draw_point(self, x, y, size):
+        size = min(size, MAX_CHUNK_SIZE * self.width)
+        size = max(size, 1.0)
+        glPointSize(size)
+        glBegin(GL_POINTS)
+        glVertex2f(x, y)
         glEnd()
 
     def completion_position(self, chunk, byte_position, f):
