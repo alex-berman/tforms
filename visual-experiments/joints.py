@@ -32,14 +32,11 @@ class Joint:
         self.reposition()
 
     def find_target(self):
-        target_joint = self.find_target_joint()
-        if target_joint:
-            self.target_position = target_joint.position
-            getter_function_name = "get_%s_angle" % self.neighbour_type
-            self.target_angle = getattr(target_joint.chunk, getter_function_name)()
+        self.target_joint = self.find_target_joint()
+        if self.target_joint:
+            self.target_position = self.target_joint.position
         else:
             self.target_position = None
-            self.target_angle = None
 
     def find_target_joint(self):
         joint = self.find_neighbour_joint_among_chunks(
@@ -58,6 +55,13 @@ class Joint:
                 joint = chunk.joints[self.neighbour_type]
                 if joint.byte_position == self.byte_position:
                     return joint
+
+    def get_target_angle(self):
+        if self.target_joint:
+            getter_function_name = "get_%s_angle" % self.neighbour_type
+            return getattr(self.target_joint.chunk, getter_function_name)()
+        else:
+            return self.random_target_angle
 
     def reposition(self):
         self.position.set(self.chunk.position +
@@ -82,29 +86,21 @@ class Chunk(visualizer.Chunk):
         self.begin_position = self.joints["begin"].position
         self.end_position = self.joints["end"].position
         self.has_arrived = False
-        if self.has_target():
-            self.get_target_angle()
-        else:
+        if not self.has_target():
             self.pick_random_target()
 
     def has_target(self):
         for joint in self.joints.values():
-            if joint.target_position:
+            if joint.target_joint:
                 return True
 
-    def get_target_angle(self):
-        if self.joints["begin"].target_angle:
-            self.target_angle = self.joints["begin"].target_angle
-        elif self.joints["end"].target_angle:
-            self.target_angle = self.joints["end"].target_angle
-            
     def pick_random_target(self):
         self.joints["begin"].target_position = Vector(
             random.uniform(self.visualizer.width * INNER_MARGIN,
                            self.visualizer.width * (1 - INNER_MARGIN*2)),
             random.uniform(self.visualizer.height * INNER_MARGIN,
                            self.visualizer.height * (1 - INNER_MARGIN*2)))
-        self.target_angle = random.uniform(0, 2*math.pi)
+        self.random_target_angle = random.uniform(0, 2*math.pi)
 
     def get_departure_position(self):
         if self.pan < 0.5:
@@ -122,7 +118,16 @@ class Chunk(visualizer.Chunk):
         for joint in self.joints.values():
             joint.reposition()
         if self.force.mag() > 0.5:
-            self.angle = self.move_angle_towards(self.angle, self.target_angle, 0.2)
+            self.angle = self.move_angle_towards(self.angle, self.get_target_angle(), 0.05)
+
+    def get_target_angle(self):
+        if self.has_target():
+            if self.joints["begin"].target_joint:
+                return self.joints["begin"].get_target_angle()
+            elif self.joints["end"].target_joint:
+                return self.joints["end"].get_target_angle()
+        else:
+            return self.random_target_angle
 
     def move_angle_towards(self, angle, target, amount):
         return self.clamp_angle(angle + self.subtract_angle(target, angle) * amount)
