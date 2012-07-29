@@ -1,4 +1,5 @@
 from visualizer import Visualizer, run
+import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
@@ -43,6 +44,7 @@ class Peer:
         self.hue = random.uniform(0, 1)
 
     def add_chunk(self, chunk):
+        chunk.peer = self
         if len(self.branches) == 0:
             self.branching_position = (self.departure_position*0.4) + (chunk.arrival_position*0.6)
         branch = self.find_branch(chunk)
@@ -67,19 +69,16 @@ class Peer:
     def draw(self):
         if len(self.branches) > 0:
             glLineWidth(1.0)
-            color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
-            relative_age = min([branch.age() for branch in self.branches.values()]) \
-                / MAX_BRANCH_AGE
-            glColor3f(relative_age + color[0] * (1-relative_age),
-                      relative_age + color[1] * (1-relative_age),
-                      relative_age + color[2] * (1-relative_age))
-            self.draw_line(self.departure_position, self.branching_position)
             for branch in self.branches.values():
                 relative_age = branch.age() / MAX_BRANCH_AGE
-                glColor3f(relative_age + color[0] * (1-relative_age),
-                          relative_age + color[1] * (1-relative_age),
-                          relative_age + color[2] * (1-relative_age))
+                self.set_color(relative_age)
                 self.draw_curve(branch.target_position())
+
+    def set_color(self, relative_age):
+        color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
+        glColor3f(relative_age + color[0] * (1-relative_age),
+                  relative_age + color[1] * (1-relative_age),
+                  relative_age + color[2] * (1-relative_age))
 
     def draw_line(self, p, q):
         glBegin(GL_LINES)
@@ -100,6 +99,10 @@ class Peer:
             glVertex2f(x, y)
         glEnd()
 
+class Chunk(visualizer.Chunk):
+    def joinable_with(self, other):
+        return other.peer == self.peer
+
 class File:
     def __init__(self, length, visualizer):
         self.visualizer = visualizer
@@ -111,6 +114,8 @@ class File:
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
         chunk.arrival_position = self.get_arrival_position(chunk)
+
+    def gather_chunk(self, chunk):
         self.gatherer.add(chunk)
 
     def get_departure_position(self, chunk):
@@ -129,7 +134,7 @@ class File:
         
 class Branches(Visualizer):
     def __init__(self, args):
-        Visualizer.__init__(self, args)
+        Visualizer.__init__(self, args, Chunk)
         self.files = {}
         self.peers = {}
 
@@ -148,6 +153,8 @@ class Branches(Visualizer):
             self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
 
+        self.files[chunk.filenum].gather_chunk(chunk)
+
     def render(self):
         self.draw_gathered_chunks()
         self.draw_branches()
@@ -163,14 +170,13 @@ class Branches(Visualizer):
             peer.draw()
 
     def draw_completed_piece(self, chunk, f):
-        opacity = 0.3
-        self.draw_sitting_piece(chunk, f, opacity)
+        self.draw_sitting_piece(chunk, f)
 
-    def draw_sitting_piece(self, chunk, f, opacity):
+    def draw_sitting_piece(self, chunk, f):
         num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
         num_vertices = max(num_vertices, 2)
         glLineWidth(4)
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        chunk.peer.set_color(0.0)
         glBegin(GL_LINE_STRIP)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)

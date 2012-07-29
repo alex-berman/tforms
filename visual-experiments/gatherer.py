@@ -39,7 +39,7 @@ class Gatherer:
 
     def find_appendable_piece(self, new_piece):
         for key, piece in self._pieces.iteritems():
-            if piece.end == new_piece.begin:
+            if piece.joinable_with(new_piece) and piece.end == new_piece.begin:
                 return key
 
     def _prepend_piece(self, new_piece):
@@ -50,6 +50,6 @@ class Gatherer:
 
     def find_prependable_piece(self, new_piece):
         for key, piece in self._pieces.iteritems():
-            if piece.begin == new_piece.end:
+            if piece.joinable_with(new_piece) and piece.begin == new_piece.end:
                 return key
 

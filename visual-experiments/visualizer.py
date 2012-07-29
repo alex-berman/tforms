@@ -44,6 +44,9 @@ class Chunk:
         self.begin = other.begin
         self.byte_size = self.end - self.begin
 
+    def joinable_with(self, other):
+        return True
+
 class Visualizer:
     def __init__(self, args, chunk_class=Chunk):
         self.chunk_class = chunk_class
