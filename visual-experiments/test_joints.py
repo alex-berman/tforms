@@ -11,7 +11,9 @@ parser.add_argument('-height', dest='height', type=int, default=480)
 parser.add_argument('-show-fps', dest='show_fps', action='store_true')
 args = parser.parse_args()
 visualizer = joints.Joints(args)
-threading.Thread(target=visualizer.run).start()
+visualizer_thread = threading.Thread(target=visualizer.run)
+visualizer_thread.daemon = True
+visualizer_thread.start()
 
 id_count = 0
 files = [{"offset": 0,
@@ -34,5 +36,7 @@ def add_chunk(filenum, begin, end):
 sleep(1);
 
 for i in range(100):
-    add_chunk(0, i*10, (i+1)*10)
+    add_chunk(0, 1000 + i*10, 1000 + (i+1)*10)
     sleep(0.1)
+
+while(True): sleep(1.0)
