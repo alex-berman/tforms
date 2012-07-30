@@ -34,14 +34,13 @@ class Branch:
         return self.visualizer.now - self.last_updated
 
     def target_position(self):
-        if len(self.f.gatherer.pieces()) > 0:
-            x = self.f.byte_to_coord(self.cursor)
-            y = self.visualizer.filenum_to_y_coord(self.filenum)
-            if y > self.peer.departure_position.y:
-                y -= 10
-            else:
-                y += 10 + ARRIVED_HEIGHT
-            return Vector(x, y)
+        x = self.f.byte_to_coord(self.cursor)
+        y = self.visualizer.filenum_to_y_coord(self.filenum)
+        if y > self.peer.departure_position.y:
+            y -= 1
+        else:
+            y += ARRIVED_HEIGHT
+        return Vector(x, y)
 
 class Peer:
     def __init__(self, departure_position, visualizer):
@@ -60,7 +59,6 @@ class Peer:
             self.branches[self.branch_count] = branch
             self.branch_count += 1
         branch.set_cursor(chunk.end)
-        chunk.branch = branch
 
     def find_branch(self, chunk):
         for branch in self.branches.values():
@@ -76,12 +74,12 @@ class Peer:
         self.update_branching_position()
 
     def update_branching_position(self):
-        target_positions = \
-            filter(None, [branch.target_position() for branch in self.branches.values()])
-        if len(target_positions) == 0:
+        if len(self.branches) == 0:
             self.smoothed_branching_position.reset()
         else:
-            average_target_position = sum(target_positions) / len(target_positions)
+            average_target_position = \
+                sum([branch.target_position() for branch in self.branches.values()]) / \
+                len(self.branches)
             new_branching_position = self.departure_position*0.4 + average_target_position*0.6
             self.smoothed_branching_position.smooth(new_branching_position, self.visualizer.time_increment)
 
@@ -89,11 +87,9 @@ class Peer:
         if len(self.branches) > 0:
             glLineWidth(1.0)
             for branch in self.branches.values():
-                target_position = branch.target_position()
-                if target_position:
-                    relative_age = branch.age() / MAX_BRANCH_AGE
-                    self.set_color(relative_age)
-                    self.draw_curve(target_position)
+                relative_age = branch.age() / MAX_BRANCH_AGE
+                self.set_color(relative_age)
+                self.draw_curve(branch.target_position())
 
     def set_color(self, relative_age):
         color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
@@ -110,17 +106,16 @@ class Peer:
     def draw_curve(self, target):
         points = []
         branching_position = self.smoothed_branching_position.value()
-        if branching_position:
-            for i in range(15):
-                points.append(self.departure_position * (1-i/14.0)+
-                              branching_position * i/14.0)
-            points.append(target)
-            bezier = make_bezier([(p.x, p.y) for p in points])
-            points = bezier([t/50.0 for t in range(51)])
-            glBegin(GL_LINE_STRIP)
-            for x,y in points:
-                glVertex2f(x, y)
-            glEnd()
+        for i in range(15):
+            points.append(self.departure_position * (1-i/14.0)+
+                          branching_position * i/14.0)
+        points.append(target)
+        bezier = make_bezier([(p.x, p.y) for p in points])
+        points = bezier([t/50.0 for t in range(51)])
+        glBegin(GL_LINE_STRIP)
+        for x,y in points:
+            glVertex2f(x, y)
+        glEnd()
 
 class Chunk(visualizer.Chunk):
     def joinable_with(self, other):
@@ -161,17 +156,13 @@ class File:
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
         chunk.duration = DURATION
-        self.arriving_chunks[chunk.id] = chunk
-
-    def gather_chunk(self, chunk):
-        del self.arriving_chunks[chunk.id]
-        self.gatherer.add(chunk)
         if self.min_byte == None:
             self.min_byte = chunk.begin
             self.max_byte = chunk.end
         else:
             self.min_byte = min(self.min_byte, chunk.begin)
             self.max_byte = max(self.max_byte, chunk.end)
+        self.arriving_chunks[chunk.id] = chunk
 
     def update_x_scope(self, time_increment):
         self._smoothed_min_byte.smooth(self.min_byte, time_increment)
@@ -212,22 +203,10 @@ class Puzzle(Visualizer):
             self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length, self)
         self.files[chunk.filenum].add_chunk(chunk)
 
-        if not chunk.peer_id in self.peers:
-            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
-        self.peers[chunk.peer_id].add_chunk(chunk)
-
     def render(self):
         if len(self.files) > 0:
-            self.process_chunks()
             self.draw_chunks()
             self.draw_branches()
-
-    def process_chunks(self):
-        for f in self.files.values():
-            for chunk in f.arriving_chunks.values():
-                age = self.now - chunk.arrival_time
-                if age > chunk.duration:
-                    f.gather_chunk(chunk)
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -240,49 +219,44 @@ class Puzzle(Visualizer):
             self.draw_file(f)
 
     def draw_file(self, f):
-        if len(f.gatherer.pieces()) > 0:
-            y = self.filenum_to_y_coord(f.filenum)
-            f.update_x_scope(self.time_increment)
-            self.draw_gathered_chunks(f, y)
-            self.draw_arriving_chunks(f, y)
+        y = self.filenum_to_y_coord(f.filenum)
+        f.update_x_scope(self.time_increment)
+        self.draw_gathered_chunks(f, y)
+        self.draw_arriving_chunks(f, y)
 
     def draw_gathered_chunks(self, f, y):
         for chunk in f.gatherer.pieces():
-            self.draw_gathered_chunk(chunk, f, y)
+            self.draw_chunk(chunk, 0, f, y)
 
     def draw_arriving_chunks(self, f, y):
         for chunk in f.arriving_chunks.values():
             age = self.now - chunk.arrival_time
-            actuality = 1 - float(age) / chunk.duration
-            self.draw_arriving_chunk(chunk, actuality, f, y)
+            if age > chunk.duration:
+                self.gather_chunk(chunk, f)
+            # else:
+            #     actuality = 1 - float(age) / chunk.duration
+            #     self.draw_chunk(chunk, actuality, f, y)
 
-    def draw_gathered_chunk(self, chunk, f, y):
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT)
-        x1 = int(f.byte_to_coord(chunk.begin))
-        x2 = int(f.byte_to_coord(chunk.end))
-        opacity = 0.2
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
+    def gather_chunk(self, chunk, f):
+        if not chunk.peer_id in self.peers:
+            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
+        self.peers[chunk.peer_id].add_chunk(chunk)
+        del f.arriving_chunks[chunk.id]
+        f.gatherer.add(chunk)
 
-    def draw_arriving_chunk(self, chunk, actuality, f, arrival_y):
+    def draw_chunk(self, chunk, actuality, f, y):
         zoom = self.get_zoom(actuality)
-        departure_y = chunk.branch.target_position().y
-        y = departure_y + (arrival_y - departure_y) * (1-actuality)
+        y_offset = actuality * 10
         height = ARRIVED_HEIGHT + zoom * (MAX_HEIGHT - ARRIVED_HEIGHT)
-        y1 = int(y)
-        y2 = int(y + height)
+        y1 = int(y + y_offset)
+        y2 = int(y + y_offset + height)
         x1 = int(f.byte_to_coord(chunk.begin))
         x2 = int(f.byte_to_coord(chunk.end))
         x1, x2 = self.upscale(x1, x2, zoom)
         if x2 == x1:
             x2 = x1 + 1
-        chunk.peer.set_color(0)
+        opacity = 0.2 + (zoom * 0.8)
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
