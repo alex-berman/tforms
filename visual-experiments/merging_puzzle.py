@@ -4,7 +4,7 @@ import time
 from OpenGL.GL import *
 from collections import OrderedDict
 
-MIN_DURATION = 0.1
+DURATION = 0.5
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
@@ -37,7 +37,7 @@ class File:
         self.gatherer = Gatherer()
 
     def add_chunk(self, chunk):
-        chunk.duration = max(chunk.duration, MIN_DURATION)
+        chunk.duration = DURATION
         if self.min_byte == None:
             self.min_byte = chunk.begin
             self.max_byte = chunk.end

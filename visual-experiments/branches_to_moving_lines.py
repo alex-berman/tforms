@@ -5,19 +5,18 @@ from OpenGL.GL import *
 from collections import OrderedDict
 import math
 import random
-from boid import Boid
-from vector import Vector
+from vector import Vector, DirectionalVector
 import colorsys
 import time
 from bezier import make_bezier
 
-CIRCLE_PRECISION = 10
 MAX_BRANCH_AGE = 2.0
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
 MAX_CHUNK_SIZE = 8.0 / 640
 PASSIVE_COLOR = (0.9, 0.9, 0.9)
 DECAY_TIME = 2.0
+INNER_MARGIN = 100
 
 class Smoother:
     RESPONSE_FACTOR = 0.01
@@ -53,10 +52,8 @@ class Branch:
         return self.visualizer.now - self.last_updated
 
     def target_position(self):
-        angle = 2 * math.pi * self.cursor / self.file_length
-        x = self.f.x + self.f.radius * math.cos(angle)
-        y = self.f.y + self.f.radius * math.sin(angle)
-        return Vector(x, y)
+        return self.f.begin_position + (self.f.end_position - self.f.begin_position) * \
+            self.cursor / self.file_length
 
 class Peer:
     def __init__(self, departure_position, visualizer):
@@ -82,12 +79,16 @@ class Peer:
                 return branch
 
     def update(self):
+        self.delete_outdated_branches()
+        self.update_branching_position()
+        self.attract_files()
+
+    def delete_outdated_branches(self):
         outdated = filter(lambda branch_id:
                               self.branches[branch_id].age() > MAX_BRANCH_AGE,
                           self.branches)
         for branch_id in outdated:
             del self.branches[branch_id]
-        self.update_branching_position()
 
     def update_branching_position(self):
         if len(self.branches) == 0:
@@ -98,6 +99,18 @@ class Peer:
                 len(self.branches)
             new_branching_position = self.departure_position*0.4 + average_target_position*0.6
             self.smoothed_branching_position.smooth(new_branching_position)
+
+    def attract_files(self):
+        for branch in self.branches.values():
+            self.attract_file(branch.f)
+
+    def attract_file(self, f):
+        distance = min((self.departure_position - f.begin_position).mag(),
+                       (self.departure_position - f.end_position).mag())
+        if distance > 100:
+            midpoint = (f.begin_position + f.end_position) / 2
+            f.begin_position += (self.departure_position - midpoint) * 0.001
+            f.end_position += (self.departure_position - midpoint) * 0.001
 
     def draw(self):
         if len(self.branches) > 0:
@@ -142,13 +155,14 @@ class File:
         self.visualizer = visualizer
         self.arriving_chunks = OrderedDict()
         self.gatherer = Gatherer()
-        self.radius = 50.0
-        self.x = random.uniform(self.radius, visualizer.width - self.radius*2)
-        self.y = random.uniform(self.radius, visualizer.height - self.radius*2)
+        self.begin_position = Vector(
+            random.uniform(INNER_MARGIN, visualizer.width - INNER_MARGIN),
+            random.uniform(INNER_MARGIN, visualizer.height - INNER_MARGIN))
+        self.end_position = self.begin_position + DirectionalVector(
+            random.uniform(0, 2*math.pi), 100)
         
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
-        chunk.arrival_position = self.get_arrival_position(chunk)
         chunk.arrived = False
         self.arriving_chunks[chunk.id] = chunk
 
@@ -162,12 +176,6 @@ class File:
         else:
             x = self.visualizer.width
         y = chunk.height * self.visualizer.height
-        return Vector(x, y)
-
-    def get_arrival_position(self, chunk):
-        angle = 2 * math.pi * chunk.begin / chunk.file_length
-        x = self.x + self.radius * math.cos(angle)
-        y = self.y + self.radius * math.sin(angle)
         return Vector(x, y)
         
 class Branches(Visualizer):
@@ -199,10 +207,20 @@ class Branches(Visualizer):
         self.files[filenum].stopped_playing(chunk_id)
 
     def render(self):
+        #self.draw_files() # TEMP
         self.draw_gathered_chunks()
         self.draw_arriving_chunks()
         self.draw_branches()
  
+    def draw_files(self): # TEMP
+        glLineWidth(2.0)
+        glColor3f(0.5,0.5,0.5)
+        glBegin(GL_LINES)
+        for f in self.files.values():
+            glVertex2f(f.begin_position.x, f.begin_position.y)
+            glVertex2f(f.end_position.x, f.end_position.y)
+        glEnd()
+
     def draw_gathered_chunks(self):
         for f in self.files.values():
             for chunk in f.gatherer.pieces():
@@ -219,15 +237,13 @@ class Branches(Visualizer):
             peer.draw()
 
     def draw_completed_piece(self, chunk, f):
-        num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
-        num_vertices = max(num_vertices, 2)
         glLineWidth(4)
         self.set_completed_color(chunk)
-        glBegin(GL_LINE_STRIP)
-        for i in range(num_vertices):
-            byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
-            x, y = self.completion_position(chunk, byte_position, f)
-            glVertex2f(x, y)
+        begin_position = self.completion_position(chunk, chunk.begin, f)
+        end_position = self.completion_position(chunk, chunk.end, f)
+        glBegin(GL_LINES)
+        glVertex2f(begin_position.x, begin_position.y)
+        glVertex2f(end_position.x, end_position.y)
         glEnd()
 
     def set_completed_color(self, chunk):
@@ -245,9 +261,9 @@ class Branches(Visualizer):
     def draw_sounding_chunk(self, chunk, f):
         size = chunk.byte_size * SOUNDING_CHUNK_SIZE_FACTOR * self.width
         mid_byte = (chunk.begin + chunk.end) / 2
-        x, y = self.completion_position(chunk, mid_byte, f)
+        position = self.completion_position(chunk, mid_byte, f)
         chunk.peer.set_color(0.0)
-        self.draw_point(x, y, size)
+        self.draw_point(position.x, position.y, size)
 
     def draw_point(self, x, y, size):
         size = min(size, MAX_CHUNK_SIZE * self.width)
@@ -258,9 +274,7 @@ class Branches(Visualizer):
         glEnd()
 
     def completion_position(self, chunk, byte_position, f):
-        angle = 2 * math.pi * byte_position / chunk.file_length
-        x = f.x + f.radius * math.cos(angle)
-        y = f.y + f.radius * math.sin(angle)
-        return x, y
+        return f.begin_position + (f.end_position - f.begin_position) * \
+            byte_position / chunk.file_length
 
 run(Branches)
