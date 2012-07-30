@@ -16,9 +16,11 @@ MAX_BRANCH_AGE = 2.0
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
 MAX_CHUNK_SIZE = 8.0 / 640
+PASSIVE_COLOR = (0.9, 0.9, 0.9)
+DECAY_TIME = 2.0
 
 class Smoother:
-    RESPONSE_FACTOR = 0.1
+    RESPONSE_FACTOR = 0.01
 
     def __init__(self):
         self._current_value = None
@@ -217,19 +219,28 @@ class Branches(Visualizer):
             peer.draw()
 
     def draw_completed_piece(self, chunk, f):
-        self.draw_sitting_piece(chunk, f)
-
-    def draw_sitting_piece(self, chunk, f):
         num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
         num_vertices = max(num_vertices, 2)
         glLineWidth(4)
-        chunk.peer.set_color(0.0)
+        self.set_completed_color(chunk)
         glBegin(GL_LINE_STRIP)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
             x, y = self.completion_position(chunk, byte_position, f)
             glVertex2f(x, y)
         glEnd()
+
+    def set_completed_color(self, chunk):
+        age = self.now - chunk.last_updated
+        if age > DECAY_TIME:
+            relative_age = 1
+        else:
+            relative_age = age / DECAY_TIME
+
+        active_color = colorsys.hsv_to_rgb(chunk.peer.hue, 0.35, 1)
+        glColor3f(PASSIVE_COLOR[0] * relative_age + active_color[0] * (1-relative_age),
+                  PASSIVE_COLOR[1] * relative_age + active_color[1] * (1-relative_age),
+                  PASSIVE_COLOR[2] * relative_age + active_color[2] * (1-relative_age))
 
     def draw_sounding_chunk(self, chunk, f):
         size = chunk.byte_size * SOUNDING_CHUNK_SIZE_FACTOR * self.width

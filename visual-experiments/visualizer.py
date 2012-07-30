@@ -34,14 +34,17 @@ class Chunk:
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
+        self.last_updated = time.time()
 
     def append(self, other):
         self.end = other.end
         self.byte_size = self.end - self.begin
+        self.last_updated = time.time()
 
     def prepend(self, other):
         self.begin = other.begin
         self.byte_size = self.end - self.begin
+        self.last_updated = time.time()
 
     def joinable_with(self, other):
         return True
