@@ -15,7 +15,26 @@ CIRCLE_PRECISION = 10
 MAX_BRANCH_AGE = 2.0
 CHUNK_SIZE_FACTOR = 0.000001
 SOUNDING_CHUNK_SIZE_FACTOR = CHUNK_SIZE_FACTOR * 1.5
-MAX_CHUNK_SIZE = 5.0 / 640
+MAX_CHUNK_SIZE = 8.0 / 640
+
+class Smoother:
+    RESPONSE_FACTOR = 0.1
+
+    def __init__(self):
+        self._current_value = None
+
+    def smooth(self, new_value):
+        if self._current_value:
+            self._current_value += (new_value - self._current_value) * \
+                self.RESPONSE_FACTOR
+        else:
+            self._current_value = new_value
+
+    def value(self):
+        return self._current_value
+
+    def reset(self):
+        self._current_value = None
 
 class Branch:
     def __init__(self, filenum, file_length, visualizer):
@@ -41,7 +60,7 @@ class Peer:
     def __init__(self, departure_position, visualizer):
         self.departure_position = departure_position
         self.visualizer = visualizer
-        self.branching_position = None
+        self.smoothed_branching_position = Smoother()
         self.branches = {}
         self.branch_count = 0
         self.hue = random.uniform(0, 1)
@@ -54,17 +73,6 @@ class Peer:
             self.branches[self.branch_count] = branch
             self.branch_count += 1
         branch.set_cursor(chunk.end)
-        self.update_branching_position()
-
-    def update_branching_position(self):
-        average_target_position = \
-            sum([branch.target_position() for branch in self.branches.values()]) / \
-            len(self.branches)
-        new_branching_position = self.departure_position*0.4 + average_target_position*0.6
-        if self.branching_position == None:
-            self.branching_position = new_branching_position
-        else:
-            self.branching_position += (new_branching_position - self.branching_position) * 0.1
 
     def find_branch(self, chunk):
         for branch in self.branches.values():
@@ -77,6 +85,17 @@ class Peer:
                           self.branches)
         for branch_id in outdated:
             del self.branches[branch_id]
+        self.update_branching_position()
+
+    def update_branching_position(self):
+        if len(self.branches) == 0:
+            self.smoothed_branching_position.reset()
+        else:
+            average_target_position = \
+                sum([branch.target_position() for branch in self.branches.values()]) / \
+                len(self.branches)
+            new_branching_position = self.departure_position*0.4 + average_target_position*0.6
+            self.smoothed_branching_position.smooth(new_branching_position)
 
     def draw(self):
         if len(self.branches) > 0:
@@ -100,9 +119,10 @@ class Peer:
 
     def draw_curve(self, target):
         points = []
-        for i in range(5):
-            points.append(self.departure_position * (1-i/4.0)+
-                          self.branching_position * i/4.0)
+        branching_position = self.smoothed_branching_position.value()
+        for i in range(15):
+            points.append(self.departure_position * (1-i/14.0)+
+                          branching_position * i/14.0)
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
         points = bezier([t/50.0 for t in range(51)])
