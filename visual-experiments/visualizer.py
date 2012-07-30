@@ -107,7 +107,7 @@ class Visualizer:
 
     def serve_osc(self):
         while True:
-            self.server.recv()
+            self.server.recv(0.1)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
