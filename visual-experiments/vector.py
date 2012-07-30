@@ -39,7 +39,10 @@ class Vector:
         self.y = y
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+        try:
+            return self.x == other.x and self.y == other.y
+        except AttributeError:
+            return False
 
     def __ne__(self, other):
         return not (self == other)
@@ -47,6 +50,10 @@ class Vector:
     def __add__(self, other):
         return Vector(self.x + other.x,
                       self.y + other.y)
+
+    def __radd__(self, value):
+        return Vector(self.x + value,
+                      self.y + value)
     
     def __sub__(self, other):
         return Vector(self.x - other.x,

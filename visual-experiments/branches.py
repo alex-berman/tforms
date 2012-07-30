@@ -48,14 +48,23 @@ class Peer:
 
     def add_chunk(self, chunk):
         chunk.peer = self
-        if len(self.branches) == 0:
-            self.branching_position = (self.departure_position*0.4) + (chunk.arrival_position*0.6)
         branch = self.find_branch(chunk)
         if not branch:
             branch = Branch(chunk.filenum, chunk.file_length, self.visualizer)
             self.branches[self.branch_count] = branch
             self.branch_count += 1
         branch.set_cursor(chunk.end)
+        self.update_branching_position()
+
+    def update_branching_position(self):
+        average_target_position = \
+            sum([branch.target_position() for branch in self.branches.values()]) / \
+            len(self.branches)
+        new_branching_position = self.departure_position*0.4 + average_target_position*0.6
+        if self.branching_position == None:
+            self.branching_position = new_branching_position
+        else:
+            self.branching_position += (new_branching_position - self.branching_position) * 0.1
 
     def find_branch(self, chunk):
         for branch in self.branches.values():
