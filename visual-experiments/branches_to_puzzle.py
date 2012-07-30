@@ -1,5 +1,4 @@
 from visualizer import Visualizer, run
-import visualizer
 from gatherer import Gatherer
 import time
 from OpenGL.GL import *
@@ -117,10 +116,6 @@ class Peer:
             glVertex2f(x, y)
         glEnd()
 
-class Chunk(visualizer.Chunk):
-    def joinable_with(self, other):
-        return other.peer == self.peer
-
 class Smoother:
     RESPONSE_FACTOR = 5
 
@@ -190,7 +185,7 @@ class File:
 
 class Puzzle(Visualizer):
     def __init__(self, args):
-        Visualizer.__init__(self, args, Chunk)
+        Visualizer.__init__(self, args)
         self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
         self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
@@ -205,8 +200,16 @@ class Puzzle(Visualizer):
 
     def render(self):
         if len(self.files) > 0:
+            self.process_chunks()
             self.draw_chunks()
             self.draw_branches()
+
+    def process_chunks(self):
+        for f in self.files.values():
+            for chunk in f.arriving_chunks.values():
+                age = self.now - chunk.arrival_time
+                if age > chunk.duration:
+                    self.gather_chunk(chunk, f)
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -231,11 +234,8 @@ class Puzzle(Visualizer):
     def draw_arriving_chunks(self, f, y):
         for chunk in f.arriving_chunks.values():
             age = self.now - chunk.arrival_time
-            if age > chunk.duration:
-                self.gather_chunk(chunk, f)
-            # else:
-            #     actuality = 1 - float(age) / chunk.duration
-            #     self.draw_chunk(chunk, actuality, f, y)
+            actuality = 1 - float(age) / chunk.duration
+            #self.draw_arriving_chunk(chunk, actuality, f, y)
 
     def gather_chunk(self, chunk, f):
         if not chunk.peer_id in self.peers:
