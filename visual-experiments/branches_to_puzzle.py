@@ -15,13 +15,16 @@ ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 MAX_BRANCH_AGE = 2.0
+ARRIVED_HEIGHT = 3
+MAX_HEIGHT = 13
 
 class Branch:
-    def __init__(self, filenum, file_length, visualizer):
+    def __init__(self, filenum, file_length, peer):
         self.filenum = filenum
         self.file_length = file_length
-        self.visualizer = visualizer
-        self.f = visualizer.files[filenum]
+        self.peer = peer
+        self.visualizer = peer.visualizer
+        self.f = self.visualizer.files[filenum]
 
     def set_cursor(self, cursor):
         self.cursor = cursor
@@ -33,6 +36,10 @@ class Branch:
     def target_position(self):
         x = self.f.byte_to_coord(self.cursor)
         y = self.visualizer.filenum_to_y_coord(self.filenum)
+        if y > self.peer.departure_position.y:
+            y -= 1
+        else:
+            y += ARRIVED_HEIGHT
         return Vector(x, y)
 
 class Peer:
@@ -48,7 +55,7 @@ class Peer:
         chunk.peer = self
         branch = self.find_branch(chunk)
         if not branch:
-            branch = Branch(chunk.filenum, chunk.file_length, self.visualizer)
+            branch = Branch(chunk.filenum, chunk.file_length, self)
             self.branches[self.branch_count] = branch
             self.branch_count += 1
         branch.set_cursor(chunk.end)
@@ -240,7 +247,7 @@ class Puzzle(Visualizer):
     def draw_chunk(self, chunk, actuality, f, y):
         zoom = self.get_zoom(actuality)
         y_offset = actuality * 10
-        height = 3 + zoom * 10
+        height = ARRIVED_HEIGHT + zoom * (MAX_HEIGHT - ARRIVED_HEIGHT)
         y1 = int(y + y_offset)
         y2 = int(y + y_offset + height)
         x1 = int(f.byte_to_coord(chunk.begin))
