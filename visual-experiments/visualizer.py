@@ -4,7 +4,6 @@ from OpenGL.GLU import *
 import sys
 import liblo
 import time
-import threading
 import argparse
 import collections
 
@@ -54,7 +53,6 @@ class Visualizer:
         self.width = args.width
         self.height = args.height
         self.show_fps = args.show_fps
-        self.lock = threading.Lock()
         self.first_frame = True
         self.synth = SynthController()
         if self.show_fps:
@@ -85,13 +83,11 @@ class Visualizer:
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length,
             peer_id, pan, height, time.time(), self)
-        with self.lock:
-            self.add_chunk(chunk)
+        self.add_chunk(chunk)
 
     def handle_stopped_playing_message(self, path, args, types, src, data):
         (chunk_id, filenum) = args
-        with self.lock:
-            self.stopped_playing(chunk_id, filenum)
+        self.stopped_playing(chunk_id, filenum)
 
     def stopped_playing(self, chunk_id, filenum):
         pass
@@ -101,13 +97,6 @@ class Visualizer:
         self.server = liblo.Server(VISUALIZER_PORT)
         self.server.add_method("/chunk", "iiiiiiiff", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
-        server_thread = threading.Thread(target=self.serve_osc)
-        server_thread.daemon = True
-        server_thread.start()
-
-    def serve_osc(self):
-        while True:
-            self.server.recv(0.1)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -136,14 +125,18 @@ class Visualizer:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
-            with self.lock:
-                self.render()
+            self.serve_osc()
+            self.render()
             if self.show_fps:
                 self.update_fps_history()
                 self.show_fps_if_timely()
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
+
+    def serve_osc(self):
+        while self.server.recv(0.01):
+            pass
 
     def update_fps_history(self):
         fps = 1.0 / self.time_increment
