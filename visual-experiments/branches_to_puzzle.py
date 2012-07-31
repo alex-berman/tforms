@@ -35,11 +35,7 @@ class Branch:
 
     def target_position(self):
         x = self.f.byte_to_coord(self.cursor)
-        y = self.visualizer.filenum_to_y_coord(self.filenum)
-        if y > self.peer.departure_position.y:
-            y -= 1
-        else:
-            y += ARRIVED_HEIGHT
+        y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
         return Vector(x, y)
 
 class Peer:
@@ -120,6 +116,9 @@ class Peer:
         for x,y in points:
             glVertex2f(x, y)
         glEnd()
+        if branch.age() < BRANCH_SUSTAIN:
+            self.draw_line(Vector(target.x, target.y-ARRIVED_HEIGHT/2),
+                           Vector(target.x, target.y+ARRIVED_HEIGHT/2))
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -202,6 +201,7 @@ class Puzzle(Visualizer):
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length, self)
         self.files[chunk.filenum].add_chunk(chunk)
+        self.play_chunk(chunk)
 
     def render(self):
         if len(self.files) > 0:
