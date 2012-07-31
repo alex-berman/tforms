@@ -14,6 +14,7 @@ ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 MAX_BRANCH_AGE = 2.0
+BRANCH_SUSTAIN = 1.5
 ARRIVED_HEIGHT = 3
 MAX_HEIGHT = 13
 
@@ -86,9 +87,8 @@ class Peer:
         if len(self.branches) > 0:
             glLineWidth(1.0)
             for branch in self.branches.values():
-                relative_age = branch.age() / MAX_BRANCH_AGE
-                self.set_color(relative_age)
-                self.draw_curve(branch.target_position())
+                self.set_color(0)
+                self.draw_curve(branch)
 
     def set_color(self, relative_age):
         color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
@@ -102,12 +102,17 @@ class Peer:
         glVertex2f(q.x, q.y)
         glEnd()
 
-    def draw_curve(self, target):
+    def draw_curve(self, branch):
         points = []
         branching_position = self.smoothed_branching_position.value()
         for i in range(15):
             points.append(self.departure_position * (1-i/14.0)+
                           branching_position * i/14.0)
+        if branch.age() < BRANCH_SUSTAIN:
+            target = branch.target_position()
+        else:
+            target = branching_position + (branch.target_position() - branching_position) * \
+                (1 - (branch.age() - BRANCH_SUSTAIN) / (MAX_BRANCH_AGE - BRANCH_SUSTAIN))
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
         points = bezier([t/50.0 for t in range(51)])
