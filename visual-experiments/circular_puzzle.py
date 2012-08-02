@@ -16,6 +16,8 @@ MAX_BRANCH_AGE = 2.0
 BRANCH_SUSTAIN = 1.5
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
+DESIRED_MARGIN = 20
+RADIUS = 100.0
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -37,7 +39,7 @@ class Branch:
 
     def target_position(self):
         return self.f.completion_position(self.last_chunk, self.last_chunk.begin,
-                                          (self.f.inner_radius + self.f.outer_radius) / 2)
+                                          (self.f.inner_radius + self.f.radius) / 2)
 
     def update(self):
         for chunk in self.playing_chunks.values():
@@ -150,7 +152,7 @@ class Peer:
             last_chunk = branch.last_chunk
             f = self.visualizer.files[last_chunk.filenum]
             self.draw_line(f.completion_position(last_chunk, last_chunk.begin, f.inner_radius),
-                           f.completion_position(last_chunk, last_chunk.begin, f.outer_radius))
+                           f.completion_position(last_chunk, last_chunk.begin, f.radius))
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -172,15 +174,14 @@ class Smoother:
         self._current_value = None
 
 class File:
-    def __init__(self, filenum, length, visualizer):
+    def __init__(self, filenum, length, visualizer, position, radius):
         self.filenum = filenum
         self.length = length
         self.visualizer = visualizer
+        self.position = position
         self.gatherer = Gatherer()
-        self.inner_radius = 100.0
-        self.outer_radius = self.inner_radius + 15.0
-        self.x = random.uniform(self.outer_radius, visualizer.width - self.outer_radius*2)
-        self.y = random.uniform(self.outer_radius, visualizer.height - self.outer_radius*2)
+        self.inner_radius = radius - 15
+        self.radius = radius
 
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
@@ -205,7 +206,7 @@ class File:
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.outer_radius)
+            p = self.completion_position(chunk, byte_position, self.radius)
             glVertex2f(p.x, p.y)
 
         glEnd()
@@ -226,7 +227,7 @@ class File:
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.outer_radius)
+            p = self.completion_position(chunk, byte_position, self.radius)
             glColor3f(1,
                       float(i) / (num_vertices-1),
                       float(i) / (num_vertices-1)
@@ -237,8 +238,8 @@ class File:
 
     def completion_position(self, chunk, byte_position, radius):
         angle = 2 * math.pi * byte_position / chunk.file_length
-        x = self.x + radius * math.cos(angle)
-        y = self.y + radius * math.sin(angle)
+        x = self.position.x + radius * math.cos(angle)
+        y = self.position.y + radius * math.sin(angle)
         return Vector(x, y)
 
     def get_departure_position(self, chunk):
@@ -257,7 +258,7 @@ class Puzzle(Visualizer):
 
     def add_chunk(self, chunk):
         if not chunk.filenum in self.files:
-            self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length, self)
+            self.files[chunk.filenum] = self.new_file(chunk.filenum, chunk.file_length)
         self.files[chunk.filenum].add_chunk(chunk)
 
         if not chunk.peer_id in self.peers:
@@ -265,6 +266,10 @@ class Puzzle(Visualizer):
         self.peers[chunk.peer_id].add_chunk(chunk)
 
         self.play_chunk(chunk)
+
+    def new_file(self, filenum, file_length):
+        position = self.place_new_circle()
+        return File(filenum, file_length, self, position, RADIUS)
 
     def render(self):
         glEnable(GL_LINE_SMOOTH)
@@ -278,6 +283,9 @@ class Puzzle(Visualizer):
 
     def draw_gathered_chunks(self):
         for f in self.files.values():
+            f.force = self.direct_towards_open_area(f)
+        for f in self.files.values():
+            f.position += f.force
             f.draw()
 
     def draw_branches(self):
@@ -285,4 +293,66 @@ class Puzzle(Visualizer):
             peer.update()
             peer.draw()
 
-run(Puzzle)
+    def place_new_circle(self):
+        return self.random_position()
+
+    def random_position(self):
+        return Vector(random.uniform(RADIUS, self.width - RADIUS),
+                      random.uniform(RADIUS, self.height - RADIUS))
+
+    def direct_towards_open_area(self, f):
+        force = Vector(0,0)
+        force += self.repel_from_boundaries(f) * 0.1
+        force += self.repel_from_other_files(f) * 0.01
+        return force
+
+    def repel_from_boundaries(self, f):
+        force = Vector(0,0)
+        force += self.repel_from_vertical_boundaries(f)
+        force += self.repel_from_horizontal_boundaries(f)
+        return force
+
+    def repel_from_vertical_boundaries(self, f):
+        left = f.position.x - f.radius
+        min_left = DESIRED_MARGIN
+        if left < min_left:
+            return Vector(min_left - left, 0)
+
+        right = f.position.x + f.radius
+        max_right = self.width - DESIRED_MARGIN
+        if right > max_right:
+            return Vector(max_right - right, 0)
+
+        return Vector(0,0)
+
+    def repel_from_horizontal_boundaries(self, f):
+        top = f.position.y - f.radius
+        min_top = DESIRED_MARGIN
+        if top < min_top:
+            return Vector(0, min_top - top)
+
+        bottom = f.position.y + f.radius
+        max_bottom = self.height - DESIRED_MARGIN
+        if bottom > max_bottom:
+            return Vector(0, max_bottom - bottom)
+
+        return Vector(0,0)
+
+    def repel_from_other_files(self, f):
+        force = Vector(0,0)
+        for other in self.files.values():
+            if other != f:
+                force += self.repel_from_other_file(f, other)
+        return force
+
+    def repel_from_other_file(self, f, other):
+        d = other.position - f.position
+        distance = d.mag() - f.radius - other.radius
+        if distance < DESIRED_MARGIN:
+            force = -d
+            return force
+        else:
+            return Vector(0,0)
+
+if __name__ == '__main__':
+    run(Puzzle)
