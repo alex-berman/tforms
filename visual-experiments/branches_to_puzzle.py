@@ -212,6 +212,11 @@ class Puzzle(Visualizer):
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length, self)
         self.files[chunk.filenum].add_chunk(chunk)
+
+        if not chunk.peer_id in self.peers:
+            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
+        self.peers[chunk.peer_id].add_chunk(chunk)
+
         self.play_chunk(chunk)
 
     def render(self):
@@ -244,6 +249,8 @@ class Puzzle(Visualizer):
         self.draw_playing_chunks(f, y)
 
     def draw_gathered_chunks(self, f, y):
+        opacity = ARRIVED_OPACITY
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
         for chunk in f.gatherer.pieces():
             self.draw_chunk(chunk, f, y)
 
@@ -251,12 +258,13 @@ class Puzzle(Visualizer):
         for chunk in f.playing_chunks.values():
             age = self.now - chunk.arrival_time
             actuality = 1 - float(age) / chunk.duration
-            #self.draw_playing_chunk(chunk, actuality, f, y)
+            self.draw_playing_chunk(chunk, actuality, f, y)
+
+    def draw_playing_chunk(self, chunk, actuality, f, y):
+        glColor3f(1,0,0)
+        self.draw_chunk(chunk, f, y)
 
     def gather_chunk(self, chunk, f):
-        if not chunk.peer_id in self.peers:
-            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
-        self.peers[chunk.peer_id].add_chunk(chunk)
         del f.playing_chunks[chunk.id]
         f.gatherer.add(chunk)
 
@@ -267,8 +275,6 @@ class Puzzle(Visualizer):
         x2 = int(f.byte_to_coord(chunk.end))
         if x2 == x1:
             x2 = x1 + 1
-        opacity = ARRIVED_OPACITY
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
