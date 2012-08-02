@@ -8,6 +8,7 @@ import random
 import math
 from bezier import make_bezier
 import colorsys
+import copy
 
 DURATION = 0.5
 CIRCLE_PRECISION = 10
@@ -47,22 +48,11 @@ class Branch:
     def draw_playing_chunks(self):
         if len(self.playing_chunks) > 0:
             chunks_list = list(self.playing_chunks.values())
-            y = self.visualizer.filenum_to_y_coord(self.filenum)
-            y1 = int(y)
-            y2 = int(y + ARRIVED_HEIGHT) - 1
-            x1 = int(self.f.byte_to_coord(chunks_list[0].begin))
-            x2 = int(self.f.byte_to_coord(chunks_list[-1].end))
-            if x2 == x1:
-                x2 = x1 + 1
-            glBegin(GL_QUADS)
-            glColor3f(1,1,1)
-            glVertex2i(x1, y2)
-            glVertex2i(x1, y1)
-            glColor3f(1,0,0)
-            glVertex2i(x2, y1)
-            glVertex2i(x2, y2)
-            glEnd()
-
+            chunk = copy.copy(chunks_list[0])
+            chunk.end = chunks_list[-1].end
+            chunk.byte_size = chunk.end - chunk.begin
+            self.f.draw_playing_chunk(chunk)
+            
 class Peer:
     def __init__(self, departure_position, visualizer):
         self.departure_position = departure_position
@@ -116,9 +106,10 @@ class Peer:
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             for branch in self.branches.values():
+                branch.draw_playing_chunks()
+            for branch in self.branches.values():
                 self.set_color(0)
                 self.draw_curve(branch)
-                #branch.draw_playing_chunks()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
@@ -186,8 +177,8 @@ class File:
         self.length = length
         self.visualizer = visualizer
         self.gatherer = Gatherer()
-        self.inner_radius = 50.0
-        self.outer_radius = self.inner_radius + 5.0
+        self.inner_radius = 100.0
+        self.outer_radius = self.inner_radius + 15.0
         self.x = random.uniform(self.outer_radius, visualizer.width - self.outer_radius*2)
         self.y = random.uniform(self.outer_radius, visualizer.height - self.outer_radius*2)
 
@@ -215,6 +206,31 @@ class File:
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
             p = self.completion_position(chunk, byte_position, self.outer_radius)
+            glVertex2f(p.x, p.y)
+
+        glEnd()
+
+    def draw_playing_chunk(self, chunk):
+        num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
+        num_vertices = max(num_vertices, 2)
+        glLineWidth(1)
+        glBegin(GL_POLYGON)
+
+        for i in range(num_vertices):
+            byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
+            p = self.completion_position(chunk, byte_position, self.inner_radius)
+            glColor3f(1,
+                      float(num_vertices-i-1) / (num_vertices-1),
+                      float(num_vertices-i-1) / (num_vertices-1)
+                      )
+            glVertex2f(p.x, p.y)
+        for i in range(num_vertices):
+            byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
+            p = self.completion_position(chunk, byte_position, self.outer_radius)
+            glColor3f(1,
+                      float(i) / (num_vertices-1),
+                      float(i) / (num_vertices-1)
+                      )
             glVertex2f(p.x, p.y)
 
         glEnd()
