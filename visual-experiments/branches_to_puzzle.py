@@ -27,9 +27,11 @@ class Branch:
         self.peer = peer
         self.visualizer = peer.visualizer
         self.f = self.visualizer.files[filenum]
+        self.playing_chunks = OrderedDict()
 
-    def set_cursor(self, cursor):
-        self.cursor = cursor
+    def add_chunk(self, chunk):
+        self.playing_chunks[chunk.id] = chunk
+        self.cursor = chunk.end
         self.last_updated = time.time()
 
     def age(self):
@@ -39,6 +41,31 @@ class Branch:
         x = self.f.byte_to_coord(self.cursor)
         y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
         return Vector(x, y)
+
+    def update(self):
+        for chunk in self.playing_chunks.values():
+            age = self.visualizer.now - chunk.arrival_time
+            if age > chunk.duration:
+                del self.playing_chunks[chunk.id]
+
+    def draw_playing_chunks(self):
+        if len(self.playing_chunks) > 0:
+            chunks_list = list(self.playing_chunks.values())
+            y = self.visualizer.filenum_to_y_coord(self.filenum)
+            y1 = int(y)
+            y2 = int(y + ARRIVED_HEIGHT) - 1
+            x1 = int(self.f.byte_to_coord(chunks_list[0].begin))
+            x2 = int(self.f.byte_to_coord(chunks_list[-1].end))
+            if x2 == x1:
+                x2 = x1 + 1
+            glBegin(GL_QUADS)
+            glColor3f(1,1,1)
+            glVertex2i(x1, y2)
+            glVertex2i(x1, y1)
+            glColor3f(1,0,0)
+            glVertex2i(x2, y1)
+            glVertex2i(x2, y2)
+            glEnd()
 
 class Peer:
     def __init__(self, departure_position, visualizer):
@@ -56,7 +83,7 @@ class Peer:
             branch = Branch(chunk.filenum, chunk.file_length, self)
             self.branches[self.branch_count] = branch
             self.branch_count += 1
-        branch.set_cursor(chunk.end)
+        branch.add_chunk(chunk)
 
     def find_branch(self, chunk):
         for branch in self.branches.values():
@@ -70,6 +97,9 @@ class Peer:
         for branch_id in outdated:
             del self.branches[branch_id]
         self.update_branching_position()
+
+        for branch in self.branches.values():
+            branch.update()
 
     def update_branching_position(self):
         if len(self.branches) == 0:
@@ -91,6 +121,7 @@ class Peer:
             for branch in self.branches.values():
                 self.set_color(0)
                 self.draw_curve(branch)
+                branch.draw_playing_chunks()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
@@ -160,7 +191,6 @@ class File:
         self.min_byte = None
         self.max_byte = None
         self.x_ratio = None
-        self.playing_chunks = OrderedDict()
         self.gatherer = Gatherer()
 
     def add_chunk(self, chunk):
@@ -172,7 +202,7 @@ class File:
         else:
             self.min_byte = min(self.min_byte, chunk.begin)
             self.max_byte = max(self.max_byte, chunk.end)
-        self.playing_chunks[chunk.id] = chunk
+        self.gatherer.add(chunk)
 
     def update_x_scope(self, time_increment):
         self._smoothed_min_byte.smooth(self.min_byte, time_increment)
@@ -221,16 +251,9 @@ class Puzzle(Visualizer):
 
     def render(self):
         if len(self.files) > 0:
-            self.process_chunks()
+            self.update_y_scope()
             self.draw_chunks()
             self.draw_branches()
-
-    def process_chunks(self):
-        for f in self.files.values():
-            for chunk in f.playing_chunks.values():
-                age = self.now - chunk.arrival_time
-                if age > chunk.duration:
-                    self.gather_chunk(chunk, f)
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -238,7 +261,6 @@ class Puzzle(Visualizer):
             peer.draw()
 
     def draw_chunks(self):
-        self.update_y_scope()
         for f in self.files.values():
             self.draw_file(f)
 
@@ -246,27 +268,12 @@ class Puzzle(Visualizer):
         y = self.filenum_to_y_coord(f.filenum)
         f.update_x_scope(self.time_increment)
         self.draw_gathered_chunks(f, y)
-        self.draw_playing_chunks(f, y)
 
     def draw_gathered_chunks(self, f, y):
         opacity = ARRIVED_OPACITY
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         for chunk in f.gatherer.pieces():
             self.draw_chunk(chunk, f, y)
-
-    def draw_playing_chunks(self, f, y):
-        for chunk in f.playing_chunks.values():
-            age = self.now - chunk.arrival_time
-            actuality = 1 - float(age) / chunk.duration
-            self.draw_playing_chunk(chunk, actuality, f, y)
-
-    def draw_playing_chunk(self, chunk, actuality, f, y):
-        glColor3f(1,0,0)
-        self.draw_chunk(chunk, f, y)
-
-    def gather_chunk(self, chunk, f):
-        del f.playing_chunks[chunk.id]
-        f.gatherer.add(chunk)
 
     def draw_chunk(self, chunk, f, y):
         y1 = int(y)
