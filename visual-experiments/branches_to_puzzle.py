@@ -160,7 +160,7 @@ class File:
         self.min_byte = None
         self.max_byte = None
         self.x_ratio = None
-        self.arriving_chunks = OrderedDict()
+        self.playing_chunks = OrderedDict()
         self.gatherer = Gatherer()
 
     def add_chunk(self, chunk):
@@ -172,7 +172,7 @@ class File:
         else:
             self.min_byte = min(self.min_byte, chunk.begin)
             self.max_byte = max(self.max_byte, chunk.end)
-        self.arriving_chunks[chunk.id] = chunk
+        self.playing_chunks[chunk.id] = chunk
 
     def update_x_scope(self, time_increment):
         self._smoothed_min_byte.smooth(self.min_byte, time_increment)
@@ -222,7 +222,7 @@ class Puzzle(Visualizer):
 
     def process_chunks(self):
         for f in self.files.values():
-            for chunk in f.arriving_chunks.values():
+            for chunk in f.playing_chunks.values():
                 age = self.now - chunk.arrival_time
                 if age > chunk.duration:
                     self.gather_chunk(chunk, f)
@@ -241,37 +241,33 @@ class Puzzle(Visualizer):
         y = self.filenum_to_y_coord(f.filenum)
         f.update_x_scope(self.time_increment)
         self.draw_gathered_chunks(f, y)
-        self.draw_arriving_chunks(f, y)
+        self.draw_playing_chunks(f, y)
 
     def draw_gathered_chunks(self, f, y):
         for chunk in f.gatherer.pieces():
-            self.draw_chunk(chunk, 0, f, y)
+            self.draw_chunk(chunk, f, y)
 
-    def draw_arriving_chunks(self, f, y):
-        for chunk in f.arriving_chunks.values():
+    def draw_playing_chunks(self, f, y):
+        for chunk in f.playing_chunks.values():
             age = self.now - chunk.arrival_time
             actuality = 1 - float(age) / chunk.duration
-            #self.draw_arriving_chunk(chunk, actuality, f, y)
+            #self.draw_playing_chunk(chunk, actuality, f, y)
 
     def gather_chunk(self, chunk, f):
         if not chunk.peer_id in self.peers:
             self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
-        del f.arriving_chunks[chunk.id]
+        del f.playing_chunks[chunk.id]
         f.gatherer.add(chunk)
 
-    def draw_chunk(self, chunk, actuality, f, y):
-        zoom = self.get_zoom(actuality)
-        y_offset = actuality * 10
-        height = ARRIVED_HEIGHT + zoom * (MAX_HEIGHT - ARRIVED_HEIGHT)
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
+    def draw_chunk(self, chunk, f, y):
+        y1 = int(y)
+        y2 = int(y + ARRIVED_HEIGHT)
         x1 = int(f.byte_to_coord(chunk.begin))
         x2 = int(f.byte_to_coord(chunk.end))
-        x1, x2 = self.upscale(x1, x2, zoom)
         if x2 == x1:
             x2 = x1 + 1
-        opacity = ARRIVED_OPACITY + (zoom * (1-ARRIVED_OPACITY))
+        opacity = ARRIVED_OPACITY
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
