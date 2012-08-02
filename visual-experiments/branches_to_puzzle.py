@@ -109,7 +109,8 @@ class Peer:
                 sum([branch.target_position() for branch in self.branches.values()]) / \
                 len(self.branches)
             new_branching_position = self.departure_position*0.4 + average_target_position*0.6
-            self.smoothed_branching_position.smooth(new_branching_position, self.visualizer.time_increment)
+            self.smoothed_branching_position.smooth(
+                new_branching_position, self.visualizer.time_increment)
 
     def draw(self):
         if len(self.branches) > 0:
