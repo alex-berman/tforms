@@ -15,8 +15,10 @@ APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 MAX_BRANCH_AGE = 2.0
 BRANCH_SUSTAIN = 1.5
-ARRIVED_HEIGHT = 3
+ARRIVED_HEIGHT = 5
 MAX_HEIGHT = 13
+ARRIVED_OPACITY = 0.5
+GREYSCALE = True
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -82,15 +84,24 @@ class Peer:
     def draw(self):
         if len(self.branches) > 0:
             glLineWidth(1.0)
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             for branch in self.branches.values():
                 self.set_color(0)
                 self.draw_curve(branch)
+            glDisable(GL_LINE_SMOOTH)
+            glDisable(GL_BLEND)
 
     def set_color(self, relative_age):
-        color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
-        glColor3f(relative_age + color[0] * (1-relative_age),
-                  relative_age + color[1] * (1-relative_age),
-                  relative_age + color[2] * (1-relative_age))
+        if GREYSCALE:
+            glColor3f(0,0,0)
+        else:
+            color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
+            glColor3f(relative_age + color[0] * (1-relative_age),
+                      relative_age + color[1] * (1-relative_age),
+                      relative_age + color[2] * (1-relative_age))
 
     def draw_line(self, p, q):
         glBegin(GL_LINES)
@@ -260,7 +271,7 @@ class Puzzle(Visualizer):
         x1, x2 = self.upscale(x1, x2, zoom)
         if x2 == x1:
             x2 = x1 + 1
-        opacity = 0.2 + (zoom * 0.8)
+        opacity = ARRIVED_OPACITY + (zoom * (1-ARRIVED_OPACITY))
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, y2)
