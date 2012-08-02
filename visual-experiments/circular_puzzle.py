@@ -35,7 +35,8 @@ class Branch:
         return self.visualizer.now - self.last_updated
 
     def target_position(self):
-        return self.f.completion_position(self.last_chunk, self.last_chunk.begin, self.f.outer_radius)
+        return self.f.completion_position(self.last_chunk, self.last_chunk.begin,
+                                          (self.f.inner_radius + self.f.outer_radius) / 2)
 
     def update(self):
         for chunk in self.playing_chunks.values():
@@ -154,9 +155,11 @@ class Peer:
         for x,y in points:
             glVertex2f(x, y)
         glEnd()
-        # if branch.age() < BRANCH_SUSTAIN:
-        #     self.draw_line(Vector(target.x, target.y-ARRIVED_HEIGHT/2),
-        #                    Vector(target.x, target.y+ARRIVED_HEIGHT/2))
+        if branch.age() < BRANCH_SUSTAIN:
+            last_chunk = branch.last_chunk
+            f = self.visualizer.files[last_chunk.filenum]
+            self.draw_line(f.completion_position(last_chunk, last_chunk.begin, f.inner_radius),
+                           f.completion_position(last_chunk, last_chunk.begin, f.outer_radius))
 
 class Smoother:
     RESPONSE_FACTOR = 5
