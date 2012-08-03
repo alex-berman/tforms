@@ -12,7 +12,9 @@ from vector import Vector
 #positions = [Vector(150, 150), Vector(580, 150)]
 #positions = [Vector(360, 150), Vector(150, 150)]
 #positions = [Vector(330, 150), Vector(150, 150)]
-positions = [Vector(110, 150), Vector(580, 150)]
+
+#positions = [Vector(110, 150), Vector(580, 150)]
+#positions = [Vector(150, 150), Vector(155, 150)]
 
 # positions = [Vector(501.145936085, 357.560708033),
 #              Vector(117.841625378, 443.805921172),
@@ -22,9 +24,12 @@ positions = [Vector(110, 150), Vector(580, 150)]
 #              Vector(330, 150),
 #              Vector(200, 200)]
 
+positions = []
+
 class Puzzle(circular_puzzle.Puzzle):
     def random_position(self):
-        return positions[len(self.files)]
+        return circular_puzzle.Puzzle.random_position(self) + Vector(0, 200)
+        #return positions[len(self.files)]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-sync', action='store_true')
@@ -36,19 +41,20 @@ visualizer = Puzzle(args)
 threading.Thread(target=visualizer.run).start()
 
 id_count = 0
-files = [{"offset": 0,
-          "length": 2000,
-          "pan": -1,
-          "height": 0.3},
-         {"offset": 0,
-          "length": 2000,
-          "pan": -1,
-          "height": 0.3},
-         {"offset": 0,
-          "length": 2000,
-          "pan": -1,
-          "height": 0.3},
-         ]
+# files = [{"offset": 0,
+#           "length": 2000,
+#           "pan": -1,
+#           "height": 0.3},
+#          {"offset": 0,
+#           "length": 2000,
+#           "pan": -1,
+#           "height": 0.3},
+#          {"offset": 0,
+#           "length": 2000,
+#           "pan": -1,
+#           "height": 0.3},
+#          ]
+files = []
 
 def add_chunk(filenum, begin, end):
     global id_count
@@ -64,10 +70,17 @@ def add_chunk(filenum, begin, end):
     visualizer.add_chunk(chunk)
     
 sleep(1);
-add_chunk(0, 0, 1000)
-add_chunk(0, 1000, 2000)
-add_chunk(1, 0, 1000)
-add_chunk(1, 1000, 2000)
+# add_chunk(0, 0, 1000)
+# add_chunk(0, 1000, 2000)
+# add_chunk(1, 0, 1000)
+# add_chunk(1, 1000, 2000)
 
-# add_chunk(2, 0, 1000)
-# add_chunk(2, 1000, 2000)
+# # add_chunk(2, 0, 1000)
+# # add_chunk(2, 1000, 2000)
+
+for i in range(8):
+    files.append({"offset": 0,
+                  "length": 2000,
+                  "pan": -1,
+                  "height": 0.3})
+    add_chunk(i, 0, 2000)

@@ -11,14 +11,14 @@ import colorsys
 import copy
 
 DURATION = 0.5
-CIRCLE_PRECISION = 10
+CIRCLE_PRECISION = 50
+CIRCLE_THICKNESS = 10
 MAX_BRANCH_AGE = 2.0
 BRANCH_SUSTAIN = 1.5
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
-DESIRED_MARGIN = 20
-RADIUS = 100.0
-DAMPING = 0.9
+RADIUS = 50.0
+DAMPING = 0.95
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -181,7 +181,7 @@ class File:
         self.visualizer = visualizer
         self.position = position
         self.gatherer = Gatherer()
-        self.inner_radius = radius - 15
+        self.inner_radius = radius - CIRCLE_THICKNESS
         self.radius = radius
         self.velocity = Vector(0,0)
 
@@ -305,41 +305,28 @@ class Puzzle(Visualizer):
 
     def direct_towards_open_area(self, f):
         f.force = Vector(0,0)
-        self.repel_from_boundaries(f)
-        self.repel_from_other_files(f)
+        self.repel_from_and_attract_to_other_files(f)
         return f.force
 
-    def repel_from_boundaries(self, f):
-        self.repel_from_minimum(f, "x", DESIRED_MARGIN)
-        self.repel_from_maximum(f, "x", self.width - DESIRED_MARGIN)
-        self.repel_from_minimum(f, "y", DESIRED_MARGIN)
-        self.repel_from_maximum(f, "y", self.height - DESIRED_MARGIN)
-
-    def repel_from_minimum(self, f, dimension, limit):
-        current = getattr(f.position, dimension) - f.radius
-        if current < limit:
-            v = Vector(0,0)
-            setattr(v, dimension, pow(limit - current, 2) * 0.01)
-            f.force += v
-
-    def repel_from_maximum(self, f, dimension, limit):
-        current = getattr(f.position, dimension) + f.radius
-        if current > limit:
-            v = Vector(0,0)
-            setattr(v, dimension, pow(limit - current, 2) * 0.01)
-            f.force -= v
-
-    def repel_from_other_files(self, f):
+    def repel_from_and_attract_to_other_files(self, f):
         for other in self.files.values():
             if other != f:
-                self.repel_from_other_file(f, other)
+                self.apply_coulomb_repulsion(f, other)
+                self.apply_hooke_attraction(f, other)
 
-    def repel_from_other_file(self, f, other):
-        d = other.position - f.position
-        distance = d.mag() - f.radius - other.radius
-        if distance < DESIRED_MARGIN:
+    def apply_coulomb_repulsion(self, f, other):
+        d = f.position - other.position
+        distance = d.mag()
+        if distance == 0:
+            f.force += Vector(random.uniform(0.0, 0.1),
+                              random.uniform(0.0, 0.1))
+        else:
             d.normalize()
-            f.force -= d * pow(DESIRED_MARGIN - distance, 2)
+            f.force += d / pow(distance, 2) * 1000
+
+    def apply_hooke_attraction(self, f, other):
+        d = other.position - f.position
+        f.force += d * 0.0001
 
 if __name__ == '__main__':
     run(Puzzle)
