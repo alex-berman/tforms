@@ -6,6 +6,7 @@ import liblo
 import time
 import argparse
 import collections
+from vector import Vector
 
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
@@ -18,7 +19,7 @@ BORDER_OPACITY = 0.7
 
 class Chunk:
     def __init__(self, chunk_id, torrent_position, byte_size,
-                 filenum, file_offset, file_length, peer_id, pan, height,
+                 filenum, file_offset, file_length, peer_id, bearing,
                  arrival_time, visualizer):
         self.id = chunk_id
         self.torrent_position = torrent_position
@@ -29,8 +30,7 @@ class Chunk:
         self.begin = file_position
         self.end = file_position + byte_size
         self.peer_id = peer_id
-        self.pan = pan
-        self.height = height
+        self.bearing = bearing
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
@@ -48,6 +48,10 @@ class Chunk:
 
     def joinable_with(self, other):
         return True
+
+    def peer_position(self):
+        return Visualizer.bearing_to_border_position(
+            self.bearing, self.visualizer.width, self.visualizer.height)
 
 class Visualizer:
     def __init__(self, args, chunk_class=Chunk):
@@ -81,11 +85,11 @@ class Visualizer:
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length,
-         peer_id, pan, height) = args
+         peer_id, bearing) = args
         chunk = self.chunk_class(
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length,
-            peer_id, pan, height, time.time(), self)
+            peer_id, bearing, time.time(), self)
         self.add_chunk(chunk)
 
     def handle_stopped_playing_message(self, path, args, types, src, data):
@@ -98,7 +102,7 @@ class Visualizer:
     def setup_osc(self):
         self.orchestra = OrchestraController()
         self.server = liblo.Server(VISUALIZER_PORT)
-        self.server.add_method("/chunk", "iiiiiiiff", self.handle_chunk_message)
+        self.server.add_method("/chunk", "iiiiiiif", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
 
     def InitGL(self):
@@ -173,9 +177,24 @@ class Visualizer:
         if args[0] == ESCAPE:
             sys.exit()
 
-    def play_chunk(self, chunk):
-        self.orchestra.play_chunk(chunk.id)
+    def play_chunk(self, chunk, pan):
+        self.orchestra.play_chunk(chunk.id, pan)
         chunk.playing = True
+
+    @staticmethod
+    def bearing_to_border_position(bearing, width, height):
+        total_border_size = width*2 + height*2
+        peer_border_position = bearing * total_border_size
+        if peer_border_position < width:
+            return Vector(peer_border_position, 0)
+        peer_border_position -= width
+        if peer_border_position < height:
+            return Vector(width, peer_border_position)
+        peer_border_position -= height
+        if peer_border_position < width:
+            return Vector(width - peer_border_position, height)
+        peer_border_position -= width
+        return Vector(0, height - peer_border_position)
 
 
 def run(visualizer_class):

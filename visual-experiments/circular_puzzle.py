@@ -186,7 +186,9 @@ class File:
         self.velocity = Vector(0,0)
 
     def add_chunk(self, chunk):
-        chunk.departure_position = self.get_departure_position(chunk)
+        pan = self.completion_position(chunk, chunk.begin, self.radius).x / self.visualizer.width
+        self.visualizer.play_chunk(chunk, pan)
+        chunk.departure_position = chunk.peer_position()
         chunk.duration = DURATION
         self.gatherer.add(chunk)
 
@@ -244,14 +246,6 @@ class File:
         y = self.visualizer.y_offset + self.position.y + radius * math.sin(angle)
         return Vector(x, y)
 
-    def get_departure_position(self, chunk):
-        if chunk.pan < 0.5:
-            x = 0
-        else:
-            x = self.visualizer.width
-        y = chunk.height * self.visualizer.height
-        return Vector(x, y)
-
 class Puzzle(Visualizer):
     def __init__(self, args):
         Visualizer.__init__(self, args)
@@ -270,8 +264,6 @@ class Puzzle(Visualizer):
         if not chunk.peer_id in self.peers:
             self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
-
-        self.play_chunk(chunk)
 
     def new_file(self, filenum, file_length):
         position = self.place_new_circle()

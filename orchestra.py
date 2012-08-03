@@ -14,12 +14,11 @@ PORT = 51233
 VISUALIZER_PORT = 51234
 
 class Player:
-    def __init__(self, orchestra, _id, pan, height):
+    def __init__(self, orchestra, _id, bearing):
         self.orchestra = orchestra
         self.logger = orchestra.logger
         self.id = _id
-        self.pan = pan
-        self.height = height
+        self.bearing = bearing
         self.enabled = True
         self._previous_chunk_time = None
 
@@ -27,13 +26,13 @@ class Player:
         chunk["desired_time"] = desired_time
         self.orchestra.visualize(chunk,
                                  self.id,
-                                 self.pan,
-                                 self.height)
+                                 self.bearing)
 
-    def play(self, chunk, desired_time=None):
+    def play(self, chunk, pan, desired_time=None):
         if not desired_time:
             if "desired_time" in chunk:
                 desired_time = chunk["desired_time"]
+        chunk["pan"] = pan
         if self.interpret_sonically(chunk, desired_time):
             self.orchestra.highlight_chunk(chunk)
         else:
@@ -83,7 +82,6 @@ class WavPlayer(Player):
         chunk["start_time_in_file"] = start_time_in_file
         chunk["end_time_in_file"] = end_time_in_file
         chunk["desired_duration"] = desired_duration
-        chunk["pan"] = self.pan
         self.orchestra.play_chunk(chunk)
         return True
 
@@ -148,7 +146,7 @@ class Orchestra:
 
     def _setup_osc(self):
         self.server = liblo.Server(PORT)
-        self.server.add_method("/play", "i", self._handle_play_message)
+        self.server.add_method("/play", "if", self._handle_play_message)
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -158,10 +156,10 @@ class Orchestra:
             self.server.recv()
 
     def _handle_play_message(self, path, args, types, src, data):
-        chunk_id = args[0]
+        (chunk_id, pan) = args
         chunk = self._chunks_by_id[chunk_id]
-        self.logger.debug("playing chunk %s" % chunk)
-        chunk["player"].play(chunk)
+        self.logger.debug("playing chunk %s with pan %s" % (chunk, pan))
+        chunk["player"].play(chunk, pan)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -323,7 +321,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
-    def visualize(self, chunk, player_id, pan, height):
+    def visualize(self, chunk, player_id, bearing):
         file_info = self.tr_log.files[chunk["filenum"]]
         liblo.send(self.visualizer, "/chunk",
                    chunk["id"],
@@ -333,8 +331,7 @@ class Orchestra:
                    file_info["offset"],
                    file_info["length"],
                    player_id,
-                   float(pan),
-                   height)
+                   bearing)
 
     def stopped_playing(self, chunk):
         self.logger.debug("stopped chunk %s" % chunk)
@@ -371,11 +368,10 @@ class Orchestra:
 
     def _create_player(self):
         count = len(self.players)
-        pan = random.choice([0.0, 1.0])
-        height = random.uniform(0.0, 1.0)
-        self.logger.debug("creating player number %d with pan %f, height %f" % (
-                count, pan, height))
-        return self._player_class(self, count, pan, height)
+        bearing = random.uniform(0.0, 1.0)
+        self.logger.debug("creating player number %d with bearing %f" % (
+                count, bearing))
+        return self._player_class(self, count, bearing)
 
     def set_time_cursor(self, log_time):
         assert not self.realtime
