@@ -8,14 +8,19 @@ from vector import Vector
 
 #positions = [Vector(150, 150), Vector(360, 150)]
 #positions = [Vector(150, 150), Vector(330, 150)]
-positions = [Vector(150, 150), Vector(460, 150)]
+#positions = [Vector(150, 150), Vector(460, 150)]
 #positions = [Vector(150, 150), Vector(580, 150)]
 #positions = [Vector(360, 150), Vector(150, 150)]
 #positions = [Vector(330, 150), Vector(150, 150)]
+positions = [Vector(110, 150), Vector(580, 150)]
 
 # positions = [Vector(501.145936085, 357.560708033),
 #              Vector(117.841625378, 443.805921172),
 #              Vector(346.567172083, 108.980287821)]
+
+# positions = [Vector(150, 150),
+#              Vector(330, 150),
+#              Vector(200, 200)]
 
 class Puzzle(circular_puzzle.Puzzle):
     def random_position(self):
@@ -63,5 +68,6 @@ add_chunk(0, 0, 1000)
 add_chunk(0, 1000, 2000)
 add_chunk(1, 0, 1000)
 add_chunk(1, 1000, 2000)
+
 # add_chunk(2, 0, 1000)
 # add_chunk(2, 1000, 2000)

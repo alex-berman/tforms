@@ -18,6 +18,7 @@ ARRIVED_OPACITY = 0.5
 GREYSCALE = True
 DESIRED_MARGIN = 20
 RADIUS = 100.0
+DAMPING = 0.9
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -182,6 +183,7 @@ class File:
         self.gatherer = Gatherer()
         self.inner_radius = radius - 15
         self.radius = radius
+        self.velocity = Vector(0,0)
 
     def add_chunk(self, chunk):
         chunk.departure_position = self.get_departure_position(chunk)
@@ -283,9 +285,10 @@ class Puzzle(Visualizer):
 
     def draw_gathered_chunks(self):
         for f in self.files.values():
-            f.force = self.direct_towards_open_area(f)
+            f.velocity = (f.velocity + self.direct_towards_open_area(f)) * DAMPING
+            f.velocity.limit(3.0)
         for f in self.files.values():
-            f.position += f.force
+            f.position += f.velocity
             f.draw()
 
     def draw_branches(self):
@@ -301,58 +304,42 @@ class Puzzle(Visualizer):
                       random.uniform(RADIUS, self.height - RADIUS))
 
     def direct_towards_open_area(self, f):
-        force = Vector(0,0)
-        force += self.repel_from_boundaries(f) * 0.1
-        force += self.repel_from_other_files(f) * 0.01
-        return force
+        f.force = Vector(0,0)
+        self.repel_from_boundaries(f)
+        self.repel_from_other_files(f)
+        return f.force
 
     def repel_from_boundaries(self, f):
-        force = Vector(0,0)
-        force += self.repel_from_vertical_boundaries(f)
-        force += self.repel_from_horizontal_boundaries(f)
-        return force
+        self.repel_from_minimum(f, "x", DESIRED_MARGIN)
+        self.repel_from_maximum(f, "x", self.width - DESIRED_MARGIN)
+        self.repel_from_minimum(f, "y", DESIRED_MARGIN)
+        self.repel_from_maximum(f, "y", self.height - DESIRED_MARGIN)
 
-    def repel_from_vertical_boundaries(self, f):
-        left = f.position.x - f.radius
-        min_left = DESIRED_MARGIN
-        if left < min_left:
-            return Vector(min_left - left, 0)
+    def repel_from_minimum(self, f, dimension, limit):
+        current = getattr(f.position, dimension) - f.radius
+        if current < limit:
+            v = Vector(0,0)
+            setattr(v, dimension, pow(limit - current, 2) * 0.01)
+            f.force += v
 
-        right = f.position.x + f.radius
-        max_right = self.width - DESIRED_MARGIN
-        if right > max_right:
-            return Vector(max_right - right, 0)
-
-        return Vector(0,0)
-
-    def repel_from_horizontal_boundaries(self, f):
-        top = f.position.y - f.radius
-        min_top = DESIRED_MARGIN
-        if top < min_top:
-            return Vector(0, min_top - top)
-
-        bottom = f.position.y + f.radius
-        max_bottom = self.height - DESIRED_MARGIN
-        if bottom > max_bottom:
-            return Vector(0, max_bottom - bottom)
-
-        return Vector(0,0)
+    def repel_from_maximum(self, f, dimension, limit):
+        current = getattr(f.position, dimension) + f.radius
+        if current > limit:
+            v = Vector(0,0)
+            setattr(v, dimension, pow(limit - current, 2) * 0.01)
+            f.force -= v
 
     def repel_from_other_files(self, f):
-        force = Vector(0,0)
         for other in self.files.values():
             if other != f:
-                force += self.repel_from_other_file(f, other)
-        return force
+                self.repel_from_other_file(f, other)
 
     def repel_from_other_file(self, f, other):
         d = other.position - f.position
         distance = d.mag() - f.radius - other.radius
         if distance < DESIRED_MARGIN:
-            force = -d
-            return force
-        else:
-            return Vector(0,0)
+            d.normalize()
+            f.force -= d * pow(DESIRED_MARGIN - distance, 2)
 
 if __name__ == '__main__':
     run(Puzzle)
