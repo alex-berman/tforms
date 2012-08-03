@@ -60,7 +60,7 @@ class Peer:
     def __init__(self, departure_position, visualizer):
         self.departure_position = departure_position
         self.visualizer = visualizer
-        self.smoothed_branching_position = Smoother()
+        self.smoothed_branching_position = Smoother(5.0)
         self.branches = {}
         self.branch_count = 0
         self.hue = random.uniform(0, 1)
@@ -156,17 +156,17 @@ class Peer:
                            f.completion_position(last_chunk, last_chunk.begin, f.radius))
 
 class Smoother:
-    RESPONSE_FACTOR = 5
-
-    def __init__(self):
+    def __init__(self, response_factor):
+        self._response_factor = response_factor
         self._current_value = None
 
     def smooth(self, new_value, time_increment):
         if self._current_value:
             self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
+                self._response_factor * time_increment
         else:
             self._current_value = new_value
+        return self._current_value
 
     def value(self):
         return self._current_value
@@ -240,8 +240,8 @@ class File:
 
     def completion_position(self, chunk, byte_position, radius):
         angle = 2 * math.pi * byte_position / chunk.file_length
-        x = self.position.x + radius * math.cos(angle)
-        y = self.position.y + radius * math.sin(angle)
+        x = self.visualizer.x_offset + self.position.x + radius * math.cos(angle)
+        y = self.visualizer.y_offset + self.position.y + radius * math.sin(angle)
         return Vector(x, y)
 
     def get_departure_position(self, chunk):
@@ -257,6 +257,10 @@ class Puzzle(Visualizer):
         Visualizer.__init__(self, args)
         self.files = {}
         self.peers = {}
+        self.x_offset = 0
+        self.y_offset = 0
+        self.x_offset_smoother = Smoother(.5)
+        self.y_offset_smoother = Smoother(.5)
 
     def add_chunk(self, chunk):
         if not chunk.filenum in self.files:
@@ -290,6 +294,16 @@ class Puzzle(Visualizer):
         for f in self.files.values():
             f.position += f.velocity
             f.draw()
+        self.center()
+
+    def center(self):
+        if len(self.files) > 0:
+            new_x_offset = self.width / 2 - (min([f.position.x for f in self.files.values()]) +
+                                             max([f.position.x for f in self.files.values()])) / 2
+            new_y_offset = self.height / 2 - (min([f.position.y for f in self.files.values()]) +
+                                              max([f.position.y for f in self.files.values()])) / 2
+            self.x_offset = self.x_offset_smoother.smooth(new_x_offset, self.time_increment)
+            self.y_offset = self.y_offset_smoother.smooth(new_y_offset, self.time_increment)
 
     def draw_branches(self):
         for peer in self.peers.values():
