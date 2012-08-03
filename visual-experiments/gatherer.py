@@ -3,15 +3,19 @@ class Gatherer:
         self._pieces = dict()
         self._counter = 1
 
-    def add(self, piece):
-        if self._fit_piece_in_hole(piece):
-            pass
-        elif self._append_piece(piece):
-            pass
-        elif self._prepend_piece(piece):
-            pass
+    def add(self, new_piece):
+        overlapping_pieces = self._overlapping_pieces(new_piece)
+        if len(overlapping_pieces) > 0:
+            new_extension = [new_piece]
+            new_extension.extend([self._pieces[key] for key in overlapping_pieces])
+            kept_overlapping_piece = self._pieces[overlapping_pieces.pop(0)]
+            kept_overlapping_piece.begin = min([piece.begin for piece in new_extension])
+            kept_overlapping_piece.end = max([piece.end for piece in new_extension])
+            kept_overlapping_piece.byte_size = kept_overlapping_piece.end - kept_overlapping_piece.begin
+            for key in overlapping_pieces:
+                del self._pieces[key]
         else:
-            self._pieces[self._counter] = piece
+            self._pieces[self._counter] = new_piece
             self._counter += 1
 
     def pieces(self):
@@ -20,36 +24,16 @@ class Gatherer:
     def piece(self, key):
         return self._pieces[key]
 
-    def _fit_piece_in_hole(self, new_piece):
-        appendable_piece_key = self.find_appendable_piece(new_piece)
-        if appendable_piece_key:
-            prependable_piece_key = self.find_prependable_piece(new_piece)
-            if prependable_piece_key:
-                prependable_piece = self._pieces[prependable_piece_key]
-                del self._pieces[prependable_piece_key]
-                self._pieces[appendable_piece_key].append(new_piece)
-                self._pieces[appendable_piece_key].append(prependable_piece)
-                return True
-            
-    def _append_piece(self, new_piece):
-        appendable_piece = self.find_appendable_piece(new_piece)
-        if appendable_piece:
-            self._pieces[appendable_piece].append(new_piece)
-            return True
+    def _overlapping_pieces(self, piece):
+        return filter(lambda key: self._pieces_overlap(piece, self._pieces[key]),
+                      self._pieces.keys())
 
-    def find_appendable_piece(self, new_piece):
-        for key, piece in self._pieces.iteritems():
-            if piece.joinable_with(new_piece) and piece.end == new_piece.begin:
-                return key
+    def _pieces_overlap(self, piece1, piece2):
+        return ((piece2.begin <= piece1.begin <= piece2.end) or
+                (piece2.begin <= piece1.end <= piece2.end) or
+                (piece1.begin <= piece2.begin <= piece1.end) or
+                (piece1.begin <= piece2.end <= piece1.end))
 
-    def _prepend_piece(self, new_piece):
-        prependable_piece = self.find_prependable_piece(new_piece)
-        if prependable_piece:
-            self._pieces[prependable_piece].prepend(new_piece)
-            return True
-
-    def find_prependable_piece(self, new_piece):
-        for key, piece in self._pieces.iteritems():
-            if piece.joinable_with(new_piece) and piece.begin == new_piece.end:
-                return key
-
+    def __str__(self):
+        return "Gatherer(%s)" % ["Piece(%s,%s)" % (piece.begin, piece.end)
+                                 for piece in self._pieces.values()]

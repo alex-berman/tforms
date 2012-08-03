@@ -191,6 +191,7 @@ class File:
         chunk.departure_position = chunk.peer_position()
         chunk.duration = DURATION
         self.gatherer.add(chunk)
+        self.visualizer.logger.debug("file %s gatherer = %s" % (self.filenum, self.gatherer))
 
     def draw(self):
         for chunk in self.gatherer.pieces():

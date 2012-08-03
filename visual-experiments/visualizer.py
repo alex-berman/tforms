@@ -7,11 +7,16 @@ import time
 import argparse
 import collections
 from vector import Vector
+import logging
 
 sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
+
+logging.basicConfig(filename="visualizer.log", 
+                    level=logging.DEBUG, 
+                    filemode="w")
 
 ESCAPE = '\033'
 MARGIN = 30
@@ -60,6 +65,7 @@ class Visualizer:
         self.width = args.width
         self.height = args.height
         self.show_fps = args.show_fps
+        self.logger = logging.getLogger("visualizer")
         self.first_frame = True
         self.synth = SynthController()
         if self.show_fps:
@@ -90,10 +96,12 @@ class Visualizer:
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length,
             peer_id, bearing, time.time(), self)
+        self.logger.debug("add_chunk(%s)" % chunk_id)
         self.add_chunk(chunk)
 
     def handle_stopped_playing_message(self, path, args, types, src, data):
         (chunk_id, filenum) = args
+        self.logger.debug("stopped_playing(%s, %s)" % (chunk_id, filenum))
         self.stopped_playing(chunk_id, filenum)
 
     def stopped_playing(self, chunk_id, filenum):

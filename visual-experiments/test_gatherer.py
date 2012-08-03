@@ -25,6 +25,9 @@ class Piece:
     def __hash__(self):
         return hash((self.begin, self.end))
 
+    def joinable_with(self, other):
+        return True
+
 class PieceTest(unittest.TestCase):
     def test_eq(self):
         self.assertEquals(Piece(10, 20),
@@ -75,4 +78,26 @@ class GathererTest(unittest.TestCase):
         gatherer.add(Piece(40, 50))
         gatherer.add(Piece(20, 40))
         expected_pieces = [Piece(10, 50)]
+        self.assertEquals(expected_pieces, gatherer.pieces())
+
+    def test_overlap_begin(self):
+        gatherer = Gatherer()
+        gatherer.add(Piece(10, 20))
+        gatherer.add(Piece(0, 15))
+        expected_pieces = [Piece(0, 20)]
+        self.assertEquals(expected_pieces, gatherer.pieces())
+
+    def test_overlap_end(self):
+        gatherer = Gatherer()
+        gatherer.add(Piece(10, 20))
+        gatherer.add(Piece(15, 30))
+        expected_pieces = [Piece(10, 30)]
+        self.assertEquals(expected_pieces, gatherer.pieces())
+
+    def test_overlap_multiple_pieces(self):
+        gatherer = Gatherer()
+        gatherer.add(Piece(10, 20))
+        gatherer.add(Piece(30, 40))
+        gatherer.add(Piece(0, 50))
+        expected_pieces = [Piece(0, 50)]
         self.assertEquals(expected_pieces, gatherer.pieces())
