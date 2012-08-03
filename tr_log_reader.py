@@ -51,8 +51,9 @@ class TrLog:
         for chunk in self.chunks:
             if chunk['peeraddr'] in peer_cursor:
                 previous_chunk = peer_cursor[chunk['peeraddr']]
-                if previous_chunk['t'] == chunk['t'] \
-                        and previous_chunk['end'] == chunk['begin']:
+                if (previous_chunk['t'] == chunk['t']
+                    and previous_chunk['filenum'] == chunk['filenum']
+                    and previous_chunk['end'] == chunk['begin']):
                     previous_chunk['end'] = chunk['end']
                 else:
                     result.append(chunk)

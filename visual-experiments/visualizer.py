@@ -96,7 +96,7 @@ class Visualizer:
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length,
             peer_id, bearing, time.time(), self)
-        self.logger.debug("add_chunk(%s)" % chunk_id)
+        self.logger.debug("add_chunk(id=%s, begin=%s, end=%s)" % (chunk_id, chunk.begin, chunk.end))
         self.add_chunk(chunk)
 
     def handle_stopped_playing_message(self, path, args, types, src, data):

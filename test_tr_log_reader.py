@@ -28,15 +28,15 @@ class TrLogReaderTests(unittest.TestCase):
 class TrLogTests(unittest.TestCase):
     def test_flatten(self):
         unflattened_chunks = [
-            {'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
-            {'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 400, 'end': 500, 't': 20.0, 'peeraddr': 'A'}
+            {'filenum': 0, 'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 400, 'end': 500, 't': 20.0, 'peeraddr': 'A'}
             ]
         expected_result = [
-            {'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
-            {'begin': 200, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 400, 'end': 500, 't': 20.0, 'peeraddr': 'A'}
+            {'filenum': 0, 'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 200, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 400, 'end': 500, 't': 20.0, 'peeraddr': 'A'}
             ]
         log = TrLog()
         log.chunks = unflattened_chunks
@@ -45,8 +45,19 @@ class TrLogTests(unittest.TestCase):
 
     def test_flatten_considers_peer(self):
         unflattened_chunks = [
-            {'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'B'}
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'B'}
+            ]
+        expected_result = unflattened_chunks
+        log = TrLog()
+        log.chunks = unflattened_chunks
+        log.flatten()
+        self.assertEquals(expected_result, log.chunks)
+
+    def test_flatten_considers_files(self):
+        unflattened_chunks = [
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 1, 'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'A'}
             ]
         expected_result = unflattened_chunks
         log = TrLog()
@@ -56,14 +67,14 @@ class TrLogTests(unittest.TestCase):
 
     def test_flatten_handles_interwoven_peers(self):
         unflattened_chunks = [
-            {'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 500, 'end': 600, 't': 10.0, 'peeraddr': 'B'},
-            {'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 600, 'end': 700, 't': 10.0, 'peeraddr': 'B'},
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 500, 'end': 600, 't': 10.0, 'peeraddr': 'B'},
+            {'filenum': 0, 'begin': 300, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 600, 'end': 700, 't': 10.0, 'peeraddr': 'B'},
             ]
         expected_result = [
-            {'begin': 200, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 500, 'end': 700, 't': 10.0, 'peeraddr': 'B'},
+            {'filenum': 0, 'begin': 200, 'end': 400, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 500, 'end': 700, 't': 10.0, 'peeraddr': 'B'},
             ]
         log = TrLog()
         log.chunks = unflattened_chunks
@@ -72,8 +83,8 @@ class TrLogTests(unittest.TestCase):
 
     def test_flatten_considers_end_and_begin(self):
         unflattened_chunks = [
-            {'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
-            {'begin': 305, 'end': 400, 't': 10.0, 'peeraddr': 'A'}
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 10.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 305, 'end': 400, 't': 10.0, 'peeraddr': 'A'}
             ]
         expected_result = unflattened_chunks
         log = TrLog()
