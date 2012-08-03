@@ -289,7 +289,7 @@ class Puzzle(Visualizer):
 
     def draw_gathered_chunks(self):
         for f in self.files.values():
-            f.velocity = (f.velocity + self.direct_towards_open_area(f)) * DAMPING
+            f.velocity = (f.velocity + self.repositioning_force(f)) * DAMPING
             f.velocity.limit(3.0)
         for f in self.files.values():
             f.position += f.velocity
@@ -317,19 +317,28 @@ class Puzzle(Visualizer):
         return Vector(random.uniform(RADIUS, self.width - RADIUS),
                       random.uniform(RADIUS, self.height - RADIUS))
 
-    def direct_towards_open_area(self, f):
+    def repositioning_force(self, f):
         f.force = Vector(0,0)
         self.repel_from_and_attract_to_other_files(f)
+        self.attract_to_peers(f)
         return f.force
 
     def repel_from_and_attract_to_other_files(self, f):
         for other in self.files.values():
             if other != f:
-                self.apply_coulomb_repulsion(f, other)
-                self.apply_hooke_attraction(f, other)
+                self.apply_coulomb_repulsion(f, other.position)
+                self.apply_hooke_attraction(f, other.position)
+
+    def attract_to_peers(self, f):
+        for peer in self.peers.values():
+            if f.filenum in [branch.filenum for branch in peer.branches.values()]:
+                self.attract_to_peer(f, peer)
+
+    def attract_to_peer(self, f, peer):
+        self.apply_hooke_attraction(f, peer.departure_position)
 
     def apply_coulomb_repulsion(self, f, other):
-        d = f.position - other.position
+        d = f.position - other
         distance = d.mag()
         if distance == 0:
             f.force += Vector(random.uniform(0.0, 0.1),
@@ -339,7 +348,7 @@ class Puzzle(Visualizer):
             f.force += d / pow(distance, 2) * 1000
 
     def apply_hooke_attraction(self, f, other):
-        d = other.position - f.position
+        d = other - f.position
         f.force += d * 0.0001
 
 if __name__ == '__main__':
