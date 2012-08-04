@@ -10,7 +10,6 @@ from bezier import make_bezier
 import colorsys
 import copy
 
-DURATION = 0.5
 CIRCLE_PRECISION = 50
 CIRCLE_THICKNESS = 15
 MAX_BRANCH_AGE = 2.0
@@ -30,32 +29,28 @@ class Branch:
         self.playing_chunks = OrderedDict()
 
     def add_chunk(self, chunk):
+        chunk.branch = self
         self.playing_chunks[chunk.id] = chunk
         self.cursor = chunk.end
         self.last_updated = time.time()
         self.last_chunk = chunk
+
+    def remove_chunk(self, chunk):
+        del self.playing_chunks[chunk.id]
+        self.last_updated = time.time()
 
     def age(self):
         return self.visualizer.now - self.last_updated
 
     def target_position(self):
         return self.f.completion_position(
-            self.last_chunk.begin / self.last_chunk.file_length,
+            float(self.last_chunk.end) / self.f.length,
             (self.f.inner_radius + self.f.radius) / 2)
-
-    def update(self):
-        for chunk in self.playing_chunks.values():
-            age = self.visualizer.now - chunk.arrival_time
-            if age > chunk.duration:
-                del self.playing_chunks[chunk.id]
 
     def draw_playing_chunks(self):
         if len(self.playing_chunks) > 0:
-            chunks_list = list(self.playing_chunks.values())
-            chunk = copy.copy(chunks_list[0])
-            chunk.end = chunks_list[-1].end
-            chunk.byte_size = chunk.end - chunk.begin
-            self.f.draw_playing_chunk(chunk)
+            sorted_chunks = sorted(self.playing_chunks.values(), key=lambda chunk: chunk.begin)
+            self.f.draw_playing_chunk(sorted_chunks[0].begin, sorted_chunks[-1].end)
             
 class Peer:
     def __init__(self, departure_position, visualizer):
@@ -87,9 +82,6 @@ class Peer:
         for branch_id in outdated:
             del self.branches[branch_id]
         self.update_branching_position()
-
-        for branch in self.branches.values():
-            branch.update()
 
     def update_branching_position(self):
         if len(self.branches) == 0:
@@ -150,10 +142,10 @@ class Peer:
         for x,y in points:
             glVertex2f(x, y)
         glEnd()
-        if branch.age() < BRANCH_SUSTAIN:
+        if branch.age() < BRANCH_SUSTAIN and len(branch.playing_chunks) > 0:
             last_chunk = branch.last_chunk
             f = self.visualizer.files[last_chunk.filenum]
-            relative_position = last_chunk.begin / f.length
+            relative_position = float(last_chunk.begin) / f.length
             self.draw_line(f.completion_position(relative_position, f.inner_radius),
                            f.completion_position(relative_position, f.radius))
 
@@ -189,12 +181,10 @@ class File:
 
     def add_chunk(self, chunk):
         pan = self.completion_position(
-            chunk.begin / self.length, self.radius).x / self.visualizer.width
+            float(chunk.begin) / self.length, self.radius).x / self.visualizer.width
         self.visualizer.play_chunk(chunk, pan)
         chunk.departure_position = chunk.peer_position()
-        chunk.duration = DURATION
         self.gatherer.add(chunk)
-        self.visualizer.logger.debug("file %s gatherer = %s" % (self.filenum, self.gatherer))
 
     def draw(self):
         glLineWidth(1)
@@ -245,14 +235,15 @@ class File:
             glVertex2f(p.x, p.y)
         glEnd()
 
-    def draw_playing_chunk(self, chunk):
-        num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
+    def draw_playing_chunk(self, begin, end):
+        byte_size = end - begin
+        num_vertices = int(CIRCLE_PRECISION * float(end - begin) / byte_size)
         num_vertices = max(num_vertices, 2)
         glLineWidth(1)
         glBegin(GL_POLYGON)
 
         for i in range(num_vertices):
-            byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
+            byte_position = begin + byte_size * float(i) / (num_vertices-1)
             p = self.completion_position(byte_position / self.length, self.inner_radius)
             glColor3f(1,
                       float(num_vertices-i-1) / (num_vertices-1),
@@ -260,7 +251,7 @@ class File:
                       )
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
-            byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
+            byte_position = begin + byte_size * float(num_vertices-i-1) / (num_vertices-1)
             p = self.completion_position(byte_position / self.length, self.radius)
             glColor3f(1,
                       float(i) / (num_vertices-1),
@@ -285,8 +276,11 @@ class Puzzle(Visualizer):
         self.y_offset = 0
         self.x_offset_smoother = Smoother(.5)
         self.y_offset_smoother = Smoother(.5)
+        self.chunks = {}
 
     def add_chunk(self, chunk):
+        self.chunks[chunk.id] = chunk
+
         if not chunk.filenum in self.files:
             self.files[chunk.filenum] = self.new_file(chunk.filenum, chunk.file_length)
         self.files[chunk.filenum].add_chunk(chunk)
@@ -294,6 +288,10 @@ class Puzzle(Visualizer):
         if not chunk.peer_id in self.peers:
             self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
         self.peers[chunk.peer_id].add_chunk(chunk)
+
+    def stopped_playing(self, chunk_id, filenum):
+        chunk = self.chunks[chunk_id]
+        chunk.branch.remove_chunk(chunk)
 
     def new_file(self, filenum, file_length):
         position = self.place_new_circle()
