@@ -129,30 +129,36 @@ class Peer:
         glEnd()
 
     def draw_curve(self, branch):
-        points = []
+        curve = self.curve(branch)
+        glBegin(GL_LINE_STRIP)
+        for x,y in curve:
+            glVertex2f(x, y)
+        glEnd()
+        if branch.playing():
+            self.draw_cursor_line(branch)
+
+    def curve(self, branch):
+        contol_points = []
         branching_position = self.smoothed_branching_position.value()
         for i in range(CONTROL_POINTS_BEFORE_BRANCH):
             r = float(i) / (CONTROL_POINTS_BEFORE_BRANCH-1)
-            points.append(self.departure_position * (1-r) +
-                          branching_position * r)
+            contol_points.append(self.departure_position * (1-r) +
+                                 branching_position * r)
         if branch.playing():
             target = branch.target_position()
         else:
             target = branching_position + (branch.target_position() - branching_position) * \
                 (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
-        points.append(target)
-        bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier(CIRCLE_PRECISION)
-        glBegin(GL_LINE_STRIP)
-        for x,y in points:
-            glVertex2f(x, y)
-        glEnd()
-        if branch.playing():
-            last_chunk = branch.last_chunk
-            f = self.visualizer.files[last_chunk.filenum]
-            relative_position = float(last_chunk.begin) / f.length
-            self.draw_line(f.completion_position(relative_position, f.inner_radius),
-                           f.completion_position(relative_position, f.radius))
+        contol_points.append(target)
+        bezier = make_bezier([(p.x, p.y) for p in contol_points])
+        return bezier(CIRCLE_PRECISION)
+
+    def draw_cursor_line(self, branch):
+        last_chunk = branch.last_chunk
+        f = self.visualizer.files[last_chunk.filenum]
+        relative_position = float(last_chunk.begin) / f.length
+        self.draw_line(f.completion_position(relative_position, f.inner_radius),
+                       f.completion_position(relative_position, f.radius))
 
 class Smoother:
     def __init__(self, response_factor):
