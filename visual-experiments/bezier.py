@@ -1,11 +1,12 @@
 def make_bezier(xys):
     n=len(xys)
     combinations=pascal_row(n-1)
-    def bezier(ts):
+    def bezier(precision):
         # This uses the generalized formula for bezier curves
         # http://en.wikipedia.org/wiki/B%C3%A9zier_curve#Generalization
         result=[]
-        for t in ts:
+        for j in range(precision):
+            t = float(j) / (precision-1)
             tpowers=(t**i for i in range(n))
             upowers=reversed([(1-t)**i for i in range(n)])
             coefs=[c*a*b for c,a,b in zip(combinations,tpowers,upowers)]

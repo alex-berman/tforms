@@ -142,7 +142,7 @@ class Peer:
                 (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier([float(t)/(CURVE_PRECISION-1) for t in range(CURVE_PRECISION)])
+        points = bezier(CIRCLE_PRECISION)
         glBegin(GL_LINE_STRIP)
         for x,y in points:
             glVertex2f(x, y)
