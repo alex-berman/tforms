@@ -12,8 +12,7 @@ import copy
 
 CIRCLE_PRECISION = 50
 CIRCLE_THICKNESS = 15
-MAX_BRANCH_AGE = 2.0
-BRANCH_SUSTAIN = 1.5
+MAX_BRANCH_AGE = 1.0
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
 RADIUS = 100.0
@@ -38,6 +37,9 @@ class Branch:
     def remove_chunk(self, chunk):
         del self.playing_chunks[chunk.id]
         self.last_updated = time.time()
+
+    def playing(self):
+        return len(self.playing_chunks) > 0
 
     def age(self):
         return self.visualizer.now - self.last_updated
@@ -130,11 +132,11 @@ class Peer:
         for i in range(15):
             points.append(self.departure_position * (1-i/14.0)+
                           branching_position * i/14.0)
-        if branch.age() < BRANCH_SUSTAIN:
+        if branch.playing():
             target = branch.target_position()
         else:
             target = branching_position + (branch.target_position() - branching_position) * \
-                (1 - (branch.age() - BRANCH_SUSTAIN) / (MAX_BRANCH_AGE - BRANCH_SUSTAIN))
+                (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
         points = bezier([t/50.0 for t in range(51)])
@@ -142,7 +144,7 @@ class Peer:
         for x,y in points:
             glVertex2f(x, y)
         glEnd()
-        if branch.age() < BRANCH_SUSTAIN and len(branch.playing_chunks) > 0:
+        if branch.playing():
             last_chunk = branch.last_chunk
             f = self.visualizer.files[last_chunk.filenum]
             relative_position = float(last_chunk.begin) / f.length
