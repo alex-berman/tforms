@@ -6,7 +6,7 @@ import argparse
 from visualizer import Chunk
 from vector import Vector
 
-#positions = [Vector(150, 150), Vector(360, 150)]
+positions = [Vector(150, 150), Vector(360, 150)]
 #positions = [Vector(150, 150), Vector(330, 150)]
 #positions = [Vector(150, 150), Vector(460, 150)]
 #positions = [Vector(150, 150), Vector(580, 150)]
@@ -41,20 +41,17 @@ visualizer = Puzzle(args)
 threading.Thread(target=visualizer.run).start()
 
 id_count = 0
-# files = [{"offset": 0,
-#           "length": 2000,
-#           "pan": -1,
-#           "height": 0.3},
-#          {"offset": 0,
-#           "length": 2000,
-#           "pan": -1,
-#           "height": 0.3},
-#          {"offset": 0,
-#           "length": 2000,
-#           "pan": -1,
-#           "height": 0.3},
-#          ]
-files = []
+files = [{"offset": 0,
+          "length": 2000,
+          "bearing": 0.0},
+         {"offset": 0,
+          "length": 2000,
+          "bearing": 0.0},
+         {"offset": 0,
+          "length": 2000,
+          "bearing": 0.0},
+         ]
+#files = []
 
 def add_chunk(filenum, begin, end):
     global id_count
@@ -66,21 +63,21 @@ def add_chunk(filenum, begin, end):
     peer_id = 0
     chunk = Chunk(
         chunk_id, torrent_position, byte_size,
-        filenum, file["offset"], file["length"], peer_id, file["pan"], file["height"], time.time(), visualizer)
+        filenum, file["offset"], file["length"], peer_id, file["bearing"], time.time(), visualizer)
     visualizer.add_chunk(chunk)
     
 sleep(1);
-# add_chunk(0, 0, 1000)
-# add_chunk(0, 1000, 2000)
-# add_chunk(1, 0, 1000)
-# add_chunk(1, 1000, 2000)
+add_chunk(0, 0, 1000)
+add_chunk(0, 1000, 1980)
+add_chunk(1, 0, 1000)
+add_chunk(1, 1000, 2000)
 
 # # add_chunk(2, 0, 1000)
 # # add_chunk(2, 1000, 2000)
 
-for i in range(8):
-    files.append({"offset": 0,
-                  "length": 2000,
-                  "pan": -1,
-                  "height": 0.3})
-    add_chunk(i, 0, 2000)
+# for i in range(8):
+#     files.append({"offset": 0,
+#                   "length": 2000,
+#                   "pan": -1,
+#                   "height": 0.3})
+#     add_chunk(i, 0, 2000)

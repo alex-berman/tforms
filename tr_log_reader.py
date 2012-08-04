@@ -3,6 +3,7 @@ import sys
 import os
 import Queue
 import cPickle
+import copy
 
 class TrLog:
     def lastchunktime(self):
@@ -79,6 +80,7 @@ class TrLogReader:
         self.id = None
         self.files = []
         self.peers = []
+        self._chunk_count = 0
 
     def get_log(self, use_cache=True):
         if use_cache and os.path.exists(self._cache_filename()):
@@ -148,7 +150,7 @@ class TrLogReader:
     def _process_chunks(self):
         self.numdata = 0
         self.time_offset = None
-        chunk_re = re.compile('^\[(\d+)\] chunkId=(\d+) TID=%d peer=([0-9.:]+) got (\d+) bytes for block (\d+) at offset (\d+) in file (\d+) at offset (\d+) \.\.\. remaining (\d+) of (\d+)$' % self.id)
+        self._chunk_re = re.compile('^\[(\d+)\] chunkId=(\d+) TID=%d peer=([0-9.:]+) got (\d+) bytes for block (\d+) at offset (\d+) in file (\d+) at offset (\d+) \.\.\. remaining (\d+) of (\d+)$' % self.id)
         self.filenummax = 0
         if not self.realtime:
             self.chunks = []
@@ -156,15 +158,46 @@ class TrLogReader:
         for line in self.logfile:
             line = line.rstrip("\r\n")
             self.debug("processing: %s" % line)
-            m = chunk_re.search(line)
-            if m:
-                self._process_chunk_line(m)
+            self._process_chunk_line(line)
         if self.realtime:
             self.chunks_queue.put_nowait(self.NO_MORE_CHUNKS)
         elif self.pretend_sequential:
             self.chunks = self.sort_chunks_sequentially(self.chunks)
 
-    def _process_chunk_line(self, m):
+    def _process_chunk_line(self, line):
+        chunk = self._parse_chunk_line(line)
+        if chunk:
+            chunks = self._split_chunk_at_file_boundaries(chunk)
+            for chunk in chunks:
+                self._add_chunk(chunk)
+
+    def _split_chunk_at_file_boundaries(self, chunk):
+        result = []
+        filenum = 0
+        for f in self.files:
+            if self._chunk_matches_file(chunk, f):
+                new_chunk = copy.copy(chunk)
+                new_chunk["id"] = self._next_chunk_id()
+                new_chunk["filenum"] = filenum
+                new_chunk["begin"] = max(chunk["begin"], f["offset"])
+                new_chunk["end"] = min(chunk["end"], f["offset"] + f["length"])
+                result.append(new_chunk)
+            filenum += 1
+        return result
+
+    def _chunk_matches_file(self, chunk, f):
+        return (f["offset"] <= chunk["begin"] < (f["offset"] + f["length"]) or
+                f["offset"] < chunk["end"] < (f["offset"] + f["length"]))
+
+    def _next_chunk_id(self):
+        result = self._chunk_count
+        self._chunk_count += 1
+        return result
+
+    def _parse_chunk_line(self, line):
+        m = self._chunk_re.search(line)
+        if not m:
+            return None
         (t,chunk_id,peeraddr,nbytes,blockindex,blockoffset,filenum,fileoffset,remain,blocksize) = m.groups()
         filenum = int(filenum)
         self.filenummax = max(self.filenummax, filenum)
@@ -185,8 +218,7 @@ class TrLogReader:
                  "end": b2,
                  "peeraddr": peeraddr,
                  "filenum": filenum}
-        self._add_peer_unless_already_added(peeraddr)
-        self._add_chunk(chunk)
+        return chunk
 
     def _add_peer_unless_already_added(self, peeraddr):
         if peeraddr not in self.peers:
@@ -203,6 +235,7 @@ class TrLogReader:
         self.files.insert(file_id, info)
 
     def _add_chunk(self, chunk):
+        self._add_peer_unless_already_added(chunk["peeraddr"])
         if self.realtime:
             self.chunks_queue.put_nowait(chunk)
         else:

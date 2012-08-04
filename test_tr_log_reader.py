@@ -4,7 +4,7 @@ import os
 
 FILENAME = "mockup_tr_log.log"
 EXPECTED_FILES = [{'length': 291, 'lastpiece': 0, 'firstpiece': 0, 'name': 'The Cataracs-Top of the WorldLike a G6 Remix Single/Distributed by Mininova.txt', 'offset': 0}, {'length': 969, 'lastpiece': 0, 'firstpiece': 0, 'name': 'The Cataracs-Top of the WorldLike a G6 Remix Single/The_Cataracs-Top_of_the_World_BW_Like_A_G6_(Lil_Prophet_Remix_Single)-2010/00-the_cataracs-top_of_the_world_bw_like_a_g6_(remix_single)-2010.m3u', 'offset': 291}]
-EXPECTED_CHUNKS = [{'begin': 28311552, 'end': 28312953, 'peeraddr': '221.187.146.133:5465', 'id': 0, 't': 0.0, 'filenum': 0}, {'begin': 28312953, 'end': 28312999, 'peeraddr': '221.187.146.133:5465', 'id': 1, 't': 0.315, 'filenum': 0}]
+EXPECTED_CHUNKS = [{'begin': 0, 'end': 100, 'peeraddr': '221.187.146.133:5465', 'id': 0, 't': 0.0, 'filenum': 0}, {'begin': 100, 'end': 184, 'peeraddr': '221.187.146.133:5465', 'id': 1, 't': 0.315, 'filenum': 0}]
 EXPECTED_PEERS = ['221.187.146.133:5465']
 EXPECTED_TOTALSIZE = 28348491
 
@@ -18,12 +18,30 @@ class TrLogReaderTests(unittest.TestCase):
 
     def test_loading_from_cache(self):
         TrLogReader(FILENAME).get_log(use_cache=True)
+        expected_cache_filename = FILENAME + ".cache"
         self.assertTrue(os.path.exists(FILENAME + ".cache"))
         tr_log_from_cache = TrLogReader(FILENAME).get_log(use_cache=True)
+        os.remove(expected_cache_filename)
         self.assertEquals(EXPECTED_FILES, tr_log_from_cache.files)
         self.assertEquals(EXPECTED_CHUNKS, tr_log_from_cache.chunks)
         self.assertEquals(EXPECTED_PEERS, tr_log_from_cache.peers)
         self.assertEquals(EXPECTED_TOTALSIZE, tr_log_from_cache.totalsize)
+
+    def test_chunk_overlapping_multiple_files(self):
+        reader = TrLogReader(FILENAME)
+        tr_log = reader.get_log(use_cache=False)
+        reader._chunk_count = 0
+        chunk = {'filenum': 0,
+                 'begin': 0, 'end': 300,
+                 'peeraddr': 'X', 'id': 0, 't': 0.0}
+        expected_chunks = [
+            {'filenum': 0,
+             'begin': 0, 'end': 291,
+             'peeraddr': 'X', 'id': 0, 't': 0.0},
+            {'filenum': 1,
+             'begin': 291, 'end': 300,
+             'peeraddr': 'X', 'id': 1, 't': 0.0}]
+        self.assertEquals(expected_chunks, reader._split_chunk_at_file_boundaries(chunk))
 
 class TrLogTests(unittest.TestCase):
     def test_flatten(self):

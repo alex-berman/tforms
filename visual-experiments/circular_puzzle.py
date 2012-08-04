@@ -39,8 +39,9 @@ class Branch:
         return self.visualizer.now - self.last_updated
 
     def target_position(self):
-        return self.f.completion_position(self.last_chunk, self.last_chunk.begin,
-                                          (self.f.inner_radius + self.f.radius) / 2)
+        return self.f.completion_position(
+            self.last_chunk.begin / self.last_chunk.file_length,
+            (self.f.inner_radius + self.f.radius) / 2)
 
     def update(self):
         for chunk in self.playing_chunks.values():
@@ -152,8 +153,9 @@ class Peer:
         if branch.age() < BRANCH_SUSTAIN:
             last_chunk = branch.last_chunk
             f = self.visualizer.files[last_chunk.filenum]
-            self.draw_line(f.completion_position(last_chunk, last_chunk.begin, f.inner_radius),
-                           f.completion_position(last_chunk, last_chunk.begin, f.radius))
+            relative_position = last_chunk.begin / f.length
+            self.draw_line(f.completion_position(relative_position, f.inner_radius),
+                           f.completion_position(relative_position, f.radius))
 
 class Smoother:
     def __init__(self, response_factor):
@@ -186,7 +188,8 @@ class File:
         self.velocity = Vector(0,0)
 
     def add_chunk(self, chunk):
-        pan = self.completion_position(chunk, chunk.begin, self.radius).x / self.visualizer.width
+        pan = self.completion_position(
+            chunk.begin / self.length, self.radius).x / self.visualizer.width
         self.visualizer.play_chunk(chunk, pan)
         chunk.departure_position = chunk.peer_position()
         chunk.duration = DURATION
@@ -194,26 +197,52 @@ class File:
         self.visualizer.logger.debug("file %s gatherer = %s" % (self.filenum, self.gatherer))
 
     def draw(self):
-        for chunk in self.gatherer.pieces():
-            self.draw_completed_piece(chunk)
-
-    def draw_completed_piece(self, chunk):
-        num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
-        num_vertices = max(num_vertices, 2)
         glLineWidth(1)
         opacity = 0.5
         glColor3f(1-opacity, 1-opacity, 1-opacity)
+
+        if self.completed():
+            self.draw_completed_file()
+        else:
+            for chunk in self.gatherer.pieces():
+                self.draw_gathered_piece(chunk)
+
+    def completed(self):
+        if len(self.gatherer.pieces()) == 1:
+            piece = self.gatherer.pieces()[0]
+            return piece.byte_size == self.length
+
+    def draw_gathered_piece(self, chunk):
+        num_vertices = int(CIRCLE_PRECISION * float(chunk.end - chunk.begin) / chunk.byte_size)
+        num_vertices = max(num_vertices, 2)
         glBegin(GL_LINE_LOOP)
 
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.inner_radius)
+            p = self.completion_position(byte_position / self.length, self.inner_radius)
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.radius)
+            p = self.completion_position(byte_position / self.length, self.radius)
             glVertex2f(p.x, p.y)
 
+        glEnd()
+
+    def draw_completed_file(self):
+        num_vertices = int(CIRCLE_PRECISION)
+
+        glBegin(GL_LINE_LOOP)
+        for i in range(num_vertices):
+            byte_position = self.length * float(i) / (num_vertices-1)
+            p = self.completion_position(byte_position / self.length, self.inner_radius)
+            glVertex2f(p.x, p.y)
+        glEnd()
+
+        glBegin(GL_LINE_LOOP)
+        for i in range(num_vertices):
+            byte_position = self.length * float(i) / (num_vertices-1)
+            p = self.completion_position(byte_position / self.length, self.radius)
+            glVertex2f(p.x, p.y)
         glEnd()
 
     def draw_playing_chunk(self, chunk):
@@ -224,7 +253,7 @@ class File:
 
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(i) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.inner_radius)
+            p = self.completion_position(byte_position / self.length, self.inner_radius)
             glColor3f(1,
                       float(num_vertices-i-1) / (num_vertices-1),
                       float(num_vertices-i-1) / (num_vertices-1)
@@ -232,7 +261,7 @@ class File:
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             byte_position = chunk.begin + chunk.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.completion_position(chunk, byte_position, self.radius)
+            p = self.completion_position(byte_position / self.length, self.radius)
             glColor3f(1,
                       float(i) / (num_vertices-1),
                       float(i) / (num_vertices-1)
@@ -241,8 +270,8 @@ class File:
 
         glEnd()
 
-    def completion_position(self, chunk, byte_position, radius):
-        angle = 2 * math.pi * byte_position / chunk.file_length
+    def completion_position(self, relative_position, radius):
+        angle = 2 * math.pi * relative_position
         x = self.visualizer.x_offset + self.position.x + radius * math.cos(angle)
         y = self.visualizer.y_offset + self.position.y + radius * math.sin(angle)
         return Vector(x, y)
