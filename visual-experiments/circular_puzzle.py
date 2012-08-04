@@ -11,12 +11,14 @@ import colorsys
 import copy
 
 CIRCLE_PRECISION = 50
-CIRCLE_THICKNESS = 15
+CIRCLE_THICKNESS = 10
 MAX_BRANCH_AGE = 1.0
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
-RADIUS = 100.0
+RADIUS = 50.0
 DAMPING = 0.95
+CONTROL_POINTS_BEFORE_BRANCH = 15
+CURVE_PRECISION = 50
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -129,9 +131,10 @@ class Peer:
     def draw_curve(self, branch):
         points = []
         branching_position = self.smoothed_branching_position.value()
-        for i in range(15):
-            points.append(self.departure_position * (1-i/14.0)+
-                          branching_position * i/14.0)
+        for i in range(CONTROL_POINTS_BEFORE_BRANCH):
+            r = float(i) / (CONTROL_POINTS_BEFORE_BRANCH-1)
+            points.append(self.departure_position * (1-r) +
+                          branching_position * r)
         if branch.playing():
             target = branch.target_position()
         else:
@@ -139,7 +142,7 @@ class Peer:
                 (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier([t/50.0 for t in range(51)])
+        points = bezier([float(t)/(CURVE_PRECISION-1) for t in range(CURVE_PRECISION)])
         glBegin(GL_LINE_STRIP)
         for x,y in points:
             glVertex2f(x, y)
