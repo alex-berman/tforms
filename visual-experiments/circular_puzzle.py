@@ -151,7 +151,7 @@ class Peer:
                 (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
         control_points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in control_points])
-        return bezier(CIRCLE_PRECISION)
+        return bezier(CURVE_PRECISION)
 
     def draw_cursor_line(self, branch):
         last_chunk = branch.last_chunk
