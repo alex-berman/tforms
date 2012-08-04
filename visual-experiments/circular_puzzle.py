@@ -55,6 +55,42 @@ class Branch:
         if len(self.playing_chunks) > 0:
             sorted_chunks = sorted(self.playing_chunks.values(), key=lambda chunk: chunk.begin)
             self.f.draw_playing_chunk(sorted_chunks[0].begin, sorted_chunks[-1].end)
+
+    def draw_curve(self):
+        glBegin(GL_LINE_STRIP)
+        for x,y in self.curve():
+            glVertex2f(x, y)
+        glEnd()
+        if self.playing():
+            self.draw_cursor_line()
+
+    def curve(self):
+        control_points = []
+        branching_position = self.peer.smoothed_branching_position.value()
+        for i in range(CONTROL_POINTS_BEFORE_BRANCH):
+            r = float(i) / (CONTROL_POINTS_BEFORE_BRANCH-1)
+            control_points.append(self.peer.departure_position * (1-r) +
+                                 branching_position * r)
+        if self.playing():
+            target = self.target_position()
+        else:
+            target = branching_position + (self.target_position() - branching_position) * \
+                (1 - pow(max(self.age() / MAX_BRANCH_AGE, 0), 0.3))
+        control_points.append(target)
+        bezier = make_bezier([(p.x, p.y) for p in control_points])
+        return bezier(CURVE_PRECISION)
+
+    def draw_cursor_line(self):
+        f = self.visualizer.files[self.last_chunk.filenum]
+        relative_position = float(self.last_chunk.begin) / f.length
+        self.draw_line(f.completion_position(relative_position, f.inner_radius),
+                       f.completion_position(relative_position, f.radius))
+
+    def draw_line(self, p, q):
+        glBegin(GL_LINES)
+        glVertex2f(p.x, p.y)
+        glVertex2f(q.x, q.y)
+        glEnd()
             
 class Peer:
     def __init__(self, departure_position, visualizer):
@@ -109,7 +145,7 @@ class Peer:
                 branch.draw_playing_chunks()
             for branch in self.branches.values():
                 self.set_color(0)
-                self.draw_curve(branch)
+                branch.draw_curve()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
@@ -121,44 +157,6 @@ class Peer:
             glColor3f(relative_age + color[0] * (1-relative_age),
                       relative_age + color[1] * (1-relative_age),
                       relative_age + color[2] * (1-relative_age))
-
-    def draw_line(self, p, q):
-        glBegin(GL_LINES)
-        glVertex2f(p.x, p.y)
-        glVertex2f(q.x, q.y)
-        glEnd()
-
-    def draw_curve(self, branch):
-        curve = self.curve(branch)
-        glBegin(GL_LINE_STRIP)
-        for x,y in curve:
-            glVertex2f(x, y)
-        glEnd()
-        if branch.playing():
-            self.draw_cursor_line(branch)
-
-    def curve(self, branch):
-        control_points = []
-        branching_position = self.smoothed_branching_position.value()
-        for i in range(CONTROL_POINTS_BEFORE_BRANCH):
-            r = float(i) / (CONTROL_POINTS_BEFORE_BRANCH-1)
-            control_points.append(self.departure_position * (1-r) +
-                                 branching_position * r)
-        if branch.playing():
-            target = branch.target_position()
-        else:
-            target = branching_position + (branch.target_position() - branching_position) * \
-                (1 - pow(max(branch.age() / MAX_BRANCH_AGE, 0), 0.3))
-        control_points.append(target)
-        bezier = make_bezier([(p.x, p.y) for p in control_points])
-        return bezier(CURVE_PRECISION)
-
-    def draw_cursor_line(self, branch):
-        last_chunk = branch.last_chunk
-        f = self.visualizer.files[last_chunk.filenum]
-        relative_position = float(last_chunk.begin) / f.length
-        self.draw_line(f.completion_position(relative_position, f.inner_radius),
-                       f.completion_position(relative_position, f.radius))
 
 class Smoother:
     def __init__(self, response_factor):
