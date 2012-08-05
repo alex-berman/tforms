@@ -1,6 +1,5 @@
 from visualizer import Visualizer, run
 from gatherer import Gatherer
-import time
 from OpenGL.GL import *
 from collections import OrderedDict
 from vector import Vector
@@ -33,12 +32,12 @@ class Branch:
         chunk.branch = self
         self.playing_chunks[chunk.id] = chunk
         self.cursor = chunk.end
-        self.last_updated = time.time()
+        self.last_updated = self.visualizer.current_time()
         self.last_chunk = chunk
 
     def remove_chunk(self, chunk):
         del self.playing_chunks[chunk.id]
-        self.last_updated = time.time()
+        self.last_updated = self.visualizer.current_time()
 
     def playing(self):
         return len(self.playing_chunks) > 0

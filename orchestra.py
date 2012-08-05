@@ -9,6 +9,7 @@ import liblo
 import threading
 import sched
 from synth_controller import SynthController
+from osc_sender import OscSender
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -101,7 +102,8 @@ class Orchestra:
                  predecoded=False,
                  file_location=None,
                  visualizer_enabled=False,
-                 loop=False):
+                 loop=False,
+                 osc_log=None):
         self.sessiondir = sessiondir
         self.logger = logger
         self.tr_log = tr_log
@@ -129,7 +131,7 @@ class Orchestra:
         self._run_scheduler_thread()
 
         if visualizer_enabled:
-            self.visualizer = liblo.Address(VISUALIZER_PORT)
+            self.visualizer = OscSender(VISUALIZER_PORT, osc_log)
             self._setup_osc()
         else:
             self.visualizer = None
@@ -153,7 +155,8 @@ class Orchestra:
 
     def _serve_osc(self):
         while True:
-            self.server.recv()
+            self.server.recv(0.01)
+            time.sleep(0.01)
 
     def _handle_play_message(self, path, args, types, src, data):
         (chunk_id, pan) = args
@@ -219,7 +222,7 @@ class Orchestra:
                 self.set_time_cursor(0)
         else:
             self._play_until_end()
-            self.quitting = True
+            self._quitting = True
             self._scheduler_thread.join()
         self.logger.debug("leaving play_non_realtime")
 
@@ -323,21 +326,21 @@ class Orchestra:
 
     def visualize(self, chunk, player_id, bearing):
         file_info = self.tr_log.files[chunk["filenum"]]
-        liblo.send(self.visualizer, "/chunk",
-                   chunk["id"],
-                   chunk["begin"],
-                   chunk["end"] - chunk["begin"],
-                   chunk["filenum"],
-                   file_info["offset"],
-                   file_info["length"],
-                   player_id,
-                   bearing)
+        self.visualizer.send("/chunk",
+                             chunk["id"],
+                             chunk["begin"],
+                             chunk["end"] - chunk["begin"],
+                             chunk["filenum"],
+                             file_info["offset"],
+                             file_info["length"],
+                             player_id,
+                             bearing)
 
     def stopped_playing(self, chunk):
         self.logger.debug("stopped chunk %s" % chunk)
         if self.visualizer:
-            liblo.send(self.visualizer, "/stopped_playing",
-                       chunk["id"], chunk["filenum"])
+            self.visualizer.send("/stopped_playing",
+                                 chunk["id"], chunk["filenum"])
 
     def play_chunk(self, chunk):
         file_info = self.tr_log.files[chunk["filenum"]]

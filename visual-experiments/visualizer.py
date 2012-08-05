@@ -13,6 +13,7 @@ sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
+from osc_receiver import OscReceiver
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -21,6 +22,7 @@ logging.basicConfig(filename="visualizer.log",
 ESCAPE = '\033'
 MARGIN = 30
 BORDER_OPACITY = 0.7
+EXPORT_DIR = "export"
 
 class Chunk:
     def __init__(self, chunk_id, torrent_position, byte_size,
@@ -39,17 +41,17 @@ class Chunk:
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
-        self.last_updated = time.time()
+        self.last_updated = visualizer.current_time()
 
     def append(self, other):
         self.end = other.end
         self.byte_size = self.end - self.begin
-        self.last_updated = time.time()
+        self.last_updated = self.visualizer.current_time()
 
     def prepend(self, other):
         self.begin = other.begin
         self.byte_size = self.end - self.begin
-        self.last_updated = time.time()
+        self.last_updated = self.visualizer.current_time()
 
     def joinable_with(self, other):
         return True
@@ -65,13 +67,21 @@ class Visualizer:
         self.width = args.width
         self.height = args.height
         self.show_fps = args.show_fps
+        self.export = args.export
         self.logger = logging.getLogger("visualizer")
         self.first_frame = True
         self.synth = SynthController()
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
-        self.setup_osc()
+        self.setup_osc(args.osc_log)
+        if self.export:
+            self.export_fps = args.export_fps
+            from exporter import Exporter
+            import shutil
+            shutil.rmtree(EXPORT_DIR)
+            os.mkdir(EXPORT_DIR)
+            self.exporter = Exporter(EXPORT_DIR, MARGIN, MARGIN, self.width, self.height)
 
     def run(self):
         window_width = self.width + MARGIN*2
@@ -95,7 +105,7 @@ class Visualizer:
         chunk = self.chunk_class(
             chunk_id, torrent_position, byte_size,
             filenum, file_offset, file_length,
-            peer_id, bearing, time.time(), self)
+            peer_id, bearing, self.current_time(), self)
         self.logger.debug("add_chunk(id=%s, begin=%s, end=%s)" % (chunk_id, chunk.begin, chunk.end))
         self.add_chunk(chunk)
 
@@ -107,9 +117,9 @@ class Visualizer:
     def stopped_playing(self, chunk_id, filenum):
         pass
 
-    def setup_osc(self):
+    def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()
-        self.server = liblo.Server(VISUALIZER_PORT)
+        self.server = OscReceiver(VISUALIZER_PORT, log_filename)
         self.server.add_method("/chunk", "iiiiiiif", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
 
@@ -131,7 +141,10 @@ class Visualizer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
-        self.now = time.time()
+        if self.export:
+            self.current_export_time = float(self.exporter.frame_count) / self.export_fps
+
+        self.now = self.current_time()
         if self.first_frame:
             if self.sync:
                 self.synth.sync_beep()
@@ -140,7 +153,7 @@ class Visualizer:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
-            self.serve_osc()
+            self.handle_incoming_messages()
             self.render()
             if self.show_fps:
                 self.update_fps_history()
@@ -148,10 +161,14 @@ class Visualizer:
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
+        if self.export:
+            self.exporter.export_frame()
 
-    def serve_osc(self):
-        while self.server.recv(0.01):
-            pass
+    def handle_incoming_messages(self):
+        if self.export:
+            self.server.serve_from_log_until(self.now)
+        else:
+            self.server.serve()
 
     def update_fps_history(self):
         fps = 1.0 / self.time_increment
@@ -189,6 +206,12 @@ class Visualizer:
         self.orchestra.play_chunk(chunk.id, pan)
         chunk.playing = True
 
+    def current_time(self):
+        if self.export:
+            return self.current_export_time
+        else:
+            return time.time()
+
     @staticmethod
     def bearing_to_border_position(bearing, width, height):
         total_border_size = width*2 + height*2
@@ -213,6 +236,9 @@ def run(visualizer_class):
     parser.add_argument('-width', dest='width', type=int, default=640)
     parser.add_argument('-height', dest='height', type=int, default=480)
     parser.add_argument('-show-fps', dest='show_fps', action='store_true')
+    parser.add_argument('-osc-log', dest='osc_log')
+    parser.add_argument('-export', dest='export', action='store_true')
+    parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
     args = parser.parse_args()
 
     visualizer_class(args).run()
