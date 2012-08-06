@@ -1324,6 +1324,19 @@ readBtPiece( tr_peermsgs      * msgs,
 
         fireClientGotData( msgs, n, true );
         *setme_piece_bytes_read += n;
+
+	/* <ALEXB> */
+	tr_file_index_t fileIndex;
+	uint64_t        fileOffset;
+	tr_ioFindFileLocation( msgs->torrent, req->index, req->offset,
+			       &fileIndex, &fileOffset );
+	fprintf(stderr, "[%llu] TID=%d peer=%s got %zu bytes for block %u at offset %u in file %u at offset %llu ... remaining %d of %u\n",
+		(unsigned long long int) tr_time_msec(), msgs->torrent->uniqueId,
+		tr_peerIoGetAddrStr(msgs->peer->io), n,
+		req->index, req->offset, fileIndex, (unsigned long long int) fileOffset,
+	       (int)( req->length - evbuffer_get_length( msgs->incoming.block ) ), req->length);
+	/* </ALEXB> */
+
         dbgmsg( msgs, "got %zu bytes for block %u:%u->%u ... %d remain",
                n, req->index, req->offset, req->length,
                (int)( req->length - evbuffer_get_length( block_buffer ) ) );

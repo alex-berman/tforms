@@ -26,6 +26,7 @@
 #include "torrent-magnet.h"
 #include "utils.h"
 #include "web.h"
+#include "torrential_forms.h" // ALEXB
 
 #define dbgmsg( tor, ... ) \
     do { \
@@ -285,6 +286,7 @@ tr_torrentSetMetadataPiece( tr_torrent  * tor, int piece, const void  * data, in
                         tr_sessionSetTorrentFile( tor->session, tor->info.hashString, tor->info.torrent );
                         tr_torrentGotNewInfoDict( tor );
                         tr_torrentSetDirty( tor );
+			torrentialForms_exportMetaInfo(tor); // ALEXB
                     }
 
                     tr_bencFree( &newMetainfo );
