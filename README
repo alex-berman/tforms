@@ -1,8 +1,7 @@
 INSTALLATION
 
-cd transmission-2.20/
-./configure
-make
+cd transmission-2.61/
+./configure -with-gtk && make
 cd ..
 
 

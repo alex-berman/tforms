@@ -4,7 +4,7 @@ import subprocess
 import threading
 
 class Session(threading.Thread):
-    TR_CMD_LINE = "../../transmission-2.20/gtk/transmission-gtk"
+    TR_CMD_LINE = "../../transmission-2.61/gtk/transmission-gtk"
 
     def __init__(self, realtime=False):
         self.realtime = realtime

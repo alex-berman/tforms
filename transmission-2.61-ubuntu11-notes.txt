@@ -1,0 +1,11 @@
+Here are some notes about my lessons from trying to install transmission-2.61 on Ubuntu 11.10.
+
+This version of transmission seems to require gtk 3.4.4.
+
+First, I installed gtk and its dependencies in their default locations (/usr/local/lib). This worked fine, until I rebooted the machine and X Windows would no longer start. It seems that glib or some other library caused a conflict, as the problem was solved by removing these libraries manually from /usr/local/lib.
+
+Instead I was able to install gtk 3.4.4 in my home directory. The following things helped when building dependencies (gtk-3 and glib-2) and transmission:
+
+export PKG_CONFIG_PATH=/home/alex/lib/pkgconfig
+export LD_LIBRARY_PATH=/home/alex/lib
+./configure --prefix=/home/alex

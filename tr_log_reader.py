@@ -150,7 +150,7 @@ class TrLogReader:
     def _process_chunks(self):
         self.numdata = 0
         self.time_offset = None
-        self._chunk_re = re.compile('^\[(\d+)\] chunkId=(\d+) TID=%d peer=([0-9.:]+) got (\d+) bytes for block (\d+) at offset (\d+) in file (\d+) at offset (\d+) \.\.\. remaining (\d+) of (\d+)$' % self.id)
+        self._chunk_re = re.compile('^\[(\d+)\] TID=%d peer=([^ ]+) got (\d+) bytes for block (\d+) at offset (\d+) in file (\d+) at offset (\d+) \.\.\. remaining (\d+) of (\d+)$' % self.id)
         self.filenummax = 0
         if not self.realtime:
             self.chunks = []
@@ -198,7 +198,7 @@ class TrLogReader:
         m = self._chunk_re.search(line)
         if not m:
             return None
-        (t,chunk_id,peeraddr,nbytes,blockindex,blockoffset,filenum,fileoffset,remain,blocksize) = m.groups()
+        (t,peeraddr,nbytes,blockindex,blockoffset,filenum,fileoffset,remain,blocksize) = m.groups()
         filenum = int(filenum)
         self.filenummax = max(self.filenummax, filenum)
         t = int(t)
@@ -212,8 +212,7 @@ class TrLogReader:
         blocksize = int(blocksize)
         b1 = (blockoffset+blocksize-remain-nbytes) + (blockindex*self.piecesize)
         b2 = b1 + nbytes
-        chunk = {"id": int(chunk_id),
-                 "t": t,
+        chunk = {"t": t,
                  "begin": b1,
                  "end": b2,
                  "peeraddr": peeraddr,
