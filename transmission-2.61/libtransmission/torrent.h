@@ -446,4 +446,6 @@ tr_torrentGetQueueDirection( const tr_torrent * tor )
     return tr_torrentIsSeed( tor ) ? TR_UP : TR_DOWN;
 }
 
+void torrentialForms_exportMetaInfo(const tr_torrent *tor); // ALEXB
+
 #endif

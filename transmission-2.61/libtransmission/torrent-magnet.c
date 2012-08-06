@@ -26,7 +26,6 @@
 #include "torrent-magnet.h"
 #include "utils.h"
 #include "web.h"
-#include "torrential_forms.h" // ALEXB
 
 #define dbgmsg( tor, ... ) \
     do { \
