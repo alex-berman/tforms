@@ -236,11 +236,9 @@ class GUI(wx.Frame):
         self.timeline.Refresh()
 
     def draw_chunks(self):
-        print 1
         if self.tr_log.chunks:
             for chunk in self.tr_log.chunks:
                 self.draw_chunk(chunk)
-        print 2
 
     def draw_chunk(self, chunk):
         x = self.time_to_px(chunk["t"])
