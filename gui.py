@@ -112,6 +112,7 @@ class GUI(wx.Frame):
     def _peer_button_toggled(self, event):
         peer_id = event.GetId()
         self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
+        self.compile_chunks()
         self.timeline.Refresh()
 
     def main_loop(self):
@@ -156,6 +157,7 @@ class GUI(wx.Frame):
 
     def OnInitGL(self):
         glClearColor(1, 1, 1, 1)
+        self.compile_chunks()
 
     def _draw(self):
         glClear(GL_COLOR_BUFFER_BIT)
@@ -168,6 +170,7 @@ class GUI(wx.Frame):
 
     def _draw_zoom_selection(self):
         self.set_pen(wx.LIGHT_GREY_PEN)
+        glLineWidth(1)
         self.draw_rectangle(self._zoom_selection_x1,
                             self._zoom_selection_y1,
                             self._zoom_selection_x2,
@@ -186,6 +189,7 @@ class GUI(wx.Frame):
         size = self.timeline.GetClientSize()
         self.width = size.width
         self.height = size.height
+        self.compile_chunks()
         self.timeline.Refresh()
 
     def _reset_displayed_time(self):
@@ -194,6 +198,7 @@ class GUI(wx.Frame):
 
     def _zoom_out_button_clicked(self, event):
         self._reset_displayed_time()
+        self.compile_chunks()
         self.timeline.Refresh()
 
     def _on_scrub_start(self, event):
@@ -217,6 +222,7 @@ class GUI(wx.Frame):
             self._displayed_time_begin = self.px_to_time(self._zoom_selection_x1)
             self._displayed_time_end = self.px_to_time(self._zoom_selection_x2)
             self._zoom_selection_taking_place = False
+            self.compile_chunks()
             self.timeline.Refresh()
 
     def _on_mouse_moved(self, event):
@@ -236,17 +242,29 @@ class GUI(wx.Frame):
         self.timeline.Refresh()
 
     def draw_chunks(self):
-        if self.tr_log.chunks:
-            for chunk in self.tr_log.chunks:
-                self.draw_chunk(chunk)
+        glCallList(self.chunks_list)
+        self.draw_highlighted_chunks()
+
+    def draw_highlighted_chunks(self):
+        glLineWidth(4)
+        for chunk_id in self._chunks_being_played.keys():
+            chunk = self.orchestra.chunks_by_id[chunk_id]
+            self.draw_chunk(chunk)
+
+    def compile_chunks(self):
+        self.chunks_list = glGenLists(1)
+        glNewList(self.chunks_list, GL_COMPILE)
+        glLineWidth(2)
+        for chunk in self.tr_log.chunks:
+            self.draw_chunk(chunk)
+        glEndList()
 
     def draw_chunk(self, chunk):
         x = self.time_to_px(chunk["t"])
         if 0 <= x < self.width:
             player_id = self.orchestra.get_player_for_chunk(chunk).id
             if self._peer_buttons[player_id].GetValue() == True:
-                pen = self.get_pen_for_player_and_highlight(
-                    player_id, self._chunk_is_being_played(chunk))
+                pen = self.get_pen_for_player(player_id)
                 self.set_pen(pen)
                 y1 = self.height - self.bytepos_to_py(chunk["begin"])
                 y2 = self.height - self.bytepos_to_py(chunk["end"])
@@ -255,7 +273,6 @@ class GUI(wx.Frame):
     def set_pen(self, pen):
         colour = pen.GetColour()
         glColor3f(colour.Red()/255.0, colour.Blue()/255.0, colour.Green()/255.0)
-        glLineWidth(pen.GetWidth())
 
     def draw_line(self, x1, y1, x2, y2):
         glBegin(GL_LINES)
@@ -265,15 +282,15 @@ class GUI(wx.Frame):
 
     def create_pens_with_colour(self, rgb):
         colour = wx.Colour(*rgb)
-        return {False: wx.Pen(colour, width=2),
-                True: wx.Pen(colour, width=4)}
+        return wx.Pen(colour, width=2)
 
-    def get_pen_for_player_and_highlight(self, player_id, highlighted):
+    def get_pen_for_player(self, player_id):
         pen_id = player_id % len(self.player_pens)
-        return self.player_pens[pen_id][highlighted]
+        return self.player_pens[pen_id]
 
     def draw_time_cursor(self):
         self.set_pen(wx.LIGHT_GREY_PEN)
+        glLineWidth(1)
         x = self.time_to_px(self.orchestra.get_current_log_time())
         y1 = 0
         y2 = self.height

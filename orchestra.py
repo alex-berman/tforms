@@ -123,7 +123,7 @@ class Orchestra:
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
-        self._chunks_by_id = {}
+        self.chunks_by_id = {}
         self._playing = False
         self._quitting = False
         self.set_time_cursor(start_time)
@@ -160,7 +160,7 @@ class Orchestra:
 
     def _handle_play_message(self, path, args, types, src, data):
         (chunk_id, pan) = args
-        chunk = self._chunks_by_id[chunk_id]
+        chunk = self.chunks_by_id[chunk_id]
         self.logger.debug("playing chunk %s with pan %s" % (chunk, pan))
         chunk["player"].play(chunk, pan)
 
@@ -313,11 +313,11 @@ class Orchestra:
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
+            self.chunks_by_id[chunk["id"]] = chunk
             if self.gui:
                 player.play(chunk, pan=0.5, desired_time=now)
             else:
                 self.logger.debug("dispatching chunk")
-                self._chunks_by_id[chunk["id"]] = chunk
                 player.dispatch(chunk, now)
 
     def highlight_chunk(self, chunk):
