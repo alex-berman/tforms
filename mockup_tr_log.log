@@ -1,5 +1,5 @@
 TID=2 file=0 offset=0 length=291 firstPiece=0 lastPiece=0 name=The Cataracs-Top of the WorldLike a G6 Remix Single/Distributed by Mininova.txt
 TID=2 file=1 offset=291 length=969 firstPiece=0 lastPiece=0 name=The Cataracs-Top of the WorldLike a G6 Remix Single/The_Cataracs-Top_of_the_World_BW_Like_A_G6_(Lil_Prophet_Remix_Single)-2010/00-the_cataracs-top_of_the_world_bw_like_a_g6_(remix_single)-2010.m3u
 initialized torrent 2: name=The Cataracs-Top of the WorldLike a G6 Remix Single totalSize=28348491 fileCount=2 pieceSize=1048576 pieceCount=28
-[1322214968044] chunkId=0 TID=2 peer=221.187.146.133:5465 got 100 bytes for block 0 at offset 0 in file 0 at offset 0 ... remaining 16284 of 16384
-[1322214968359] chunkId=1 TID=2 peer=221.187.146.133:5465 got 84 bytes for block 0 at offset 0 in file 0 at offset 0 ... remaining 16200 of 16384
+[1322214968044] TID=2 peer=221.187.146.133:5465 got 100 bytes for block 0 at offset 0 in file 0 at offset 0 ... remaining 16284 of 16384
+[1322214968359] TID=2 peer=221.187.146.133:5465 got 84 bytes for block 0 at offset 0 in file 0 at offset 0 ... remaining 16200 of 16384
