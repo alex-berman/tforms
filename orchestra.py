@@ -56,6 +56,8 @@ class WavPlayer(Player):
     def perform_sonic_interpretation(self, chunk, desired_time):
         if self._previous_chunk_time:
             return self._play_chunk(chunk, desired_time)
+        else:
+            self.logger.debug("not playing first chunk for this player")
 
     def _play_chunk(self, chunk, desired_time):
         file_info = self.orchestra.tr_log.files[chunk["filenum"]]
@@ -118,8 +120,6 @@ class Orchestra:
         self._check_which_files_are_audio()
         self.synth = SynthController()
         self._prepare_players()
-        self._total_bytes = 0
-        self._played_bytes = 0
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
@@ -227,6 +227,7 @@ class Orchestra:
         self.logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
+        self.logger.debug("entering _play_until_end")
         self._playing = True
         self.stopwatch.start()
         num_chunks = len(self.chunks)
@@ -235,6 +236,7 @@ class Orchestra:
             chunk = self.chunks[self.current_chunk_index]
             self.handle_chunk(chunk)
             self.current_chunk_index += 1
+        self.logger.debug("leaving _play_until_end")
 
     def scrub_to_time(self, target_log_time):
         self.logger.debug("scrub_to_time(%s)" % target_log_time)
@@ -257,7 +259,7 @@ class Orchestra:
                 if self.current_chunk_index == num_chunks:
                     reached_target = True
         player = self.get_player_for_chunk(chunk)
-        player.play(chunk)
+        player.play(chunk, pan=0.5)
 
     def _scrub_backward_to(self, target_log_time):
         reached_target = False
@@ -271,7 +273,7 @@ class Orchestra:
                 if self.current_chunk_index < 0 or self.current_chunk_index == num_chunks:
                     reached_target = True
         player = self.get_player_for_chunk(chunk)
-        player.play(chunk)
+        player.play(chunk, pan=0.5)
         
     def stop(self):
         self._playing = False
@@ -311,30 +313,29 @@ class Orchestra:
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
-            self.logger.debug("dispatching chunk")
-            self._chunks_by_id[chunk["id"]] = chunk
-            player.dispatch(chunk, now)
-            self._played_bytes += chunk_size
-        self._total_bytes += chunk_size
-        self.logger.debug("recall rate: %f (%d/%d)" % (
-                float(self._played_bytes) / self._total_bytes,
-                self._played_bytes, self._total_bytes))
+            if self.gui:
+                player.play(chunk, pan=0.5, desired_time=now)
+            else:
+                self.logger.debug("dispatching chunk")
+                self._chunks_by_id[chunk["id"]] = chunk
+                player.dispatch(chunk, now)
 
     def highlight_chunk(self, chunk):
         if self.gui:
             self.gui.highlight_chunk(chunk)
 
     def visualize(self, chunk, player_id, bearing):
-        file_info = self.tr_log.files[chunk["filenum"]]
-        self.visualizer.send("/chunk",
-                             chunk["id"],
-                             chunk["begin"],
-                             chunk["end"] - chunk["begin"],
-                             chunk["filenum"],
-                             file_info["offset"],
-                             file_info["length"],
-                             player_id,
-                             bearing)
+        if self.visualizer:
+            file_info = self.tr_log.files[chunk["filenum"]]
+            self.visualizer.send("/chunk",
+                                 chunk["id"],
+                                 chunk["begin"],
+                                 chunk["end"] - chunk["begin"],
+                                 chunk["filenum"],
+                                 file_info["offset"],
+                                 file_info["length"],
+                                 player_id,
+                                 bearing)
 
     def stopped_playing(self, chunk):
         self.logger.debug("stopped chunk %s" % chunk)
