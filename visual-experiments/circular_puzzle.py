@@ -18,6 +18,7 @@ RADIUS = 50
 DAMPING = 0.95
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
+CURVE_OPACITY = 0.05
 
 class Branch:
     def __init__(self, filenum, file_length, peer):
@@ -143,14 +144,16 @@ class Peer:
             for branch in self.branches.values():
                 branch.draw_playing_chunks()
             for branch in self.branches.values():
-                self.set_color(0.95)
+                self.set_color(0)
                 branch.draw_curve()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
     def set_color(self, relative_age):
         if GREYSCALE:
-            glColor3f(relative_age,relative_age,relative_age)
+            glColor3f(1 - CURVE_OPACITY,
+                      1 - CURVE_OPACITY,
+                      1 - CURVE_OPACITY)
         else:
             color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
             glColor3f(relative_age + color[0] * (1-relative_age),
