@@ -1,5 +1,7 @@
 import wx
 import threading
+from wx import glcanvas
+from OpenGL.GL import *
 
 class GUI(wx.Frame):
     PLAYER_COLOURS = [(255,0,0),
@@ -28,8 +30,9 @@ class GUI(wx.Frame):
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
         self.player_pens = map(self.create_pens_with_colour,
                                self.PLAYER_COLOURS)
+        style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
         wx.Frame.__init__(self, None, wx.ID_ANY, "Torrential Forms",
-                          size=wx.Size(self.width, self.height))
+                          size=wx.Size(self.width, self.height), style=style)
         self.Bind(wx.EVT_SIZE, self._OnSize)
         self._vbox = wx.BoxSizer(wx.VERTICAL)
         self._create_control_buttons()
@@ -38,7 +41,7 @@ class GUI(wx.Frame):
         self._create_timeline()
         self.SetSizer(self._vbox)
         self.timeline.SetFocus()
-        self.Show(True)
+        self.Show()
         orchestra.gui = self
 
     def _create_control_buttons(self):
@@ -61,7 +64,13 @@ class GUI(wx.Frame):
     
     def _create_timeline(self):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        self.timeline = wx.Panel(self)
+        self.GLinitialized = False
+        self.timeline = glcanvas.GLCanvas(
+            self,
+            attribList=(glcanvas.WX_GL_RGBA,
+                        glcanvas.WX_GL_DOUBLEBUFFER,
+                        glcanvas.WX_GL_DEPTH_SIZE, 24))
+        self.timeline.Bind(wx.EVT_SIZE, self._on_resize)
         self.timeline.Bind(wx.EVT_PAINT, self._OnPaint)
         self.timeline.Bind(wx.EVT_KEY_DOWN, self._OnKeyDown)
         self.timeline.Bind(wx.EVT_LEFT_DOWN, self._on_scrub_start)
@@ -72,6 +81,22 @@ class GUI(wx.Frame):
         hbox.Add(self._timeline_button_box)
         hbox.Add(self.timeline, 1, flag=wx.EXPAND)
         self._vbox.Add(hbox, 1, flag=wx.EXPAND)
+
+    def _on_resize(self, event):
+        if self.timeline.GetContext():
+            self.Show()
+            self.timeline.SetCurrent()
+            size = self.timeline.GetClientSize()
+            self._reshape(size.width, size.height)
+            self.timeline.Refresh(False)
+        event.Skip()
+
+    def _reshape(self, width, height):
+        glViewport(0, 0, width, height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0.0, width, height, 0.0, -1.0, 1.0);
+        glMatrixMode(GL_MODELVIEW)
 
     def _create_peer_buttons(self):
         self._timeline_button_box = wx.BoxSizer(wx.VERTICAL)
@@ -121,23 +146,40 @@ class GUI(wx.Frame):
             self._play_button_clicked(event)
 
     def _OnPaint(self, event):
-        dc = wx.BufferedPaintDC(self.timeline)
-        dc.Clear()
-        dc.BeginDrawing()
-        self.draw_chunks(dc)
-        self.draw_time_cursor(dc)
+        self.timeline.SetCurrent()
+        if not self.GLinitialized:
+            self.OnInitGL()
+            self.GLinitialized = True
+            self._on_resize(event)
+        self._draw()
+        event.Skip()
+
+    def OnInitGL(self):
+        glClearColor(1, 1, 1, 1)
+
+    def _draw(self):
+        glClear(GL_COLOR_BUFFER_BIT)
+        self.draw_chunks()
+        self.draw_time_cursor()
         self.update_clock()
         if self._zoom_selection_taking_place:
-            self._draw_zoom_selection(dc)
-        dc.EndDrawing()
+            self._draw_zoom_selection()
+        self.timeline.SwapBuffers()
 
-    def _draw_zoom_selection(self, dc):
-        dc.SetPen(wx.LIGHT_GREY_PEN)
-        dc.SetBrush(wx.TRANSPARENT_BRUSH)
-        dc.DrawRectangle(self._zoom_selection_x1,
-                         self._zoom_selection_y1,
-                         self._zoom_selection_x2 - self._zoom_selection_x1,
-                         self._zoom_selection_y2 - self._zoom_selection_y1)
+    def _draw_zoom_selection(self):
+        self.set_pen(wx.LIGHT_GREY_PEN)
+        self.draw_rectangle(self._zoom_selection_x1,
+                            self._zoom_selection_y1,
+                            self._zoom_selection_x2,
+                            self._zoom_selection_y2)
+
+    def draw_rectangle(self, x1, y1, x2, y2):
+        glBegin(GL_LINE_LOOP)
+        glVertex2f(x1, y1)
+        glVertex2f(x2, y1)
+        glVertex2f(x2, y2)
+        glVertex2f(x1, y2)
+        glEnd()
 
     def _OnSize(self, event):
         self.Layout()
@@ -193,22 +235,35 @@ class GUI(wx.Frame):
             self.orchestra.scrub_to_time(t)
         self.timeline.Refresh()
 
-    def draw_chunks(self, dc):
+    def draw_chunks(self):
+        print 1
         if self.tr_log.chunks:
             for chunk in self.tr_log.chunks:
-                self.draw_chunk(chunk, dc)
+                self.draw_chunk(chunk)
+        print 2
 
-    def draw_chunk(self, chunk, dc):
+    def draw_chunk(self, chunk):
         x = self.time_to_px(chunk["t"])
         if 0 <= x < self.width:
             player_id = self.orchestra.get_player_for_chunk(chunk).id
             if self._peer_buttons[player_id].GetValue() == True:
                 pen = self.get_pen_for_player_and_highlight(
                     player_id, self._chunk_is_being_played(chunk))
-                dc.SetPen(pen)
+                self.set_pen(pen)
                 y1 = self.height - self.bytepos_to_py(chunk["begin"])
                 y2 = self.height - self.bytepos_to_py(chunk["end"])
-                dc.DrawLine(x, y1, x, y2)
+                self.draw_line(x, y1, x, y2)
+
+    def set_pen(self, pen):
+        colour = pen.GetColour()
+        glColor3f(colour.Red()/255.0, colour.Blue()/255.0, colour.Green()/255.0)
+        glLineWidth(pen.GetWidth())
+
+    def draw_line(self, x1, y1, x2, y2):
+        glBegin(GL_LINES)
+        glVertex2f(x1, y1)
+        glVertex2f(x2, y2)
+        glEnd()
 
     def create_pens_with_colour(self, rgb):
         colour = wx.Colour(*rgb)
@@ -219,12 +274,12 @@ class GUI(wx.Frame):
         pen_id = player_id % len(self.player_pens)
         return self.player_pens[pen_id][highlighted]
 
-    def draw_time_cursor(self, dc):
-        dc.SetPen(wx.LIGHT_GREY_PEN)
+    def draw_time_cursor(self):
+        self.set_pen(wx.LIGHT_GREY_PEN)
         x = self.time_to_px(self.orchestra.get_current_log_time())
         y1 = 0
         y2 = self.height
-        dc.DrawLine(x, y1, x, y2)
+        self.draw_line(x, y1, x, y2)
 
     def update_clock(self):
         self.clock.SetLabel('%.2f' % self.orchestra.get_current_log_time())
