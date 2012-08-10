@@ -14,7 +14,7 @@ CIRCLE_THICKNESS = 10
 MAX_BRANCH_AGE = 1.0
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
-RADIUS = 50.0
+RADIUS = 50
 DAMPING = 0.95
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
@@ -143,14 +143,14 @@ class Peer:
             for branch in self.branches.values():
                 branch.draw_playing_chunks()
             for branch in self.branches.values():
-                self.set_color(0)
+                self.set_color(0.95)
                 branch.draw_curve()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
     def set_color(self, relative_age):
         if GREYSCALE:
-            glColor3f(0,0,0)
+            glColor3f(relative_age,relative_age,relative_age)
         else:
             color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
             glColor3f(relative_age + color[0] * (1-relative_age),
@@ -183,8 +183,8 @@ class File:
         self.visualizer = visualizer
         self.position = position
         self.gatherer = Gatherer()
-        self.inner_radius = radius - CIRCLE_THICKNESS
-        self.radius = radius
+        self.inner_radius = visualizer.scale(radius - CIRCLE_THICKNESS)
+        self.radius = visualizer.scale(radius)
         self.velocity = Vector(0,0)
 
     def add_chunk(self, chunk):
@@ -342,8 +342,8 @@ class Puzzle(Visualizer):
         return self.random_position()
 
     def random_position(self):
-        return Vector(random.uniform(RADIUS, self.width - RADIUS),
-                      random.uniform(RADIUS, self.height - RADIUS))
+        return Vector(random.uniform(self.scale(RADIUS), self.width - self.scale(RADIUS)),
+                      random.uniform(self.scale(RADIUS), self.height - self.scale(RADIUS)))
 
     def repositioning_force(self, f):
         f.force = Vector(0,0)
@@ -378,6 +378,9 @@ class Puzzle(Visualizer):
     def apply_hooke_attraction(self, f, other):
         d = other - f.position
         f.force += d * 0.0001
+
+    def scale(self, unscaled):
+        return float(unscaled) / 640 * self.width
 
 if __name__ == '__main__':
     run(Puzzle)
