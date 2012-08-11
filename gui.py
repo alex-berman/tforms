@@ -298,8 +298,8 @@ class GUI(wx.Frame):
                 self.set_pen(pen)
                 x1 = x - size
                 x2 = x + size + 3
-                y1 = self.byte_to_py(chunk["begin"]) - size
-                y2 = self.byte_to_py(chunk["end"])   + size + 1
+                y1 = self.byte_to_py(chunk["begin"]) + size
+                y2 = self.byte_to_py(chunk["end"])   - size - 1
                 glVertex2f(x1, y1)
                 glVertex2f(x2, y1)
                 glVertex2f(x2, y2)
