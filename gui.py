@@ -42,7 +42,7 @@ class GUI(wx.Frame):
         self._create_peer_buttons()
         self._create_timeline()
         self.SetSizer(self._vbox)
-        self.timeline.SetFocus()
+        self.catch_key_events()
         self.Show()
         orchestra.gui = self
 
@@ -118,6 +118,7 @@ class GUI(wx.Frame):
         self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
         self.refresh_chunks()
         self.timeline.Refresh()
+        self.catch_key_events()
 
     def main_loop(self):
         self.app.MainLoop()
@@ -129,6 +130,7 @@ class GUI(wx.Frame):
         self.play_button.Disable()
         self.stop_button.Enable()
         self._playing = True
+        self.catch_key_events()
 
     def _stop_button_clicked(self, event):
         self.orchestra.stop()
@@ -137,6 +139,7 @@ class GUI(wx.Frame):
         self.play_button.Enable()
         self._chunks_being_played = {}
         self._playing = False
+        self.catch_key_events()
 
     def _OnKeyDown(self, event):
         keycode = event.GetKeyCode()
@@ -208,6 +211,7 @@ class GUI(wx.Frame):
         self._reset_displayed_bytes()
         self.refresh_chunks()
         self.timeline.Refresh()
+        self.catch_key_events()
 
     def _on_scrub_start(self, event):
         self._scrubbing = True
@@ -358,3 +362,6 @@ class GUI(wx.Frame):
     def py_to_byte(self, py):
         return self._displayed_byte_begin + (self.timeline_height - py) * (
             self._displayed_byte_end - self._displayed_byte_begin) / self.timeline_height
+
+    def catch_key_events(self):
+        self.timeline.SetFocus()
