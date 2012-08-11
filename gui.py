@@ -249,10 +249,11 @@ class GUI(wx.Frame):
         self.draw_highlighted_chunks()
 
     def draw_highlighted_chunks(self):
-        glLineWidth(4)
+        glBegin(GL_QUADS)
         for chunk_id in self._chunks_being_played.keys():
             chunk = self.orchestra.chunks_by_id[chunk_id]
-            self.draw_chunk(chunk)
+            self.draw_chunk(chunk, size=1)
+        glEnd()
 
     def refresh_chunks(self):
         if self.chunks_display_list:
@@ -262,21 +263,27 @@ class GUI(wx.Frame):
     def render_and_draw_chunks(self):
         self.chunks_display_list = glGenLists(1)
         glNewList(self.chunks_display_list, GL_COMPILE_AND_EXECUTE)
-        glLineWidth(2)
+        glBegin(GL_QUADS)
         for chunk in self.tr_log.chunks:
             self.draw_chunk(chunk)
+        glEnd()
         glEndList()
 
-    def draw_chunk(self, chunk):
+    def draw_chunk(self, chunk, size=0):
         x = self.time_to_px(chunk["t"])
         if 0 <= x < self.width:
             player_id = self.orchestra.get_player_for_chunk(chunk).id
             if self._peer_buttons[player_id].GetValue() == True:
                 pen = self.get_pen_for_player(player_id)
                 self.set_pen(pen)
-                y1 = self.height - self.bytepos_to_py(chunk["begin"])
-                y2 = self.height - self.bytepos_to_py(chunk["end"])
-                self.draw_line(x, y1, x, y2)
+                x1 = x - size
+                x2 = x + size + 3
+                y1 = self.height - self.bytepos_to_py(chunk["begin"]) - size
+                y2 = self.height - self.bytepos_to_py(chunk["end"])   + size + 1
+                glVertex2f(x1, y1)
+                glVertex2f(x2, y1)
+                glVertex2f(x2, y2)
+                glVertex2f(x1, y2)
 
     def set_pen(self, pen):
         colour = pen.GetColour()
