@@ -26,6 +26,7 @@ class GUI(wx.Frame):
         self._playing = False
         self._scrubbing = False
         self._reset_displayed_time()
+        self._reset_displayed_bytes()
         self.chunks_display_list = None
         self.app = wx.App(False)
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
@@ -71,7 +72,7 @@ class GUI(wx.Frame):
             attribList=(glcanvas.WX_GL_RGBA,
                         glcanvas.WX_GL_DOUBLEBUFFER,
                         glcanvas.WX_GL_DEPTH_SIZE, 24))
-        self.timeline.Bind(wx.EVT_SIZE, self._on_resize)
+        self.timeline.Bind(wx.EVT_SIZE, self._on_resize_timeline)
         self.timeline.Bind(wx.EVT_PAINT, self._OnPaint)
         self.timeline.Bind(wx.EVT_KEY_DOWN, self._OnKeyDown)
         self.timeline.Bind(wx.EVT_LEFT_DOWN, self._on_scrub_start)
@@ -83,16 +84,18 @@ class GUI(wx.Frame):
         hbox.Add(self.timeline, 1, flag=wx.EXPAND)
         self._vbox.Add(hbox, 1, flag=wx.EXPAND)
 
-    def _on_resize(self, event):
+    def _on_resize_timeline(self, event):
         if self.timeline.GetContext():
             self.Show()
             self.timeline.SetCurrent()
             size = self.timeline.GetClientSize()
-            self._reshape(size.width, size.height)
+            self._reshape_timeline(size.width, size.height)
             self.timeline.Refresh(False)
         event.Skip()
 
-    def _reshape(self, width, height):
+    def _reshape_timeline(self, width, height):
+        self.timeline_width = width
+        self.timeline_height = height
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -152,7 +155,7 @@ class GUI(wx.Frame):
         if not self.GLinitialized:
             self.OnInitGL()
             self.GLinitialized = True
-            self._on_resize(event)
+            self._on_resize_timeline(event)
         self._draw()
         event.Skip()
 
@@ -196,8 +199,13 @@ class GUI(wx.Frame):
         self._displayed_time_begin = 0
         self._displayed_time_end = self.tr_log.lastchunktime()
 
+    def _reset_displayed_bytes(self):
+        self._displayed_byte_begin = self.min_byte
+        self._displayed_byte_end = self.max_byte
+
     def _zoom_out_button_clicked(self, event):
         self._reset_displayed_time()
+        self._reset_displayed_bytes()
         self.refresh_chunks()
         self.timeline.Refresh()
 
@@ -219,8 +227,16 @@ class GUI(wx.Frame):
 
     def _on_zoom_selection_stop(self, event):
         if self._zoom_selection_taking_place:
-            self._displayed_time_begin = self.px_to_time(self._zoom_selection_x1)
-            self._displayed_time_end = self.px_to_time(self._zoom_selection_x2)
+            (self._displayed_time_begin,
+             self._displayed_time_end) = sorted((
+                self.px_to_time(self._zoom_selection_x1),
+                self.px_to_time(self._zoom_selection_x2)))
+
+            (self._displayed_byte_begin,
+             self._displayed_byte_end) = sorted((
+                    self.py_to_byte(self._zoom_selection_y1),
+                    self.py_to_byte(self._zoom_selection_y2)))
+
             self._zoom_selection_taking_place = False
             self.refresh_chunks()
             self.timeline.Refresh()
@@ -271,15 +287,15 @@ class GUI(wx.Frame):
 
     def draw_chunk(self, chunk, size=0):
         x = self.time_to_px(chunk["t"])
-        if 0 <= x < self.width:
+        if 0 <= x < self.timeline_width:
             player_id = self.orchestra.get_player_for_chunk(chunk).id
             if self._peer_buttons[player_id].GetValue() == True:
                 pen = self.get_pen_for_player(player_id)
                 self.set_pen(pen)
                 x1 = x - size
                 x2 = x + size + 3
-                y1 = self.height - self.bytepos_to_py(chunk["begin"]) - size
-                y2 = self.height - self.bytepos_to_py(chunk["end"])   + size + 1
+                y1 = self.byte_to_py(chunk["begin"]) - size
+                y2 = self.byte_to_py(chunk["end"])   + size + 1
                 glVertex2f(x1, y1)
                 glVertex2f(x2, y1)
                 glVertex2f(x2, y2)
@@ -308,7 +324,7 @@ class GUI(wx.Frame):
         glLineWidth(1)
         x = self.time_to_px(self.orchestra.get_current_log_time())
         y1 = 0
-        y2 = self.height
+        y2 = self.timeline_height
         self.draw_line(x, y1, x, y2)
 
     def update_clock(self):
@@ -331,12 +347,19 @@ class GUI(wx.Frame):
         return chunk["id"] in self._chunks_being_played
 
     def time_to_px(self, t):
-        return (t - self._displayed_time_begin) * self.width / (
+        return (t - self._displayed_time_begin) * self.timeline_width / (
             self._displayed_time_end - self._displayed_time_begin)
+
+    def byte_to_py(self, byte):
+        return self.timeline_height - \
+            (byte - self._displayed_byte_begin) * self.timeline_height / (
+            self._displayed_byte_end - self._displayed_byte_begin)
 
     def px_to_time(self, px):
         return self._displayed_time_begin + px * (
-            self._displayed_time_end - self._displayed_time_begin) / self.width
+            self._displayed_time_end - self._displayed_time_begin) / self.timeline_width
 
-    def bytepos_to_py(self, pos):
-        return (pos - self.min_byte) * self.height / self.max_byte
+    def py_to_byte(self, py):
+        print self.timeline_height, py
+        return self._displayed_byte_begin + (self.timeline_height - py) * (
+            self._displayed_byte_end - self._displayed_byte_begin) / self.timeline_height
