@@ -7,7 +7,7 @@ s.doWhenBooted({
 
 ~sounds = Dictionary[];
 ~filenames = Dictionary[];
-
+~players = Dictionary[];
 
 SynthDef(\limiter,
 { arg gain=1.0, threshold=0.2;
@@ -39,14 +39,11 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 //WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
-SynthDef(\warp, {arg buffer = 0, begin, end, duration, pan;
-	var out, pointer, filelength, pitch, env, dir;
-	pointer = Line.kr(begin, end, duration);
+SynthDef(\warp, {arg buffer = 0, envbuf = -1, pan = 0, pointer=0;
+	var out, filelength, pitch, env, dir;
 	pitch = 1.0;
-	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
-		[0.005*duration, 0.9*duration, 0.06*duration], 'exp'), doneAction: 2);
-	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	Out.ar(0, Pan2.ar(env * out, pan));
+	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, envbuf, 8, 0.1, 2);
+	Out.ar(0, Pan2.ar(out, pan));
 }).send(s);
 
 OSCresponder.new(nil, "/load",
@@ -59,19 +56,31 @@ OSCresponder.new(nil, "/load",
 	  }, {});
   }).add;
 
-OSCresponder.new(nil, "/play",
+OSCresponder.new(nil, "/start",
   { arg t, r, msg;
-	  var sound_id = msg[1];
-	  var begin = msg[2];
-	  var end = msg[3];
-	  var duration = msg[4];
-	  var pan = msg[5] * 2 - 1;
+	  var player_id = msg[1];
+	  var sound_id = msg[2];
+	  var position = msg[3];
+	  var pan = msg[4] * 2 - 1;
 	  //"numSynths=".post; s.numSynths.postln;
-	  Synth(\warp, [\buffer, ~sounds[sound_id],
-		  \begin, begin, \end, end, \duration, duration,
+	  ~players[player_id] = Synth(\warp, [
+		  \buffer, ~sounds[sound_id],
+		  \pointer, position,
 		  \pan, pan]);
   }).add;
 
+OSCresponder.new(nil, "/stop",
+  { arg t, r, msg;
+	  var player_id = msg[1];
+	  ~players[player_id].free;
+  }).add;
+
+OSCresponder.new(nil, "/cursor",
+  { arg t, r, msg;
+	  var player_id = msg[1];
+	  var position = msg[2];
+	  ~players[player_id].set(\pointer, position);
+  }).add;
 
 
 SynthDef(\sync_beep, {
