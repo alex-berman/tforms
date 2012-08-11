@@ -26,6 +26,7 @@ class GUI(wx.Frame):
         self._playing = False
         self._scrubbing = False
         self._reset_displayed_time()
+        self.chunks_display_list = None
         self.app = wx.App(False)
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
         self.player_pens = map(self.create_pens_with_colour,
@@ -112,7 +113,7 @@ class GUI(wx.Frame):
     def _peer_button_toggled(self, event):
         peer_id = event.GetId()
         self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
-        self.compile_chunks()
+        self.refresh_chunks()
         self.timeline.Refresh()
 
     def main_loop(self):
@@ -157,7 +158,6 @@ class GUI(wx.Frame):
 
     def OnInitGL(self):
         glClearColor(1, 1, 1, 1)
-        self.compile_chunks()
 
     def _draw(self):
         glClear(GL_COLOR_BUFFER_BIT)
@@ -189,7 +189,7 @@ class GUI(wx.Frame):
         size = self.timeline.GetClientSize()
         self.width = size.width
         self.height = size.height
-        self.compile_chunks()
+        self.refresh_chunks()
         self.timeline.Refresh()
 
     def _reset_displayed_time(self):
@@ -198,7 +198,7 @@ class GUI(wx.Frame):
 
     def _zoom_out_button_clicked(self, event):
         self._reset_displayed_time()
-        self.compile_chunks()
+        self.refresh_chunks()
         self.timeline.Refresh()
 
     def _on_scrub_start(self, event):
@@ -222,7 +222,7 @@ class GUI(wx.Frame):
             self._displayed_time_begin = self.px_to_time(self._zoom_selection_x1)
             self._displayed_time_end = self.px_to_time(self._zoom_selection_x2)
             self._zoom_selection_taking_place = False
-            self.compile_chunks()
+            self.refresh_chunks()
             self.timeline.Refresh()
 
     def _on_mouse_moved(self, event):
@@ -242,7 +242,10 @@ class GUI(wx.Frame):
         self.timeline.Refresh()
 
     def draw_chunks(self):
-        glCallList(self.chunks_list)
+        if self.chunks_display_list:
+            glCallList(self.chunks_display_list)
+        else:
+            self.render_and_draw_chunks()
         self.draw_highlighted_chunks()
 
     def draw_highlighted_chunks(self):
@@ -251,9 +254,14 @@ class GUI(wx.Frame):
             chunk = self.orchestra.chunks_by_id[chunk_id]
             self.draw_chunk(chunk)
 
-    def compile_chunks(self):
-        self.chunks_list = glGenLists(1)
-        glNewList(self.chunks_list, GL_COMPILE)
+    def refresh_chunks(self):
+        if self.chunks_display_list:
+            glDeleteLists(self.chunks_display_list, 1)
+            self.chunks_display_list = None
+
+    def render_and_draw_chunks(self):
+        self.chunks_display_list = glGenLists(1)
+        glNewList(self.chunks_display_list, GL_COMPILE_AND_EXECUTE)
         glLineWidth(2)
         for chunk in self.tr_log.chunks:
             self.draw_chunk(chunk)
