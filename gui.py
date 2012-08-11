@@ -333,12 +333,8 @@ class GUI(wx.Frame):
     def highlight_chunk(self, chunk):
         self._chunks_being_played[chunk["id"]] = True
         wx.CallAfter(self.timeline.Refresh)
-        self._schedule_to_unhighlight(chunk)
 
-    def _schedule_to_unhighlight(self, chunk):
-        wx.FutureCall(1000, self._unhighlight_chunk, chunk)
-
-    def _unhighlight_chunk(self, chunk):
+    def unhighlight_chunk(self, chunk):
         if self._chunk_is_being_played(chunk):
             del self._chunks_being_played[chunk["id"]]
             wx.CallAfter(self.timeline.Refresh)
@@ -360,6 +356,5 @@ class GUI(wx.Frame):
             self._displayed_time_end - self._displayed_time_begin) / self.timeline_width
 
     def py_to_byte(self, py):
-        print self.timeline_height, py
         return self._displayed_byte_begin + (self.timeline_height - py) * (
             self._displayed_byte_end - self._displayed_byte_begin) / self.timeline_height

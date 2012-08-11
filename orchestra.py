@@ -339,6 +339,8 @@ class Orchestra:
 
     def stopped_playing(self, chunk):
         self.logger.debug("stopped chunk %s" % chunk)
+        if self.gui:
+            self.gui.unhighlight_chunk(chunk)
         if self.visualizer:
             self.visualizer.send("/stopped_playing",
                                  chunk["id"], chunk["filenum"])
