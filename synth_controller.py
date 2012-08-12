@@ -4,6 +4,14 @@ import time
 
 PRECISION = .01
 
+class Player:
+    def __init__(self, synth, player_id):
+        self.synth = synth
+        self.player_id = player_id
+
+    def start_playing(self, sound_id, position, pan):
+        return Sound(self.synth, self.player_id, sound_id, position, pan)
+
 class Sound:
     def __init__(self, synth, player_id, sound_id, position, pan):
         self.synth = synth
@@ -42,12 +50,18 @@ class SynthController:
     def __init__(self):
         self.target = liblo.Address(self.PORT)
         self._lock = threading.Lock()
+        self._player_count = 1
 
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
 
-    def start_playing(self, player_id, sound_id, position, pan):
-        return Sound(self, player_id, sound_id, position, pan)
+    def player(self):
+        return Player(self, self._new_player_id())
+
+    def _new_player_id(self):
+        id = self._player_count
+        self._player_count += 1
+        return id
 
     def sync_beep(self):
         self._send("/sync_beep")
