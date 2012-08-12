@@ -1,5 +1,8 @@
 import liblo
 import threading
+import time
+
+PRECISION = .01
 
 class Sound:
     def __init__(self, synth, player_id, sound_id, position, pan):
@@ -10,6 +13,24 @@ class Sound:
 
     def stop_playing(self):
         self.synth._send("/stop", self.player_id)
+
+    def play_to(self, target_position, desired_duration):
+        thread = threading.Thread(target=self._play_to,
+                                  args=(target_position, desired_duration))
+        thread.daemon = True
+        thread.start()
+
+    def _play_to(self, target_position, desired_duration):
+        self._start_time = time.time()
+        start_position = self.cursor
+        distance = target_position - start_position
+        while self.elapsed_time() < desired_duration:
+            position = start_position + self.elapsed_time() / desired_duration * distance
+            self.set_cursor(position)
+            time.sleep(PRECISION)
+
+    def elapsed_time(self):
+        return time.time() - self._start_time
 
     def set_cursor(self, position):
         self.synth._send("/cursor", self.player_id, position)
