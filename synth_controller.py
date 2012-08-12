@@ -3,6 +3,7 @@ import threading
 import time
 
 PRECISION = .01
+SUSTAIN = 1.0
 
 class SynthControllerException(Exception):
     pass
@@ -14,7 +15,7 @@ class Player:
         self._target_position = None
         self._cursor = None
         self._desired_duration = None
-        thread = threading.Thread(target=self._cursor_thread)
+        thread = threading.Thread(target=self._playback_thread)
         thread.daemon = True
         thread.start()
 
@@ -36,16 +37,24 @@ class Player:
         self._distance = target_position - self._start_position
         self._desired_duration = desired_duration
 
-    def _cursor_thread(self):
+    def _playback_thread(self):
         while True:
             while self._desired_duration == None:
                 time.sleep(PRECISION)
-            while self._elapsed_time() < self._desired_duration:
+
+            while self._desired_duration and self._elapsed_time() < self._desired_duration:
                 position = self._start_position + \
                     self._elapsed_time() / self._desired_duration * self._distance
                 self.set_cursor(position)
                 time.sleep(PRECISION)
+
             self._desired_duration = None
+            self._start_time = time.time()
+            while self._desired_duration == None and self._elapsed_time() < SUSTAIN:
+                time.sleep(PRECISION)
+
+            if self._desired_duration == None:
+                self.stop_playing()
 
     def _elapsed_time(self):
         return time.time() - self._start_time

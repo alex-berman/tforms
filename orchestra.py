@@ -22,6 +22,9 @@ class Player:
         self.bearing = bearing
         self.enabled = True
         self._previous_chunk_time = None
+        self._sound = None
+        self._cursor = None
+        self.synth_player = orchestra.synth.player()
 
     def dispatch(self, chunk, desired_time):
         chunk["desired_time"] = desired_time
@@ -40,24 +43,38 @@ class Player:
             self.orchestra.stopped_playing(chunk)
 
     def interpret_sonically(self, chunk, desired_time):
-        result = self.perform_sonic_interpretation(chunk, desired_time)
+        if self._cursor == (chunk["filenum"], chunk["begin"]):
+            desired_duration = desired_time - self._previous_chunk_time
+            if desired_duration == 0:
+                warn(self.logger, "simultaneous chunks within a peer?")
+                desired_duration = 0.01
+            self._sound.play_to(
+                self._relative_position(chunk), desired_duration)
+            self.orchestra.scheduler.enter(
+                desired_duration, 1,
+                self.orchestra.stopped_playing, [chunk])
+        else:
+            if self._sound:
+                self._sound.stop_playing()
+            self._sound = self._start_sound(chunk)
+        self._cursor = (chunk["filenum"], chunk["end"])
         self._previous_chunk_time = desired_time
-        return result
+        return True
+
+    def _start_sound(self, chunk):
+        return self.synth_player.start_playing(
+            chunk["filenum"], self._relative_position(chunk), chunk["pan"])
+
+    def _relative_position(self, chunk):
+        file_info = self.orchestra.tr_log.files[chunk["filenum"]]
+        start_time_in_file = self._bytecount_to_secs(
+            chunk["begin"]-file_info["offset"], file_info)
+        return start_time_in_file / file_info["duration"]
 
     def _bytecount_to_secs(self, byte_count, file_info):
         duration_secs = file_info["duration"]
         file_num_bytes = file_info["length"]
         return duration_secs * byte_count / file_num_bytes
-
-
-
-
-class WavPlayer(Player):
-    def perform_sonic_interpretation(self, chunk, desired_time):
-        if self._previous_chunk_time:
-            return self._play_chunk(chunk, desired_time)
-        else:
-            self.logger.debug("not playing first chunk for this player")
 
     def _play_chunk(self, chunk, desired_time):
         file_info = self.orchestra.tr_log.files[chunk["filenum"]]
@@ -67,11 +84,6 @@ class WavPlayer(Player):
 
         if desired_time == None:
             raise Exception("why does this happen?")
-
-        desired_duration = desired_time - self._previous_chunk_time
-        if desired_duration == 0:
-            warn(self.logger, "simultaneous chunks within a peer?")
-            desired_duration = 0.01
 
         rate = (end_time_in_file - start_time_in_file) / desired_duration
         if rate < Orchestra.MIN_GRAIN_RATE:
@@ -179,7 +191,7 @@ class Orchestra:
             return m.group(1).lower()
 
     def _prepare_players(self):
-        self._player_class = WavPlayer
+        self._player_class = Player
         if self.predecoded:
             self._get_wav_files_info()
         else:
@@ -344,18 +356,6 @@ class Orchestra:
         if self.visualizer:
             self.visualizer.send("/stopped_playing",
                                  chunk["id"], chunk["filenum"])
-
-    def play_chunk(self, chunk):
-        file_info = self.tr_log.files[chunk["filenum"]]
-        self.synth.play_chunk(
-            chunk["filenum"],
-            chunk["start_time_in_file"] / file_info["duration"],
-            chunk["end_time_in_file"] / file_info["duration"],
-            chunk["desired_duration"],
-            chunk["pan"])
-        self.scheduler.enter(
-            chunk["desired_duration"], 1,
-            self.stopped_playing, [chunk])
 
     def get_player_for_chunk(self, chunk):
         try:

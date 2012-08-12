@@ -23,6 +23,12 @@ class SynthControllerTest(unittest.TestCase):
         with self.assertRaises(SynthControllerException):
             sound2 = player.start_playing(sound_id=2, position=0, pan=0.5)
 
+    def test_automatic_stop(self):
+        player = synth.player()
+        sound = player.start_playing(sound_id=1, position=0, pan=0.5)
+        sound.play_to(target_position=0.5, desired_duration=2.0)
+        time.sleep(5.0)
+
     def test_two_players(self):
         player1 = synth.player()
         sound1 = player1.start_playing(sound_id=1, position=0, pan=0)
