@@ -307,7 +307,7 @@ class GUI(wx.Frame):
 
     def set_pen(self, pen):
         colour = pen.GetColour()
-        glColor3f(colour.Red()/255.0, colour.Blue()/255.0, colour.Green()/255.0)
+        glColor3f(colour.Red()/255.0, colour.Green()/255.0, colour.Blue()/255.0)
 
     def draw_line(self, x1, y1, x2, y2):
         glBegin(GL_LINES)
