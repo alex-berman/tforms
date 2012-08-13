@@ -3,7 +3,7 @@ import threading
 import time
 import Queue
 
-PRECISION = .01
+PRECISION = .0001
 SUSTAIN = 1.0
 
 START = "START"
@@ -11,7 +11,8 @@ STOP = "STOP"
 TARGET_POSITION = "TARGET_POSITION"
 
 LINEAR_STRATEGY, SMOOTH_STRATEGY = range(2)
-STRATEGY = SMOOTH_STRATEGY
+STRATEGY = LINEAR_STRATEGY
+#STRATEGY = SMOOTH_STRATEGY
 
 class SynthControllerException(Exception):
     pass
@@ -110,16 +111,15 @@ class Player:
             remaining_time = self._desired_duration - self._elapsed_time()
             if remaining_time <= 0:
                 return
+            desired_position = self._start_position + self._distance * self._elapsed_time() / self._desired_duration
             if STRATEGY == LINEAR_STRATEGY:
-                position = self._start_position + self._distance * self._elapsed_time() / self._desired_duration
+                position = desired_position
             elif STRATEGY == SMOOTH_STRATEGY:
-                remaining_iterations = remaining_time / PRECISION
-                remaining_distance = self._target_position - position
-                target_speed = remaining_distance / remaining_iterations
+                target_speed = desired_position - position
                 if speed == None:
                     speed = target_speed
                 else:
-                    speed += (target_speed - speed) * 0.05
+                    speed += (target_speed - speed) * PRECISION * 5
                 position += speed
             self.set_cursor(position)
             try:
