@@ -1,4 +1,4 @@
-from synth_controller import SynthController, SynthControllerException
+from synth_controller import SynthController, SynthControllerException, SUSTAIN
 import time
 import unittest
 import logging
@@ -67,6 +67,14 @@ class SynthControllerTest(unittest.TestCase):
         sound2.play_to(target_position=1.0, desired_duration=3.0)
         time.sleep(3.0)
         sound2.stop_playing()
+
+    def test_play_to_after_timeout(self):
+        player1 = synth.player()
+        sound1 = player1.start_playing(sound_id=1, position=0, pan=0)
+        sound1.play_to(target_position=0.5, desired_duration=1.0)
+        time.sleep(1.0 + SUSTAIN + 0.1)
+        sound1.play_to(target_position=0.1, desired_duration=1.0)
+        time.sleep(1.0)
 
     def setUp(self):
         logger.debug("begin test %s" % self.id())

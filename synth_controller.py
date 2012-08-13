@@ -67,17 +67,21 @@ class Player:
             if command == START:
                 self._handle_start(message[1])
                 started = True
+            elif command == TARGET_POSITION:
+                self._handle_target_position_as_start(message[1])
+                started = True
             elif command == STOP:
                 pass
             else:
-                self.synth.raise_exception("expected START or STOP but got %s" % str(message))
+                self.synth.raise_exception(
+                    "expected START, STOP or TARGET_POSITION but got %s" % str(message))
 
     def _handle_start(self, args):
         (self._sound_id, self._cursor, self._pan, callback, callback_args) = args
         if callback:
             self._callbacks.append((callback, callback_args))
         self.synth._send("/start", self.id, self._sound_id, self._cursor, self._pan)
-
+        
     def _await_target_position_or_stopped_or_timeout(self):
         self.synth.log("_await_target_position_or_stopped_or_timeout")
         try:
@@ -133,6 +137,11 @@ class Player:
         self._start_time = time.time()
         self._start_position = self._cursor
         self._distance = self._target_position - self._start_position
+
+    def _handle_target_position_as_start(self, args):
+        (self._target_position, self._desired_duration, callback, callback_args) = args
+        self._handle_start((self._sound_id, self._target_position, self._pan,
+                            callback, callback_args))
 
     def _handle_stop(self):
         if not self._stopped:
