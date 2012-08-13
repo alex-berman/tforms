@@ -70,7 +70,7 @@ class Player:
             elif command == STOP:
                 pass
             else:
-                raise SynthControllerException("expected START or STOP but got %s" % str(message))
+                self.synth.raise_exception("expected START or STOP but got %s" % str(message))
 
     def _handle_start(self, args):
         (self._sound_id, self._cursor, self._pan, callback, callback_args) = args
@@ -88,7 +88,7 @@ class Player:
             elif command == STOP:
                 self._handle_stop()
             else:
-                raise SynthControllerException("expected TARGET_POSITION or STOP but got %s" % str(message))
+                self.synth.raise_exception("expected TARGET_POSITION or STOP but got %s" % str(message))
         except Queue.Empty:
             self.synth.log("timed out")
             self.synth._send("/stop", self.id)
@@ -98,8 +98,10 @@ class Player:
         self.synth.log("_move_cursor_until_target_position_reached_or_stopped_or_new_target_position")
         position = self._start_position
         speed = None
-        while self._elapsed_time() < self._desired_duration:
+        while True:
             remaining_time = self._desired_duration - self._elapsed_time()
+            if remaining_time <= 0:
+                return
             remaining_iterations = remaining_time / PRECISION
             remaining_distance = self._target_position - position
             target_speed = remaining_distance / remaining_iterations
@@ -118,7 +120,7 @@ class Player:
                 elif command == TARGET_POSITION:
                     self._handle_target_position(args)
                 else:
-                    raise SynthControllerException(
+                    self.synth.raise_exception(
                         "expected STOP or TARGET_POSITION or nothing but got %s" % str(message))
             except Queue.Empty:
                 pass
@@ -203,4 +205,8 @@ class SynthController:
 
     def log(self, msg):
         if self.logger:
-            self.logger.debug("SynthController.%s" % msg)
+            self.logger.debug("SynthController: %s" % msg)
+
+    def raise_exception(self, msg):
+        self.log("raise_exception(%s)" % msg)
+        raise SynthControllerException(msg)
