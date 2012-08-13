@@ -58,31 +58,37 @@ class Player:
 
     def _playback_thread(self):
         while True:
-            while self._desired_duration == None:
-                time.sleep(PRECISION)
-
-            position = self._start_position
-            speed = None
-            while self._desired_duration and self._elapsed_time() < self._desired_duration:
-                remaining_time = self._desired_duration - self._elapsed_time()
-                remaining_iterations = remaining_time / PRECISION
-                remaining_distance = self._target_position - position
-                target_speed = remaining_distance / remaining_iterations
-                if speed == None:
-                    speed = target_speed
-                else:
-                    speed += (target_speed - speed) * 0.05
-                position += speed
-                self.set_cursor(position)
-                time.sleep(PRECISION)
-
-            self._desired_duration = None
-            self._start_time = time.time()
-            while self._desired_duration == None and self._elapsed_time() < SUSTAIN:
-                time.sleep(PRECISION)
-
+            self._await_target_position()
+            self._move_cursor_to_target_position()
+            self._sustain()
             if self._desired_duration == None:
                 self.stop_playing()
+
+    def _await_target_position(self):
+        while self._desired_duration == None:
+            time.sleep(PRECISION)
+
+    def _move_cursor_to_target_position(self):
+        position = self._start_position
+        speed = None
+        while self._desired_duration and self._elapsed_time() < self._desired_duration:
+            remaining_time = self._desired_duration - self._elapsed_time()
+            remaining_iterations = remaining_time / PRECISION
+            remaining_distance = self._target_position - position
+            target_speed = remaining_distance / remaining_iterations
+            if speed == None:
+                speed = target_speed
+            else:
+                speed += (target_speed - speed) * 0.05
+            position += speed
+            self.set_cursor(position)
+            time.sleep(PRECISION)
+
+    def _sustain(self):
+        self._desired_duration = None
+        self._start_time = time.time()
+        while self._desired_duration == None and self._elapsed_time() < SUSTAIN:
+            time.sleep(PRECISION)
 
     def _elapsed_time(self):
         return time.time() - self._start_time
