@@ -15,27 +15,41 @@ class Player:
         self._target_position = None
         self._cursor = None
         self._desired_duration = None
+        self._callbacks = []
         thread = threading.Thread(target=self._playback_thread)
         thread.daemon = True
         thread.start()
 
-    def start_playing(self, sound_id, position, pan):
+    def start_playing(self, sound_id, position, pan,
+                      callback=None, callback_args=()):
         self.synth.log("Player(%s).start_playing(%s, %s, %s)" % (
                 self.id, sound_id, position, pan))
         if self._desired_duration:
             raise SynthControllerException("trying to start new sound while already playing something")
         self.synth._send("/start", self.id, sound_id, position, pan)
         self._cursor = position
+        if callback:
+            self._callbacks.append((callback, callback_args))
         return Sound(self)
 
     def stop_playing(self):
         self.synth.log("Player(%s).stop_playing()" % self.id)
         self.synth._send("/stop", self.id)
         self._desired_duration = None
+        self._fire_callbacks()
 
-    def play_to(self, target_position, desired_duration):
+    def _fire_callbacks(self):
+        for callback, args in self._callbacks:
+            callback(*args)
+        self._callbacks = []
+
+    def play_to(self, target_position, desired_duration,
+                callback=None, callback_args=()):
         self.synth.log("Player(%s).play_to(%s, %s)" % (
                 self.id, target_position, desired_duration))
+        self._fire_callbacks()
+        if callback:
+            self._callbacks.append((callback, callback_args))
         self._target_position = target_position
         self._start_time = time.time()
         self._start_position = self._cursor
@@ -84,8 +98,10 @@ class Sound:
     def stop_playing(self):
         self.player.stop_playing()
 
-    def play_to(self, target_position, desired_duration):
-        self.player.play_to(target_position, desired_duration)
+    def play_to(self, target_position, desired_duration,
+                callback=None, callback_args=()):
+        self.player.play_to(target_position, desired_duration,
+                            callback, callback_args)
 
 class SynthController:
     PORT = 57120

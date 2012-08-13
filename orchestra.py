@@ -7,7 +7,6 @@ import os
 import re
 import liblo
 import threading
-import sched
 from synth_controller import SynthController
 from osc_sender import OscSender
 
@@ -50,9 +49,7 @@ class Player:
                 warn(self.logger, "simultaneous chunks within a peer?")
                 desired_duration = 0.01
             self._sound.play_to(
-                self._relative_position(chunk), desired_duration)
-            self.orchestra.scheduler.enter(
-                desired_duration, 1,
+                self._relative_position(chunk), desired_duration,
                 self.orchestra.stopped_playing, [chunk])
         else:
             if self._sound:
@@ -64,7 +61,8 @@ class Player:
 
     def _start_sound(self, chunk):
         return self.synth_player.start_playing(
-            chunk["filenum"], self._relative_position(chunk), chunk["pan"])
+            chunk["filenum"], self._relative_position(chunk), chunk["pan"],
+            self.orchestra.stopped_playing, [chunk])
 
     def _relative_position(self, chunk):
         file_info = self.orchestra.tr_log.files[chunk["filenum"]]
@@ -140,24 +138,12 @@ class Orchestra:
         self._playing = False
         self._quitting = False
         self.set_time_cursor(start_time)
-        self.scheduler = sched.scheduler(time.time, time.sleep)
-        self._run_scheduler_thread()
 
         if visualizer_enabled:
             self.visualizer = OscSender(VISUALIZER_PORT, osc_log)
             self._setup_osc()
         else:
             self.visualizer = None
-
-    def _run_scheduler_thread(self):
-        self._scheduler_thread = threading.Thread(target=self._process_scheduled_events)
-        self._scheduler_thread.daemon = True
-        self._scheduler_thread.start()
-
-    def _process_scheduled_events(self):
-        while not self._quitting:
-            self.scheduler.run()
-            time.sleep(0.01)
 
     def _setup_osc(self):
         self.server = liblo.Server(PORT)
@@ -236,7 +222,6 @@ class Orchestra:
         else:
             self._play_until_end()
             self._quitting = True
-            self._scheduler_thread.join()
         self.logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
