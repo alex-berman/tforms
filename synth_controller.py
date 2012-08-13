@@ -10,6 +10,9 @@ START = "START"
 STOP = "STOP"
 TARGET_POSITION = "TARGET_POSITION"
 
+LINEAR_STRATEGY, SMOOTH_STRATEGY = range(2)
+STRATEGY = SMOOTH_STRATEGY
+
 class SynthControllerException(Exception):
     pass
 
@@ -100,20 +103,24 @@ class Player:
 
     def _move_cursor_until_target_position_reached_or_stopped_or_new_target_position(self):
         self.synth.log("_move_cursor_until_target_position_reached_or_stopped_or_new_target_position")
-        position = self._start_position
+        if STRATEGY == SMOOTH_STRATEGY:
+            position = self._start_position
         speed = None
         while True:
             remaining_time = self._desired_duration - self._elapsed_time()
             if remaining_time <= 0:
                 return
-            remaining_iterations = remaining_time / PRECISION
-            remaining_distance = self._target_position - position
-            target_speed = remaining_distance / remaining_iterations
-            if speed == None:
-                speed = target_speed
-            else:
-                speed += (target_speed - speed) * 0.05
-            position += speed
+            if STRATEGY == LINEAR_STRATEGY:
+                position = self._start_position + self._distance * self._elapsed_time() / self._desired_duration
+            elif STRATEGY == SMOOTH_STRATEGY:
+                remaining_iterations = remaining_time / PRECISION
+                remaining_distance = self._target_position - position
+                target_speed = remaining_distance / remaining_iterations
+                if speed == None:
+                    speed = target_speed
+                else:
+                    speed += (target_speed - speed) * 0.05
+                position += speed
             self.set_cursor(position)
             try:
                 message = self._get_message(PRECISION)
@@ -219,3 +226,6 @@ class SynthController:
     def raise_exception(self, msg):
         self.log("raise_exception(%s)" % msg)
         raise SynthControllerException(msg)
+
+    def shutdown(self):
+        time.sleep(SUSTAIN + 0.1)

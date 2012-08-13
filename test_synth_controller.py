@@ -17,8 +17,8 @@ class SynthControllerTest(unittest.TestCase):
     def test_play_sound(self):
         player = synth.player()
         sound = player.start_playing(sound_id=1, position=0, pan=0.5)
-        sound.play_to(target_position=0.5, desired_duration=1.0)
-        time.sleep(1.0)
+        sound.play_to(target_position=0.5, desired_duration=3.0)
+        time.sleep(3.0)
         sound.stop_playing()
 
     def test_play_sound_with_different_speeds(self):
