@@ -47,9 +47,18 @@ class Player:
             while self._desired_duration == None:
                 time.sleep(PRECISION)
 
+            position = self._start_position
+            speed = None
             while self._desired_duration and self._elapsed_time() < self._desired_duration:
-                position = self._start_position + \
-                    self._elapsed_time() / self._desired_duration * self._distance
+                remaining_time = self._desired_duration - self._elapsed_time()
+                remaining_iterations = remaining_time / PRECISION
+                remaining_distance = self._target_position - position
+                target_speed = remaining_distance / remaining_iterations
+                if speed == None:
+                    speed = target_speed
+                else:
+                    speed += (target_speed - speed) * 0.05
+                position += speed
                 self.set_cursor(position)
                 time.sleep(PRECISION)
 

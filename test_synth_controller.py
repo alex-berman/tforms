@@ -10,10 +10,10 @@ class SynthControllerTest(unittest.TestCase):
     def test_play_sound_with_different_speeds(self):
         player = synth.player()
         sound = player.start_playing(sound_id=1, position=0, pan=0.5)
-        sound.play_to(target_position=0.5, desired_duration=2.0)
-        time.sleep(2.0)
-        sound.play_to(target_position=1.0, desired_duration=1.0)
+        sound.play_to(target_position=0.5, desired_duration=1.0)
         time.sleep(1.0)
+        sound.play_to(target_position=1.0, desired_duration=5.0)
+        time.sleep(5.0)
         sound.stop_playing()
 
     def test_trying_to_play_two_sounds_simultaneously_with_same_player_raises_exception(self):
