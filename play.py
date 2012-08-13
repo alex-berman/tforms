@@ -11,7 +11,8 @@ from session import Session
 
 logging.basicConfig(filename="play.log", 
                     level=logging.DEBUG, 
-                    filemode="w")
+                    filemode="w",
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("play")
 
 parser = OptionParser()

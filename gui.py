@@ -255,10 +255,11 @@ class GUI(wx.Frame):
 
     def _scrub(self, event):
         t = self.px_to_time(event.GetX())
-        if self._playing:
-            self.orchestra.set_time_cursor(t)
-        else:
-            self.orchestra.scrub_to_time(t)
+        self.orchestra.set_time_cursor(t) # TEMP disabled scrubbing
+        # if self._playing:
+        #     self.orchestra.set_time_cursor(t)
+        # else:
+        #     self.orchestra.scrub_to_time(t)
         self.timeline.Refresh()
 
     def draw_chunks(self):

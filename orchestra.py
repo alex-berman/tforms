@@ -45,6 +45,7 @@ class Player:
     def interpret_sonically(self, chunk, desired_time):
         if self._cursor == (chunk["filenum"], chunk["begin"]):
             desired_duration = desired_time - self._previous_chunk_time
+            self.orchestra.logger.debug("desired_duration=%s-%s=%s" % (desired_time, self._previous_chunk_time, desired_duration))
             if desired_duration == 0:
                 warn(self.logger, "simultaneous chunks within a peer?")
                 desired_duration = 0.01
@@ -130,7 +131,7 @@ class Orchestra:
 
         self.gui = None
         self._check_which_files_are_audio()
-        self.synth = SynthController()
+        self.synth = SynthController(self.logger)
         self._prepare_players()
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
@@ -326,6 +327,7 @@ class Orchestra:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
             self.chunks_by_id[chunk["id"]] = chunk
+            now = self.get_current_log_time()
             if self.gui:
                 player.play(chunk, pan=0.5, desired_time=now)
             else:

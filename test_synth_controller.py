@@ -40,3 +40,15 @@ class SynthControllerTest(unittest.TestCase):
         time.sleep(3.0)
         sound1.stop_playing()
         sound2.stop_playing()
+
+    def test_stop_followed_by_play(self):
+        player1 = synth.player()
+        sound1 = player1.start_playing(sound_id=1, position=0, pan=0)
+        time.sleep(0.3)
+        sound1.play_to(target_position=1.0, desired_duration=3.0)
+        time.sleep(1.0)
+        sound1.stop_playing()
+        sound2 = player1.start_playing(sound_id=2, position=0, pan=1)
+        sound2.play_to(target_position=1.0, desired_duration=3.0)
+        time.sleep(3.0)
+        sound2.stop_playing()

@@ -20,4 +20,5 @@ x.set(\pointer, 0.3);
 x.set(\pointer, 0.4);
 x.set(\pointer, 0.5);
 x.set(\pointer, 0.6);
-x.free();
+x.free;
+

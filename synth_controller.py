@@ -20,6 +20,8 @@ class Player:
         thread.start()
 
     def start_playing(self, sound_id, position, pan):
+        self.synth.log("Player(%s).start_playing(%s, %s, %s)" % (
+                self.id, sound_id, position, pan))
         if self._desired_duration:
             raise SynthControllerException("trying to start new sound while already playing something")
         self.synth._send("/start", self.id, sound_id, position, pan)
@@ -27,10 +29,13 @@ class Player:
         return Sound(self)
 
     def stop_playing(self):
+        self.synth.log("Player(%s).stop_playing()" % self.id)
         self.synth._send("/stop", self.id)
         self._desired_duration = None
 
     def play_to(self, target_position, desired_duration):
+        self.synth.log("Player(%s).play_to(%s, %s)" % (
+                self.id, target_position, desired_duration))
         self._target_position = target_position
         self._start_time = time.time()
         self._start_position = self._cursor
@@ -76,7 +81,8 @@ class Sound:
 class SynthController:
     PORT = 57120
 
-    def __init__(self):
+    def __init__(self, logger=None):
+        self.logger = logger
         self.target = liblo.Address(self.PORT)
         self._lock = threading.Lock()
         self._player_count = 1
@@ -103,5 +109,10 @@ class SynthController:
         self._send("/sync_beep")
 
     def _send(self, command, *args):
+        self.log("_send(%s, %s)" % (command, args))
         with self._lock:
             liblo.send(self.target, command, *args)
+
+    def log(self, msg):
+        if self.logger:
+            self.logger.debug("SynthController.%s" % msg)
