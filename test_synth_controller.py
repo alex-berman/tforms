@@ -1,8 +1,15 @@
 from synth_controller import SynthController, SynthControllerException
 import time
 import unittest
+import logging
 
-synth = SynthController()
+logging.basicConfig(filename="test_synth_controller.log", 
+                    level=logging.DEBUG, 
+                    filemode="w",
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("SynthControllerTest")
+
+synth = SynthController(logger)
 synth.load_sound(sound_id=1, filename="sonic-experiments/theme-nikolayeva-mono.wav")
 synth.load_sound(sound_id=2, filename="sonic-experiments/theme-acad-st-martin-mono.wav")
 
@@ -52,3 +59,9 @@ class SynthControllerTest(unittest.TestCase):
         sound2.play_to(target_position=1.0, desired_duration=3.0)
         time.sleep(3.0)
         sound2.stop_playing()
+
+    def setUp(self):
+        logger.debug("begin test %s" % self.id())
+
+    def tearDown(self):
+        logger.debug("end test %s" % self.id())
