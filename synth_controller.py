@@ -1,9 +1,14 @@
 import liblo
 import threading
 import time
+import Queue
 
 PRECISION = .01
 SUSTAIN = 1.0
+
+START = "START"
+STOP = "STOP"
+TARGET_POSITION = "TARGET_POSITION"
 
 class SynthControllerException(Exception):
     pass
@@ -16,6 +21,7 @@ class Player:
         self._cursor = None
         self._desired_duration = None
         self._callbacks = []
+        self._queue = Queue.Queue()
         thread = threading.Thread(target=self._playback_thread)
         thread.daemon = True
         thread.start()
@@ -24,54 +30,75 @@ class Player:
                       callback=None, callback_args=()):
         self.synth.log("Player(%s).start_playing(%s, %s, %s)" % (
                 self.id, sound_id, position, pan))
-        if self._desired_duration:
-            raise SynthControllerException("trying to start new sound while already playing something")
-        self.synth._send("/start", self.id, sound_id, position, pan)
-        self._cursor = position
-        if callback:
-            self._callbacks.append((callback, callback_args))
+        self._queue.put((START,
+                         (sound_id, position, pan, callback, callback_args)))
         return Sound(self)
 
     def stop_playing(self):
         self.synth.log("Player(%s).stop_playing()" % self.id)
-        self.synth._send("/stop", self.id)
-        self._desired_duration = None
-        self._fire_callbacks()
-
-    def _fire_callbacks(self):
-        for callback, args in self._callbacks:
-            callback(*args)
-        self._callbacks = []
+        self._queue.put((STOP, ()))
 
     def play_to(self, target_position, desired_duration,
                 callback=None, callback_args=()):
         self.synth.log("Player(%s).play_to(%s, %s)" % (
                 self.id, target_position, desired_duration))
-        self._fire_callbacks()
-        if callback:
-            self._callbacks.append((callback, callback_args))
-        self._target_position = target_position
-        self._start_time = time.time()
-        self._start_position = self._cursor
-        self._distance = target_position - self._start_position
-        self._desired_duration = desired_duration
+        self._queue.put((TARGET_POSITION, (
+                    target_position, desired_duration,
+                    callback, callback_args)))
 
     def _playback_thread(self):
         while True:
-            self._await_target_position()
-            self._move_cursor_to_target_position()
-            self._sustain()
-            if self._desired_duration == None:
-                self.stop_playing()
+            self._await_start()
+            self._stopped = False
+            self._timed_out = False
+            while not self._stopped and not self._timed_out:
+                self.synth.log("_stopped=%s _timed_out=%s" % (self._stopped, self._timed_out))
+                self._await_target_position_or_stopped_or_timeout()
+                if not self._stopped and not self._timed_out:
+                    self._move_cursor_until_target_position_reached_or_stopped_or_new_target_position()
+            self._fire_callbacks()
 
-    def _await_target_position(self):
-        while self._desired_duration == None:
-            time.sleep(PRECISION)
+    def _await_start(self):
+        self.synth.log("_await_start")
+        started = False
+        while not started:
+            message = self._get_message()
+            command = message[0]
+            if command == START:
+                self._handle_start(message[1])
+                started = True
+            elif command == STOP:
+                pass
+            else:
+                raise SynthControllerException("expected START or STOP but got %s" % str(message))
 
-    def _move_cursor_to_target_position(self):
+    def _handle_start(self, args):
+        (self._sound_id, self._cursor, self._pan, callback, callback_args) = args
+        if callback:
+            self._callbacks.append((callback, callback_args))
+        self.synth._send("/start", self.id, self._sound_id, self._cursor, self._pan)
+
+    def _await_target_position_or_stopped_or_timeout(self):
+        self.synth.log("_await_target_position_or_stopped_or_timeout")
+        try:
+            message = self._get_message(SUSTAIN)
+            command, args = message
+            if command == TARGET_POSITION:
+                self._handle_target_position(args)
+            elif command == STOP:
+                self._handle_stop()
+            else:
+                raise SynthControllerException("expected TARGET_POSITION or STOP but got %s" % str(message))
+        except Queue.Empty:
+            self.synth.log("timed out")
+            self.synth._send("/stop", self.id)
+            self._timed_out = True
+
+    def _move_cursor_until_target_position_reached_or_stopped_or_new_target_position(self):
+        self.synth.log("_move_cursor_until_target_position_reached_or_stopped_or_new_target_position")
         position = self._start_position
         speed = None
-        while self._desired_duration and self._elapsed_time() < self._desired_duration:
+        while self._elapsed_time() < self._desired_duration:
             remaining_time = self._desired_duration - self._elapsed_time()
             remaining_iterations = remaining_time / PRECISION
             remaining_distance = self._target_position - position
@@ -82,13 +109,38 @@ class Player:
                 speed += (target_speed - speed) * 0.05
             position += speed
             self.set_cursor(position)
-            time.sleep(PRECISION)
+            try:
+                message = self._get_message(PRECISION)
+                command, args = message
+                if command == STOP:
+                    self._handle_stop()
+                    return
+                elif command == TARGET_POSITION:
+                    self._handle_target_position(args)
+                else:
+                    raise SynthControllerException(
+                        "expected STOP or TARGET_POSITION or nothing but got %s" % str(message))
+            except Queue.Empty:
+                pass
 
-    def _sustain(self):
-        self._desired_duration = None
+    def _handle_target_position(self, args):
+        (self._target_position, self._desired_duration, callback, callback_args) = args
+        self._fire_callbacks()
+        if callback:
+            self._callbacks.append((callback, callback_args))
         self._start_time = time.time()
-        while self._desired_duration == None and self._elapsed_time() < SUSTAIN:
-            time.sleep(PRECISION)
+        self._start_position = self._cursor
+        self._distance = self._target_position - self._start_position
+
+    def _handle_stop(self):
+        if not self._stopped:
+            self.synth._send("/stop", self.id)
+            self._stopped = True
+
+    def _fire_callbacks(self):
+        for callback, args in self._callbacks:
+            callback(*args)
+        self._callbacks = []
 
     def _elapsed_time(self):
         return time.time() - self._start_time
@@ -96,6 +148,11 @@ class Player:
     def set_cursor(self, position):
         self.synth._send("/cursor", self.id, position)
         self._cursor = position
+
+    def _get_message(self, timeout=None):
+        message = self._queue.get(True, timeout)
+        self.synth.log("processing message %s" % str(message))
+        return message
 
 class Sound:
     def __init__(self, player):
