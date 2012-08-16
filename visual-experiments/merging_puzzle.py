@@ -26,7 +26,8 @@ class Smoother:
         return self._current_value
 
 class File:
-    def __init__(self, filenum):
+    def __init__(self, visualizer, filenum):
+        self.visualizer = visualizer
         self.filenum = filenum
         self._smoothed_min_byte = Smoother()
         self._smoothed_max_byte = Smoother()
@@ -34,6 +35,7 @@ class File:
         self.max_byte = None
         self.x_ratio = None
         self.arriving_chunks = OrderedDict()
+        self.playing_chunks = OrderedDict()
         self.gatherer = Gatherer()
 
     def add_chunk(self, chunk):
@@ -45,6 +47,16 @@ class File:
             self.min_byte = min(self.min_byte, chunk.begin)
             self.max_byte = max(self.max_byte, chunk.end)
         self.arriving_chunks[chunk.id] = chunk
+
+    def play_chunk(self, chunk):
+        pan = self.byte_to_coord(chunk.begin)
+        self.visualizer.play_chunk(chunk, pan)
+        del self.arriving_chunks[chunk.id]
+        self.playing_chunks[chunk.id] = chunk
+
+    def gather_chunk(self, chunk):
+        del self.playing_chunks[chunk.id]
+        self.gatherer.add(chunk)
 
     def update_x_scope(self, time_increment):
         self._smoothed_min_byte.smooth(self.min_byte, time_increment)
@@ -67,11 +79,19 @@ class Puzzle(Visualizer):
         self.files = {}
         self._smoothed_min_filenum = Smoother()
         self._smoothed_max_filenum = Smoother()
+        self.chunks = {}
 
     def add_chunk(self, chunk):
+        self.chunks[chunk.id] = chunk
+
         if not chunk.filenum in self.files:
-            self.files[chunk.filenum] = File(chunk.filenum)
+            self.files[chunk.filenum] = File(self, chunk.filenum)
+
         self.files[chunk.filenum].add_chunk(chunk)
+
+    def stopped_playing(self, chunk_id, filenum):
+        chunk = self.chunks[chunk_id]
+        self.files[filenum].gather_chunk(chunk)
 
     def render(self):
         if len(self.files) > 0:
@@ -80,6 +100,7 @@ class Puzzle(Visualizer):
     def draw_chunks(self):
         self.update_y_scope()
         for f in self.files.values():
+            self.update_chunks(f)
             self.draw_file(f)
 
     def draw_file(self, f):
@@ -87,21 +108,28 @@ class Puzzle(Visualizer):
         f.update_x_scope(self.time_increment)
         self.draw_gathered_chunks(f, y)
         self.draw_arriving_chunks(f, y)
+        self.draw_playing_chunks(f, y)
 
     def draw_gathered_chunks(self, f, y):
         for chunk in f.gatherer.pieces():
             self.draw_chunk(chunk, 0, f, y)
 
-    def draw_arriving_chunks(self, f, y):
+    def update_chunks(self, f):
         for chunk in f.arriving_chunks.values():
             age = self.now - chunk.arrival_time
             if age > chunk.duration:
-                del f.arriving_chunks[chunk.id]
-                f.gatherer.add(chunk)
-            else:
-                actuality = 1 - float(age) / chunk.duration
-                self.draw_chunk(chunk, actuality, f, y)
+                f.play_chunk(chunk)
 
+    def draw_arriving_chunks(self, f, y):
+        for chunk in f.arriving_chunks.values():
+            age = self.now - chunk.arrival_time
+            actuality = 1 - float(age) / chunk.duration
+            self.draw_chunk(chunk, actuality, f, y)
+
+    def draw_playing_chunks(self, f, y):
+        for chunk in f.playing_chunks.values():
+            self.draw_playing_chunk(chunk, f, y)
+        
     def draw_chunk(self, chunk, actuality, f, y):
         y_offset = actuality * 10
         height = 3 + actuality * 10
@@ -115,6 +143,23 @@ class Puzzle(Visualizer):
         opacity = 0.2 + (actuality * 0.8)
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
+        glVertex2i(x1, y2)
+        glVertex2i(x2, y2)
+        glVertex2i(x2, y1)
+        glVertex2i(x1, y1)
+        glEnd()
+        
+    def draw_playing_chunk(self, chunk, f, y):
+        y_offset = 0
+        height = 3
+        y1 = int(y + y_offset)
+        y2 = int(y + y_offset + height)
+        x1 = self.prepend_margin_width + int(f.byte_to_coord(chunk.begin) * self.safe_width)
+        x2 = self.prepend_margin_width + int(f.byte_to_coord(chunk.end) * self.safe_width)
+        if x2 == x1:
+            x2 = x1 + 1
+        glColor3f(1, 0, 0)
+        glBegin(GL_QUADS)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
         glVertex2i(x2, y1)
