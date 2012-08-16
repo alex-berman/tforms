@@ -37,6 +37,8 @@ class GUI(wx.Frame):
         wx.Frame.__init__(self, None, wx.ID_ANY, "Torrential Forms",
                           size=wx.Size(self.width, self.height), style=style)
         self.Bind(wx.EVT_SIZE, self._OnSize)
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER,self._on_timer)
         self._vbox = wx.BoxSizer(wx.VERTICAL)
         self._create_control_buttons()
         self._create_clock()
@@ -155,6 +157,7 @@ class GUI(wx.Frame):
             self._play_button_clicked(event)
 
     def _OnPaint(self, event):
+        self.timer.Start(100)
         self.timeline.SetCurrent()
         if not self.GLinitialized:
             self.OnInitGL()
@@ -162,6 +165,9 @@ class GUI(wx.Frame):
             self._on_resize_timeline(event)
         self._draw()
         event.Skip()
+
+    def _on_timer(self, event):
+        self.timeline.Refresh()
 
     def OnInitGL(self):
         glClearColor(1, 1, 1, 1)
