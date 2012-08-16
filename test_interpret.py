@@ -94,7 +94,7 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 1000, "end": 2000},
              {"peeraddr": "20.0.0.1",
               "t": 0.6,
-              "begin": 5000, "end": 7000},
+              "begin": 6000, "end": 7000},
              ])
 
         self.assert_interpretation(
