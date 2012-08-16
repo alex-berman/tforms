@@ -11,7 +11,7 @@ class SynthController:
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
 
-    def play_chunk(self, sound_id, begin, end, duration, pan):
+    def play_sound(self, sound_id, begin, end, duration, pan):
         self._send("/play", sound_id, begin, end, duration, pan)
 
     def sync_beep(self):

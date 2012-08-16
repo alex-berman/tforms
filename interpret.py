@@ -1,19 +1,8 @@
-import itertools
-
 class Interpretor:
     def interpret(self, chunks, files):
         self._files = files
-        voices = []
-        for peer, peer_chunks in self._group_chunks_by_peer(chunks):
-            groups = self._group_consecutive_chunks(peer_chunks)
-            score = map(self._interpret_group, groups)
-            voice = {"peer": peer,
-                     "score": score}
-            voices.append(voice)
-        return voices
-
-    def _group_chunks_by_peer(self, chunks):
-        return itertools.groupby(chunks, lambda chunk: chunk["peeraddr"])
+        groups = self._group_consecutive_chunks(chunks)
+        return map(self._interpret_group, groups)
 
     def _group_consecutive_chunks(self, chunks):
         self._groups = []
@@ -29,7 +18,9 @@ class Interpretor:
 
     def _chunk_appendable_to_current_group(self, chunk):
         if len(self._current_group) > 0:
-            return chunk["begin"] == self._current_group[-1]["end"]
+            return (chunk["begin"] == self._current_group[-1]["end"] and
+                    chunk["peeraddr"] == self._current_group[0]["peeraddr"] and
+                    chunk["filenum"] == self._current_group[0]["filenum"])
 
     def _close_current_group(self):
         if len(self._current_group) > 0:
@@ -46,7 +37,9 @@ class Interpretor:
         return {"onset": onset,
                 "begin": first_chunk["begin"],
                 "end": last_chunk["end"],
-                "duration": Duration(duration)}
+                "duration": Duration(duration),
+                "peeraddr": first_chunk["peeraddr"],
+                "filenum": first_chunk["filenum"]}
 
     def _chunk_duration_with_unadjusted_rate(self, chunk):
         file_duration = self._files[chunk["filenum"]]["duration"]

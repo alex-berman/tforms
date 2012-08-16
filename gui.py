@@ -22,7 +22,7 @@ class GUI(wx.Frame):
         self.height = 600
         self.min_byte = min(tr_log.chunks, key=lambda chunk: chunk["begin"])["begin"]
         self.max_byte = max(tr_log.chunks, key=lambda chunk: chunk["end"])["end"]
-        self._chunks_being_played = {}
+        self._sounds_being_played = {}
         self._zoom_selection_taking_place = False
         self._playing = False
         self._scrubbing = False
@@ -138,7 +138,7 @@ class GUI(wx.Frame):
         self._orchestra_thread.join()
         self.stop_button.Disable()
         self.play_button.Enable()
-        self._chunks_being_played = {}
+        self._sounds_being_played = {}
         self._playing = False
         self.catch_key_events()
 
@@ -267,13 +267,14 @@ class GUI(wx.Frame):
             glCallList(self.chunks_and_score_display_list)
         else:
             self.render_and_draw_chunks_and_score()
-        self.draw_highlighted_chunks()
+        self.draw_highlighted_sounds()
 
-    def draw_highlighted_chunks(self):
-        glBegin(GL_QUADS)
-        for chunk_id in self._chunks_being_played.keys():
-            chunk = self.orchestra.chunks_by_id[chunk_id]
-            self.draw_chunk(chunk, size=1)
+    def draw_highlighted_sounds(self):
+        glLineWidth(2)
+        glBegin(GL_LINES)
+        for sound_id in self._sounds_being_played.keys():
+            sound = self.orchestra.sounds_by_id[sound_id]
+            self.draw_sound(sound)
         glEnd()
 
     def refresh_chunks(self):
@@ -290,12 +291,10 @@ class GUI(wx.Frame):
             self.draw_chunk(chunk)
         glEnd()
 
+        glLineWidth(1)
         glBegin(GL_LINES)
-        for voice in self.score:
-            pen = self.get_pen_for_peer(voice["peer"])
-            self.set_pen(pen)
-            for sound in voice["score"]:
-                self.draw_sound(sound)
+        for sound in self.score:
+            self.draw_sound(sound)
         glEnd()
 
         glEndList()
@@ -317,6 +316,7 @@ class GUI(wx.Frame):
                 glVertex2f(x1, y2)
 
     def draw_sound(self, sound):
+        pen = self.get_pen_for_peer(sound["peeraddr"])
         x1 = self.time_to_px(sound["onset"])
         x2 = self.time_to_px(sound["onset"] + sound["duration"].value)
         y1 = self.byte_to_py(sound["begin"])
@@ -358,17 +358,17 @@ class GUI(wx.Frame):
     def update_clock(self):
         self.clock.SetLabel('%.2f' % self.orchestra.get_current_log_time())
 
-    def highlight_chunk(self, chunk):
-        self._chunks_being_played[chunk["id"]] = True
+    def highlight_sound(self, sound):
+        self._sounds_being_played[sound["id"]] = True
         wx.CallAfter(self.timeline.Refresh)
 
-    def unhighlight_chunk(self, chunk):
-        if self._chunk_is_being_played(chunk):
-            del self._chunks_being_played[chunk["id"]]
+    def unhighlight_sound(self, sound):
+        if self._sound_is_being_played(sound):
+            del self._sounds_being_played[sound["id"]]
             wx.CallAfter(self.timeline.Refresh)
 
-    def _chunk_is_being_played(self, chunk):
-        return chunk["id"] in self._chunks_being_played
+    def _sound_is_being_played(self, sound):
+        return sound["id"] in self._sounds_being_played
 
     def time_to_px(self, t):
         return (t - self._displayed_time_begin) * self.timeline_width / (

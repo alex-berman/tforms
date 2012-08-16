@@ -3,8 +3,8 @@ import unittest
 
 class InterpretTestCase(unittest.TestCase):
     def test_single_chunk_gets_unadjusted_rate(self):
-        self.given_file_duration(2.0)
-        self.given_file_size(10000)
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
         self.given_chunks(
             [{"t": 0,
               "begin": 0, "end": 1000}])
@@ -14,7 +14,8 @@ class InterpretTestCase(unittest.TestCase):
               "duration": Duration(2.0*0.1)}])
 
     def test_consecutive_chunks_are_joined_and_rate_adjusted(self):
-        self.given_file_duration(2.0)
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
         self.given_chunks(
             [{"t": 0,
               "begin": 0, "end": 1000},
@@ -28,7 +29,8 @@ class InterpretTestCase(unittest.TestCase):
               "duration": Duration(0.5)}])
 
     def test_non_consecutive_chunks_are_divided_into_different_sounds(self):
-        self.given_file_duration(2.0)
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
         self.given_chunks(
             [{"t": 0,
               "begin": 0, "end": 1000},
@@ -47,50 +49,68 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 5000, "end": 7000,
               "duration": Duration(0.2)}])
 
-    def test_grouping_by_peer(self):
-        self.given_file_duration(2.0)
-        self.given_file_size(10000)
-        chunks = [
-            {"peeraddr": "10.0.0.1",
-             "filenum": 0,
-             "t": 0,
-             "begin": 0, "end": 1000},
-            {"peeraddr": "10.0.0.2",
-             "filenum": 0,
-             "t": 0,
-             "begin": 1000, "end": 2000}]
-        expected_interpretation = [
-            {"peer": "10.0.0.1",
-             "score": self._actual_chunk_interpretation(chunks[0])},
-            {"peer": "10.0.0.2",
-             "score": self._actual_chunk_interpretation(chunks[1])},
-            ]
-        self.assertEquals(expected_interpretation,
-                          self.interpretor.interpret(chunks, self.files))
+    def test_chunks_from_different_peers_are_not_joined(self):
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
+        self.given_chunks(
+            [{"peeraddr": "10.0.0.1",
+              "t": 0,
+              "begin": 0, "end": 1000},
+             {"peeraddr": "10.0.0.2",
+              "t": 0.3,
+              "begin": 1000, "end": 2000}])
+        self.assert_interpretation(
+            [self._actual_chunk_interpretation(self.chunks[0])[0],
+             self._actual_chunk_interpretation(self.chunks[1])[0]])
+
+    def test_chunks_from_different_files_are_not_joined(self):
+        self.given_files([{"duration": 2.0,
+                           "length": 10000},
+                          {"duration": 3.0,
+                           "length": 15000}])
+        self.given_chunks(
+            [{"filenum": 0,
+              "t": 0,
+              "begin": 0, "end": 1000},
+             {"filenum": 1,
+              "t": 0.3,
+              "begin": 1000, "end": 2000}])
+        self.assert_interpretation(
+            [self._actual_chunk_interpretation(self.chunks[0])[0],
+             self._actual_chunk_interpretation(self.chunks[1])[0]])
 
     def setUp(self):
         self.interpretor = Interpretor()
-        self.files = [{"offset": 0}]
 
-    def given_file_duration(self, duration):
-        self.files[0]["duration"] = duration
-
-    def given_file_size(self, size):
-        self.files[0]["length"] = size
+    def given_files(self, files):
+        self.files = files
 
     def given_chunks(self, chunks):
         self.chunks = map(self._set_filenum_and_peer, chunks)
 
     def _set_filenum_and_peer(self, chunk):
-        chunk["filenum"] = 0
-        chunk["peeraddr"] = "10.0.0.1"
+        if not "filenum" in chunk:
+            chunk["filenum"] = 0
+        if not "peeraddr" in chunk:
+            chunk["peeraddr"] = "10.0.0.1"
         return chunk
 
-    def assert_interpretation(self, expected_score):
-        actual_voices = self.interpretor.interpret(self.chunks, self.files)
-        actual_score = actual_voices[0]["score"]
+    def assert_interpretation(self, expected_score_with_potential_gaps):
+        actual_score = self.interpretor.interpret(self.chunks, self.files)
+        expected_score = map(self._fill_potential_gaps_with_actual_values,
+                             zip(expected_score_with_potential_gaps, actual_score))
         self.assertEquals(expected_score, actual_score)
 
+    def _fill_potential_gaps_with_actual_values(self, (expected_dict_pattern, actual_dict)):
+        expected_dict = {}
+        for key, actual_value in actual_dict.iteritems():
+            if key in expected_dict_pattern:
+                expected_dict[key] = expected_dict_pattern[key]
+            else:
+                expected_dict[key] = actual_value
+        return expected_dict
+
     def _actual_chunk_interpretation(self, chunk):
-        actual_voices = self.interpretor.interpret([chunk], self.files)
-        return actual_voices[0]["score"]
+        return self.interpretor.interpret([chunk], self.files)
+
+    maxDiff = 1000
