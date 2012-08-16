@@ -5,22 +5,26 @@ class Interpretor:
         return map(self._interpret_group, groups)
 
     def _group_consecutive_chunks(self, chunks):
-        self._groups = []
-        self._current_group = []
+        groups = []
+        current_peer_groups = {}
         for chunk in chunks:
-            if self._chunk_appendable_to_current_group(chunk):
-                self._current_group.append(chunk)
+            if chunk["peeraddr"] in current_peer_groups:
+                current_peer_group = current_peer_groups[chunk["peeraddr"]]
+                if self._chunk_appendable_to_group(chunk, current_peer_group):
+                    current_peer_groups[chunk["peeraddr"]].append(chunk)
+                else:
+                    groups.append(current_peer_group)
+                    current_peer_groups[chunk["peeraddr"]] = [chunk]
             else:
-                self._close_current_group()
-                self._current_group = [chunk]
-        self._close_current_group()
-        return self._groups
+                current_peer_groups[chunk["peeraddr"]] = [chunk]
+        for group in current_peer_groups.values():
+            groups.append(group)
+        return groups
 
-    def _chunk_appendable_to_current_group(self, chunk):
-        if len(self._current_group) > 0:
-            return (chunk["begin"] == self._current_group[-1]["end"] and
-                    chunk["peeraddr"] == self._current_group[0]["peeraddr"] and
-                    chunk["filenum"] == self._current_group[0]["filenum"])
+    def _chunk_appendable_to_group(self, chunk, group):
+        return (chunk["begin"] == group[-1]["end"] and
+                chunk["peeraddr"] == group[0]["peeraddr"] and
+                chunk["filenum"] == group[0]["filenum"])
 
     def _close_current_group(self):
         if len(self._current_group) > 0:

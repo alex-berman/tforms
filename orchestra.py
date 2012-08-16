@@ -91,7 +91,6 @@ class Orchestra:
         self.synth = SynthController()
         self._prepare_players()
         self.stopwatch = Stopwatch()
-        self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
         self.score = Interpretor().interpret(self.chunks, tr_log.files)
         self.sounds_by_id = {}

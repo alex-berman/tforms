@@ -79,6 +79,37 @@ class InterpretTestCase(unittest.TestCase):
             [self._actual_chunk_interpretation(self.chunks[0])[0],
              self._actual_chunk_interpretation(self.chunks[1])[0]])
 
+    def test_grouping_tolerates_interwoven_peers(self):
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
+        self.given_chunks(
+            [{"peeraddr": "10.0.0.1",
+              "t": 0,
+              "begin": 0, "end": 1000},
+             {"peeraddr": "20.0.0.1",
+              "t": 0.1,
+              "begin": 5000, "end": 6000},
+             {"peeraddr": "10.0.0.1",
+              "t": 0.5,
+              "begin": 1000, "end": 2000},
+             {"peeraddr": "20.0.0.1",
+              "t": 0.6,
+              "begin": 5000, "end": 7000},
+             ])
+
+        self.assert_interpretation(
+            [{"peeraddr": "10.0.0.1",
+              "onset": 0,
+              "begin": 0, "end": 2000,
+              "duration": 0.5},
+             {"peeraddr": "20.0.0.1",
+              "onset": 0.1,
+              "begin": 5000, "end": 7000,
+              "duration": 0.5},
+             ])
+
+
+
     def setUp(self):
         self.interpretor = Interpretor()
 
