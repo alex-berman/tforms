@@ -1,6 +1,6 @@
 import copy
 
-class Interpretor:
+class Interpreter:
     def interpret(self, chunks, files):
         self._files = files
         sounds = []

@@ -1,4 +1,4 @@
-from interpret import Interpretor
+from interpret import Interpreter
 import unittest
 
 class InterpretTestCase(unittest.TestCase):
@@ -111,7 +111,7 @@ class InterpretTestCase(unittest.TestCase):
 
 
     def setUp(self):
-        self.interpretor = Interpretor()
+        self.interpreter = Interpreter()
 
     def given_files(self, files):
         self.files = files
@@ -129,7 +129,7 @@ class InterpretTestCase(unittest.TestCase):
         return chunk
 
     def assert_interpretation(self, expected_score):
-        actual_score = self.interpretor.interpret(self.chunks, self.files)
+        actual_score = self.interpreter.interpret(self.chunks, self.files)
         expected_score = map(self._replace_durations_with_float_comparable_instances,
                              expected_score)
         expected_score = map(self._fill_potential_gaps_with_actual_values,
@@ -150,7 +150,7 @@ class InterpretTestCase(unittest.TestCase):
         return expected_dict
 
     def _actual_chunk_interpretation(self, chunk):
-        return self.interpretor.interpret([chunk], self.files)
+        return self.interpreter.interpret([chunk], self.files)
 
     maxDiff = 1000
 

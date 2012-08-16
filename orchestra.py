@@ -10,7 +10,7 @@ import threading
 import sched
 from synth_controller import SynthController
 from osc_sender import OscSender
-from interpret import Interpretor
+from interpret import Interpreter
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -92,7 +92,7 @@ class Orchestra:
         self._prepare_players()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
-        self.score = Interpretor().interpret(self.chunks, tr_log.files)
+        self.score = Interpreter().interpret(self.chunks, tr_log.files)
         self.sounds_by_id = {}
         self._playing = False
         self._quitting = False
