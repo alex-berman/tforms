@@ -1,8 +1,19 @@
+import itertools
+
 class Interpretor:
     def interpret(self, chunks, files):
         self._files = files
-        groups = self._group_consecutive_chunks(chunks)
-        return map(self._interpret_group, groups)
+        voices = []
+        for peer, peer_chunks in self._group_chunks_by_peer(chunks):
+            groups = self._group_consecutive_chunks(peer_chunks)
+            score = map(self._interpret_group, groups)
+            voice = {"peer": peer,
+                     "score": score}
+            voices.append(voice)
+        return voices
+
+    def _group_chunks_by_peer(self, chunks):
+        return itertools.groupby(chunks, lambda chunk: chunk["peeraddr"])
 
     def _group_consecutive_chunks(self, chunks):
         self._groups = []
@@ -35,13 +46,13 @@ class Interpretor:
         return {"onset": onset,
                 "begin": first_chunk["begin"],
                 "end": last_chunk["end"],
-                "duration": duration}
+                "duration": Duration(duration)}
 
     def _chunk_duration_with_unadjusted_rate(self, chunk):
         file_duration = self._files[chunk["filenum"]]["duration"]
         chunk_size = chunk["end"] - chunk["begin"]
         file_size = self._files[chunk["filenum"]]["length"]
-        return Duration(float(chunk_size) / file_size * file_duration)
+        return float(chunk_size) / file_size * file_duration
 
 
 class Duration:

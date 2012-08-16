@@ -10,6 +10,7 @@ import threading
 import sched
 from synth_controller import SynthController
 from osc_sender import OscSender
+from interpret import Interpretor
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -123,6 +124,7 @@ class Orchestra:
         self.stopwatch = Stopwatch()
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = tr_log.chunks
+        self.score = Interpretor().interpret(tr_log.chunks, tr_log.files)
         self.chunks_by_id = {}
         self._playing = False
         self._quitting = False
@@ -361,16 +363,19 @@ class Orchestra:
         try:
             return chunk["player"]
         except KeyError:
-            peer = chunk["peeraddr"]
-            peer_player = None
-            try:
-                peer_player = self._player_for_peer[peer]
-            except KeyError:
-                peer_player = self._create_player()
-                self.players.append(peer_player)
-                self._player_for_peer[peer] = peer_player
+            peer_player = self.get_player_for_peer(chunk["peeraddr"])
             chunk["player"] = peer_player
             return peer_player
+
+    def get_player_for_peer(self, peeraddr):
+        peer_player = None
+        try:
+            peer_player = self._player_for_peer[peeraddr]
+        except KeyError:
+            peer_player = self._create_player()
+            self.players.append(peer_player)
+            self._player_for_peer[peeraddr] = peer_player
+        return peer_player
 
     def _create_player(self):
         count = len(self.players)

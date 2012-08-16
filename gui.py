@@ -16,6 +16,7 @@ class GUI(wx.Frame):
     def __init__(self, tr_log, orchestra):
         self.tr_log = tr_log
         self.orchestra = orchestra
+        self.score = orchestra.score
 
         self.width = 800
         self.height = 600
@@ -27,7 +28,7 @@ class GUI(wx.Frame):
         self._scrubbing = False
         self._reset_displayed_time()
         self._reset_displayed_bytes()
-        self.chunks_display_list = None
+        self.chunks_and_score_display_list = None
         self.app = wx.App(False)
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
         self.player_pens = map(self.create_pens_with_colour,
@@ -167,7 +168,7 @@ class GUI(wx.Frame):
 
     def _draw(self):
         glClear(GL_COLOR_BUFFER_BIT)
-        self.draw_chunks()
+        self.draw_chunks_and_score()
         self.draw_time_cursor()
         self.update_clock()
         if self._zoom_selection_taking_place:
@@ -261,11 +262,11 @@ class GUI(wx.Frame):
             self.orchestra.scrub_to_time(t)
         self.timeline.Refresh()
 
-    def draw_chunks(self):
-        if self.chunks_display_list:
-            glCallList(self.chunks_display_list)
+    def draw_chunks_and_score(self):
+        if self.chunks_and_score_display_list:
+            glCallList(self.chunks_and_score_display_list)
         else:
-            self.render_and_draw_chunks()
+            self.render_and_draw_chunks_and_score()
         self.draw_highlighted_chunks()
 
     def draw_highlighted_chunks(self):
@@ -276,17 +277,27 @@ class GUI(wx.Frame):
         glEnd()
 
     def refresh_chunks(self):
-        if self.chunks_display_list:
-            glDeleteLists(self.chunks_display_list, 1)
-            self.chunks_display_list = None
+        if self.chunks_and_score_display_list:
+            glDeleteLists(self.chunks_and_score_display_list, 1)
+            self.chunks_and_score_display_list = None
 
-    def render_and_draw_chunks(self):
-        self.chunks_display_list = glGenLists(1)
-        glNewList(self.chunks_display_list, GL_COMPILE_AND_EXECUTE)
+    def render_and_draw_chunks_and_score(self):
+        self.chunks_and_score_display_list = glGenLists(1)
+        glNewList(self.chunks_and_score_display_list, GL_COMPILE_AND_EXECUTE)
+
         glBegin(GL_QUADS)
         for chunk in self.tr_log.chunks:
             self.draw_chunk(chunk)
         glEnd()
+
+        glBegin(GL_LINES)
+        for voice in self.score:
+            pen = self.get_pen_for_peer(voice["peer"])
+            self.set_pen(pen)
+            for sound in voice["score"]:
+                self.draw_sound(sound)
+        glEnd()
+
         glEndList()
 
     def draw_chunk(self, chunk, size=0):
@@ -305,6 +316,14 @@ class GUI(wx.Frame):
                 glVertex2f(x2, y2)
                 glVertex2f(x1, y2)
 
+    def draw_sound(self, sound):
+        x1 = self.time_to_px(sound["onset"])
+        x2 = self.time_to_px(sound["onset"] + sound["duration"].value)
+        y1 = self.byte_to_py(sound["begin"])
+        y2 = self.byte_to_py(sound["end"])
+        glVertex2f(x1, y1)
+        glVertex2f(x2, y2)
+
     def set_pen(self, pen):
         colour = pen.GetColour()
         glColor3f(colour.Red()/255.0, colour.Blue()/255.0, colour.Green()/255.0)
@@ -321,6 +340,11 @@ class GUI(wx.Frame):
 
     def get_pen_for_player(self, player_id):
         pen_id = player_id % len(self.player_pens)
+        return self.player_pens[pen_id]
+
+    def get_pen_for_peer(self, peer):
+        player = self.orchestra.get_player_for_peer(peer)
+        pen_id = player.id % len(self.player_pens)
         return self.player_pens[pen_id]
 
     def draw_time_cursor(self):
