@@ -38,6 +38,7 @@ class Interpretor:
                 "begin": first_chunk["begin"],
                 "end": last_chunk["end"],
                 "duration": duration,
+                "id": first_chunk["id"],
                 "peeraddr": first_chunk["peeraddr"],
                 "filenum": first_chunk["filenum"]}
 

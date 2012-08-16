@@ -94,7 +94,7 @@ class Orchestra:
         self.tr_log.flatten() # TODO: find better place for this call
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
         self.score = Interpretor().interpret(self.chunks, tr_log.files)
-        self.chunks_by_id = {}
+        self.sounds_by_id = {}
         self._playing = False
         self._quitting = False
         self.set_time_cursor(start_time)
@@ -302,15 +302,16 @@ class Orchestra:
                                  player_id,
                                  bearing)
 
-    def stopped_playing(self, chunk):
-        self.logger.debug("stopped chunk %s" % chunk)
+    def stopped_playing(self, sound):
+        self.logger.debug("stopped sound %s" % sound)
         if self.gui:
-            self.gui.unhighlight_chunk(chunk)
-        if self.visualizer:
-            self.visualizer.send("/stopped_playing",
-                                 chunk["id"], chunk["filenum"])
+            self.gui.unhighlight_sound(sound)
+        # if self.visualizer:
+        #     self.visualizer.send("/stopped_playing",
+        #                          chunk["id"], chunk["filenum"])
 
     def play_sound(self, sound):
+        self.sounds_by_id[sound["id"]] = sound
         file_info = self.tr_log.files[sound["filenum"]]
         self.synth.play_sound(
             sound["filenum"],

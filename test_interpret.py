@@ -93,6 +93,8 @@ class InterpretTestCase(unittest.TestCase):
             chunk["filenum"] = 0
         if not "peeraddr" in chunk:
             chunk["peeraddr"] = "10.0.0.1"
+        if not "id" in chunk:
+            chunk["id"] = 0
         return chunk
 
     def assert_interpretation(self, expected_score):
