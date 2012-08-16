@@ -270,7 +270,7 @@ class GUI(wx.Frame):
         self.draw_highlighted_sounds()
 
     def draw_highlighted_sounds(self):
-        glLineWidth(2)
+        glLineWidth(4)
         glBegin(GL_LINES)
         for sound_id in self._sounds_being_played.keys():
             sound = self.orchestra.sounds_by_id[sound_id]
@@ -316,13 +316,16 @@ class GUI(wx.Frame):
                 glVertex2f(x1, y2)
 
     def draw_sound(self, sound):
-        pen = self.get_pen_for_peer(sound["peeraddr"])
-        x1 = self.time_to_px(sound["onset"])
-        x2 = self.time_to_px(sound["onset"] + sound["duration"])
-        y1 = self.byte_to_py(sound["begin"])
-        y2 = self.byte_to_py(sound["end"])
-        glVertex2f(x1, y1)
-        glVertex2f(x2, y2)
+        player_id = self.orchestra.get_player_for_sound(sound).id
+        if self._peer_buttons[player_id].GetValue() == True:
+            pen = self.get_pen_for_player(player_id)
+            self.set_pen(pen)
+            x1 = self.time_to_px(sound["onset"])
+            x2 = self.time_to_px(sound["onset"] + sound["duration"])
+            y1 = self.byte_to_py(sound["begin"])
+            y2 = self.byte_to_py(sound["end"])
+            glVertex2f(x1, y1)
+            glVertex2f(x2, y2)
 
     def set_pen(self, pen):
         colour = pen.GetColour()
@@ -340,11 +343,6 @@ class GUI(wx.Frame):
 
     def get_pen_for_player(self, player_id):
         pen_id = player_id % len(self.player_pens)
-        return self.player_pens[pen_id]
-
-    def get_pen_for_peer(self, peer):
-        player = self.orchestra.get_player_for_peer(peer)
-        pen_id = player.id % len(self.player_pens)
         return self.player_pens[pen_id]
 
     def draw_time_cursor(self):
