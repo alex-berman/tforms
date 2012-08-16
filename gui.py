@@ -318,7 +318,7 @@ class GUI(wx.Frame):
     def draw_sound(self, sound):
         pen = self.get_pen_for_peer(sound["peeraddr"])
         x1 = self.time_to_px(sound["onset"])
-        x2 = self.time_to_px(sound["onset"] + sound["duration"].value)
+        x2 = self.time_to_px(sound["onset"] + sound["duration"])
         y1 = self.byte_to_py(sound["begin"])
         y2 = self.byte_to_py(sound["end"])
         glVertex2f(x1, y1)

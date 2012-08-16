@@ -1,4 +1,4 @@
-from interpret import Interpretor, Duration
+from interpret import Interpretor
 import unittest
 
 class InterpretTestCase(unittest.TestCase):
@@ -11,7 +11,7 @@ class InterpretTestCase(unittest.TestCase):
         self.assert_interpretation(
             [{"onset": 0,
               "begin": 0, "end": 1000,
-              "duration": Duration(2.0*0.1)}])
+              "duration": 2.0*0.1}])
 
     def test_consecutive_chunks_are_joined_and_rate_adjusted(self):
         self.given_files([{"duration": 2.0,
@@ -26,7 +26,7 @@ class InterpretTestCase(unittest.TestCase):
         self.assert_interpretation(
             [{"onset": 0,
               "begin": 0, "end": 3000,
-              "duration": Duration(0.5)}])
+              "duration": 0.5}])
 
     def test_non_consecutive_chunks_are_divided_into_different_sounds(self):
         self.given_files([{"duration": 2.0,
@@ -44,10 +44,10 @@ class InterpretTestCase(unittest.TestCase):
         self.assert_interpretation(
             [{"onset": 0,
               "begin": 0, "end": 2000,
-              "duration": Duration(0.1)},
+              "duration": 0.1},
              {"onset": 0.5,
               "begin": 5000, "end": 7000,
-              "duration": Duration(0.2)}])
+              "duration": 0.2}])
 
     def test_chunks_from_different_peers_are_not_joined(self):
         self.given_files([{"duration": 2.0,
@@ -95,11 +95,17 @@ class InterpretTestCase(unittest.TestCase):
             chunk["peeraddr"] = "10.0.0.1"
         return chunk
 
-    def assert_interpretation(self, expected_score_with_potential_gaps):
+    def assert_interpretation(self, expected_score):
         actual_score = self.interpretor.interpret(self.chunks, self.files)
+        expected_score = map(self._replace_durations_with_float_comparable_instances,
+                             expected_score)
         expected_score = map(self._fill_potential_gaps_with_actual_values,
-                             zip(expected_score_with_potential_gaps, actual_score))
+                             zip(expected_score, actual_score))
         self.assertEquals(expected_score, actual_score)
+
+    def _replace_durations_with_float_comparable_instances(self, sound):
+        sound["duration"] = Duration(sound["duration"])
+        return sound
 
     def _fill_potential_gaps_with_actual_values(self, (expected_dict_pattern, actual_dict)):
         expected_dict = {}
@@ -114,3 +120,21 @@ class InterpretTestCase(unittest.TestCase):
         return self.interpretor.interpret([chunk], self.files)
 
     maxDiff = 1000
+
+
+class Duration:
+    PRECISION = 0.000001
+
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if isinstance(other, Duration):
+            return abs(self.value - other.value) < self.PRECISION
+        elif isinstance(other, float):
+            return abs(self.value - other) < self.PRECISION
+        else:
+            return False
+
+    def __repr__(self):
+        return "Duration(%s)" % self.value

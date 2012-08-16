@@ -37,7 +37,7 @@ class Interpretor:
         return {"onset": onset,
                 "begin": first_chunk["begin"],
                 "end": last_chunk["end"],
-                "duration": Duration(duration),
+                "duration": duration,
                 "peeraddr": first_chunk["peeraddr"],
                 "filenum": first_chunk["filenum"]}
 
@@ -46,21 +46,3 @@ class Interpretor:
         chunk_size = chunk["end"] - chunk["begin"]
         file_size = self._files[chunk["filenum"]]["length"]
         return float(chunk_size) / file_size * file_duration
-
-
-class Duration:
-    PRECISION = 0.000001
-
-    def __init__(self, value):
-        self.value = value
-
-    def __eq__(self, other):
-        if isinstance(other, Duration):
-            return abs(self.value - other.value) < self.PRECISION
-        elif isinstance(other, float):
-            return abs(self.value - other) < self.PRECISION
-        else:
-            return False
-
-    def __repr__(self):
-        return "Duration(%s)" % self.value

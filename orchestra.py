@@ -51,7 +51,7 @@ class WavPlayer(Player):
         end_time_in_file = self._bytecount_to_secs(sound["end"]-file_info["offset"], file_info)
 
         self.logger.debug("playing %s at position %fs with duration %fs" % (
-                filename, start_time_in_file, sound["duration"].value))
+                filename, start_time_in_file, sound["duration"]))
 
         sound["start_time_in_file"] = start_time_in_file
         sound["end_time_in_file"] = end_time_in_file
@@ -316,10 +316,10 @@ class Orchestra:
             sound["filenum"],
             sound["start_time_in_file"] / file_info["duration"],
             sound["end_time_in_file"] / file_info["duration"],
-            sound["duration"].value,
+            sound["duration"],
             sound["pan"])
         self.scheduler.enter(
-            sound["duration"].value, 1,
+            sound["duration"], 1,
             self.stopped_playing, [sound])
 
     def get_player_for_chunk(self, chunk):
