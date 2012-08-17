@@ -24,8 +24,7 @@ class Player:
         self.enabled = True
         self._previous_chunk_time = None
 
-    def dispatch(self, chunk, desired_time):
-        chunk["desired_time"] = desired_time
+    def visualize(self, chunk):
         self.orchestra.visualize(chunk,
                                  self.id,
                                  self.bearing)
@@ -213,14 +212,56 @@ class Orchestra:
         self.logger.debug("entering _play_until_end")
         self._playing = True
         self.stopwatch.start()
-        num_sounds = len(self.score)
-        while self._playing and self.current_sound_index < num_sounds:
-            self.logger.debug("sound index is %d" % self.current_sound_index)
-            sound = self.score[self.current_sound_index]
-            self.handle_sound(sound)
-            self.current_sound_index += 1
+        no_more_events = False
+        while self._playing and not no_more_events:
+            event = self._get_next_chunk_or_sound()
+            if event:
+                self._handle_event(event)
+            else:
+                no_more_events = True
         self.logger.debug("leaving _play_until_end")
 
+    def _get_next_chunk_or_sound(self):
+        self.logger.debug("sound index is %d" % self.current_sound_index)
+        chunk = self._get_next_chunk()
+        sound = self._get_next_sound()
+        if chunk and sound:
+            return self._choose_nearest_chunk_or_sound(chunk, sound)
+        elif chunk:
+            return {"type": "chunk",
+                    "chunk": chunk}
+        elif sound:
+            return {"type": "sound",
+                    "sound": sound}
+        else:
+            return None
+
+    def _get_next_chunk(self):
+        if self.current_chunk_index < len(self.chunks):
+            return self.chunks[self.current_chunk_index]
+
+    def _get_next_sound(self):
+        if self.current_sound_index < len(self.score):
+            return self.score[self.current_sound_index]
+
+    def _handle_event(self, event):
+        if event["type"] == "chunk":
+            self.handle_chunk(event["chunk"])
+            self.current_chunk_index += 1
+        elif event["type"] == "sound":
+            self.handle_sound(event["sound"])
+            self.current_sound_index += 1
+        else:
+            raise Exception("unexpected event %s" % event)
+
+    def _choose_nearest_chunk_or_sound(self, chunk, sound):
+        if chunk["t"] < sound["onset"]:
+            return {"type": "chunk",
+                    "chunk": chunk}
+        else:
+            return {"type": "sound",
+                    "sound": sound}
+            
     def scrub_to_time(self, target_log_time):
         self.logger.debug("scrub_to_time(%s)" % target_log_time)
         if target_log_time > self.get_current_log_time():
@@ -278,11 +319,23 @@ class Orchestra:
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
-            if self.gui:
-                player.play(sound, pan=0.5)
-            else:
-                self.logger.debug("dispatching chunk")
-                player.dispatch(chunk, now)
+            player.play(sound, pan=0.5)
+
+    def handle_chunk(self, chunk):
+        self.logger.debug("handling chunk %s" % chunk)
+        now = self.get_current_log_time()
+        time_margin = chunk["t"] - now
+        self.logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
+        player = self.get_player_for_chunk(chunk)
+        self.logger.debug("get_player_for_chunk returned %s" % player)
+        if not self.realtime and time_margin > 0:
+            sleep_time = time_margin
+            self.logger.debug("sleeping %f" % sleep_time)
+            time.sleep(sleep_time)
+        if player:
+            self.logger.debug("player.enabled=%s" % player.enabled)
+        if player and player.enabled:
+            player.visualize(chunk)
 
     def highlight_sound(self, sound):
         if self.gui:
@@ -361,8 +414,17 @@ class Orchestra:
         self.log_time_played_from = log_time
         if self._playing:
             self.stopwatch.restart()
+        self.current_chunk_index = self._get_current_chunk_index()
         self.current_sound_index = self._get_current_sound_index()
-        self.logger.debug("new chunk index is %d" % self.current_sound_index)
+
+    def _get_current_chunk_index(self):
+        index = 0
+        next_to_last_index = len(self.chunks) - 2
+        while index < next_to_last_index:
+            if self.chunks[index+1]["t"] >= self.log_time_played_from:
+                return index
+            index += 1
+        return len(self.chunks) - 1
 
     def _get_current_sound_index(self):
         index = 0
