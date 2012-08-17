@@ -193,7 +193,7 @@ class File:
     def add_chunk(self, chunk):
         pan = self.completion_position(
             float(chunk.begin) / self.length, self.radius).x / self.visualizer.width
-        self.visualizer.play_chunk(chunk, pan)
+        self.visualizer.playing_chunk(chunk, pan)
         chunk.departure_position = chunk.peer_position()
         self.gatherer.add(chunk)
 

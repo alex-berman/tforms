@@ -30,11 +30,13 @@ class Interpreter:
         sound = copy.copy(chunk)
         sound["onset"] = chunk["t"]
         sound["duration"] = self._chunk_duration_with_unadjusted_rate(chunk)
+        sound["id"] = chunk["sound_id"] = chunk["id"]
         return sound
 
     def _append_chunk_to_sound(self, chunk, sound):
         sound["end"] = chunk["end"]
         sound["duration"] = chunk["t"] - sound["onset"]
+        chunk["sound_id"] = sound["id"]
 
     def _chunk_duration_with_unadjusted_rate(self, chunk):
         file_duration = self._files[chunk["filenum"]]["duration"]

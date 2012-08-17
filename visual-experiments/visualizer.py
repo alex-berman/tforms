@@ -202,8 +202,8 @@ class Visualizer:
         if args[0] == ESCAPE:
             sys.exit()
 
-    def play_chunk(self, chunk, pan):
-        self.orchestra.play_chunk(chunk.id, pan)
+    def playing_chunk(self, chunk, pan):
+        self.orchestra.visualizing_chunk(chunk.id, pan)
         chunk.playing = True
 
     def current_time(self):

@@ -7,6 +7,7 @@ s.doWhenBooted({
 
 ~sounds = Dictionary[];
 ~filenames = Dictionary[];
+~synths = Dictionary[];
 
 
 SynthDef(\limiter,
@@ -67,11 +68,18 @@ OSCresponder.new(nil, "/play",
 	  var duration = msg[4];
 	  var pan = msg[5] * 2 - 1;
 	  //"numSynths=".post; s.numSynths.postln;
-	  Synth(\warp, [\buffer, ~sounds[sound_id],
+	  ~synths[sound_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
 		  \begin, begin, \end, end, \duration, duration,
 		  \pan, pan]);
   }).add;
 
+OSCresponder.new(nil, "/pan",
+  { arg t, r, msg;
+	  var sound_id = msg[1];
+	  var pan = msg[2];
+	  var synth = ~synths[sound_id];
+	  synth.set(\pan, pan);
+  }).add;
 
 
 SynthDef(\sync_beep, {

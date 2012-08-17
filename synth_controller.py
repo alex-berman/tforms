@@ -14,6 +14,9 @@ class SynthController:
     def play_sound(self, sound_id, begin, end, duration, pan):
         self._send("/play", sound_id, begin, end, duration, pan)
 
+    def pan(self, sound_id, pan):
+        self._send("/pan", sound_id, pan)
+
     def stop_all(self):
         self._send("/stop_all")
 

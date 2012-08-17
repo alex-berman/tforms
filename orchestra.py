@@ -90,8 +90,8 @@ class Orchestra:
         self._prepare_players()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
-        self.logger.debug("chunks=%s" % self.chunks)
         self.score = Interpreter().interpret(self.chunks, tr_log.files)
+        self._chunks_by_id = {}
         self.sounds_by_id = {}
         self._playing = False
         self._quitting = False
@@ -131,7 +131,7 @@ class Orchestra:
 
     def _setup_osc(self):
         self.server = liblo.Server(PORT)
-        self.server.add_method("/play", "if", self._handle_play_message)
+        self.server.add_method("/visualizing", "if", self._handle_visualizing_message)
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -141,11 +141,11 @@ class Orchestra:
             self.server.recv(0.01)
             time.sleep(0.01)
 
-    def _handle_play_message(self, path, args, types, src, data):
+    def _handle_visualizing_message(self, path, args, types, src, data):
         (chunk_id, pan) = args
-        chunk = self.chunks_by_id[chunk_id]
-        self.logger.debug("playing chunk %s with pan %s" % (chunk, pan))
-        chunk["player"].play(chunk, pan)
+        chunk = self._chunks_by_id[chunk_id]
+        self.logger.debug("visualizing chunk %s with pan %s" % (chunk, pan))
+        self.synth.pan(chunk["sound_id"], pan)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -343,6 +343,7 @@ class Orchestra:
 
     def visualize(self, chunk, player_id, bearing):
         if self.visualizer:
+            self._chunks_by_id[chunk["id"]] = chunk
             file_info = self.tr_log.files[chunk["filenum"]]
             self.visualizer.send("/chunk",
                                  chunk["id"],
