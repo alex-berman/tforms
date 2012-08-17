@@ -88,4 +88,9 @@ OSCresponder.new(nil, "/sync_beep",
   }).add;
 
 
+OSCresponder.new(nil, "/stop_all",
+	{ arg t, r, msg;
+		s.freeAll;
+	}).add;
+
 });

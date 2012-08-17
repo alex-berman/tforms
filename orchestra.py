@@ -207,7 +207,6 @@ class Orchestra:
         else:
             self._play_until_end()
             self._quitting = True
-            self._scheduler_thread.join()
         self.logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
@@ -260,6 +259,7 @@ class Orchestra:
         player.play(chunk, pan=0.5)
         
     def stop(self):
+        self.synth.stop_all()
         self._playing = False
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
