@@ -11,7 +11,7 @@ class Interpreter:
             if chunk["peeraddr"] in peers:
                 peer_sound_index = peers[chunk["peeraddr"]]
                 if self._chunk_appendable_to_sound(chunk, sounds[peer_sound_index]):
-                    sounds[peer_sound_index] = self._append_chunk_to_sound(
+                    self._append_chunk_to_sound(
                         chunk, sounds[peer_sound_index])
                 else:
                     peers[chunk["peeraddr"]] = len(sounds)
@@ -36,7 +36,6 @@ class Interpreter:
     def _append_chunk_to_sound(self, chunk, sound):
         sound["end"] = chunk["end"]
         sound["duration"] = chunk["t"] - sound["onset"]
-        return sound
 
     def _interpret_group(self, group):
         first_chunk = group[0]
