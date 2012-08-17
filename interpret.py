@@ -1,5 +1,7 @@
 import copy
 
+MAX_PAUSE_WITHIN_SOUND = 1.0
+
 class Interpreter:
     def interpret(self, chunks, files):
         self._files = files
@@ -22,7 +24,8 @@ class Interpreter:
     def _chunk_appendable_to_sound(self, chunk, sound):
         return (chunk["begin"] == sound["end"] and
                 chunk["peeraddr"] == sound["peeraddr"] and
-                chunk["filenum"] == sound["filenum"])
+                chunk["filenum"] == sound["filenum"] and
+                ((chunk["t"] - (sound["onset"]+sound["duration"])) < MAX_PAUSE_WITHIN_SOUND))
 
     def _new_sound(self, chunk):
         sound = copy.copy(chunk)

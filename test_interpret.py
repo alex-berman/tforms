@@ -59,9 +59,7 @@ class InterpretTestCase(unittest.TestCase):
              {"peeraddr": "10.0.0.2",
               "t": 0.3,
               "begin": 1000, "end": 2000}])
-        self.assert_interpretation(
-            self._actual_chunk_interpretation(self.chunks[0]) +
-            self._actual_chunk_interpretation(self.chunks[1]))
+        self.assert_interpretation_length(2)
 
     def test_chunks_from_different_files_are_not_joined(self):
         self.given_files([{"duration": 2.0,
@@ -75,9 +73,7 @@ class InterpretTestCase(unittest.TestCase):
              {"filenum": 1,
               "t": 0.3,
               "begin": 1000, "end": 2000}])
-        self.assert_interpretation(
-            self._actual_chunk_interpretation(self.chunks[0]) +
-            self._actual_chunk_interpretation(self.chunks[1]))
+        self.assert_interpretation_length(2)
 
     def test_grouping_tolerates_interwoven_peers(self):
         self.given_files([{"duration": 2.0,
@@ -107,6 +103,18 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 5000, "end": 7000,
               "duration": 0.5},
              ])
+
+    def test_chunks_separated_by_long_pause_are_not_joined(self):
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
+        self.given_chunks(
+            [{"filenum": 0,
+              "t": 0,
+              "begin": 0, "end": 1000},
+             {"filenum": 0,
+              "t": 10,
+              "begin": 1000, "end": 2000}])
+        self.assert_interpretation_length(2)
 
 
 
@@ -149,8 +157,9 @@ class InterpretTestCase(unittest.TestCase):
                 expected_dict[key] = actual_value
         return expected_dict
 
-    def _actual_chunk_interpretation(self, chunk):
-        return self.interpreter.interpret([chunk], self.files)
+    def assert_interpretation_length(self, expected_length):
+        actual_score = self.interpreter.interpret(self.chunks, self.files)
+        self.assertEquals(expected_length, len(actual_score))
 
     maxDiff = 1000
 

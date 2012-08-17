@@ -61,7 +61,6 @@ class WavPlayer(Player):
 
 class Orchestra:
     SAMPLE_RATE = 44100
-    MIN_GRAIN_RATE = 0.01
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
 
     _extension_re = re.compile('\.(\w+)$')
