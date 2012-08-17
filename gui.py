@@ -280,7 +280,7 @@ class GUI(wx.Frame):
         glBegin(GL_LINES)
         for sound_id in self._sounds_being_played.keys():
             sound = self.orchestra.sounds_by_id[sound_id]
-            self.draw_sound(sound)
+            self.draw_sound(sound, opacity=0.8)
         glEnd()
 
     def refresh_chunks(self):
@@ -292,6 +292,9 @@ class GUI(wx.Frame):
         self.chunks_and_score_display_list = glGenLists(1)
         glNewList(self.chunks_and_score_display_list, GL_COMPILE_AND_EXECUTE)
 
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
         glBegin(GL_QUADS)
         for chunk in self.tr_log.chunks:
             self.draw_chunk(chunk)
@@ -300,7 +303,7 @@ class GUI(wx.Frame):
         glLineWidth(1)
         glBegin(GL_LINES)
         for sound in self.score:
-            self.draw_sound(sound)
+            self.draw_sound(sound, opacity=0.3)
         glEnd()
 
         glEndList()
@@ -321,11 +324,11 @@ class GUI(wx.Frame):
                 glVertex2f(x2, y2)
                 glVertex2f(x1, y2)
 
-    def draw_sound(self, sound):
+    def draw_sound(self, sound, opacity):
         player_id = self.orchestra.get_player_for_sound(sound).id
         if self._peer_buttons[player_id].GetValue() == True:
             pen = self.get_pen_for_player(player_id)
-            self.set_pen(pen)
+            self.set_pen(pen, opacity)
             x1 = self.time_to_px(sound["onset"])
             x2 = self.time_to_px(sound["onset"] + sound["duration"])
             y1 = self.byte_to_py(sound["begin"])
@@ -333,9 +336,9 @@ class GUI(wx.Frame):
             glVertex2f(x1, y1)
             glVertex2f(x2, y2)
 
-    def set_pen(self, pen):
+    def set_pen(self, pen, opacity=1):
         colour = pen.GetColour()
-        glColor3f(colour.Red()/255.0, colour.Green()/255.0, colour.Blue()/255.0)
+        glColor4f(colour.Red()/255.0, colour.Green()/255.0, colour.Blue()/255.0, opacity)
 
     def draw_line(self, x1, y1, x2, y2):
         glBegin(GL_LINES)
