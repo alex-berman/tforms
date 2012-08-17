@@ -92,6 +92,7 @@ class Orchestra:
         self._prepare_players()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
+        self.logger.debug("chunks=%s" % self.chunks)
         self.score = Interpreter().interpret(self.chunks, tr_log.files)
         self.sounds_by_id = {}
         self._playing = False

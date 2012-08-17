@@ -13,15 +13,14 @@ class GUI(wx.Frame):
                       (100,100,255),
                       (50,50,50)]
 
-    def __init__(self, tr_log, orchestra):
-        self.tr_log = tr_log
+    def __init__(self, orchestra):
         self.orchestra = orchestra
         self.score = orchestra.score
 
         self.width = 800
         self.height = 600
-        self.min_byte = min(tr_log.chunks, key=lambda chunk: chunk["begin"])["begin"]
-        self.max_byte = max(tr_log.chunks, key=lambda chunk: chunk["end"])["end"]
+        self.min_byte = min(orchestra.chunks, key=lambda chunk: chunk["begin"])["begin"]
+        self.max_byte = max(orchestra.chunks, key=lambda chunk: chunk["end"])["end"]
         self._sounds_being_played = {}
         self._zoom_selection_taking_place = False
         self._playing = False
@@ -133,7 +132,7 @@ class GUI(wx.Frame):
         
     def _create_peer_buttons(self):
         self._peer_buttons = []
-        for i in range(len(self.tr_log.peers)):
+        for i in range(len(self.orchestra.tr_log.peers)):
             button = wx.CheckBox(self, i, 'Peer %d' % (i+1))
             button.SetValue(True)
             button.SetForegroundColour(self.PLAYER_COLOURS[i % len(self.PLAYER_COLOURS)])
@@ -230,7 +229,7 @@ class GUI(wx.Frame):
 
     def _reset_displayed_time(self):
         self._displayed_time_begin = 0
-        self._displayed_time_end = self.tr_log.lastchunktime()
+        self._displayed_time_end = self.orchestra.tr_log.lastchunktime()
 
     def _reset_displayed_bytes(self):
         self._displayed_byte_begin = self.min_byte
@@ -323,7 +322,7 @@ class GUI(wx.Frame):
 
     def draw_chunks(self):
         glBegin(GL_QUADS)
-        for chunk in self.tr_log.chunks:
+        for chunk in self.orchestra.chunks:
             self.draw_chunk(chunk)
         glEnd()
 

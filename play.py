@@ -103,7 +103,7 @@ if options.realtime:
 else:
     if options.gui_enabled:
         from gui import GUI
-        gui = GUI(tr_log, orchestra)
+        gui = GUI(orchestra)
         gui.main_loop()
     else:
         play()
