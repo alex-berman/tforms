@@ -60,8 +60,8 @@ class InterpretTestCase(unittest.TestCase):
               "t": 0.3,
               "begin": 1000, "end": 2000}])
         self.assert_interpretation(
-            [self._actual_chunk_interpretation(self.chunks[0])[0],
-             self._actual_chunk_interpretation(self.chunks[1])[0]])
+            self._actual_chunk_interpretation(self.chunks[0]) +
+            self._actual_chunk_interpretation(self.chunks[1]))
 
     def test_chunks_from_different_files_are_not_joined(self):
         self.given_files([{"duration": 2.0,
@@ -76,8 +76,8 @@ class InterpretTestCase(unittest.TestCase):
               "t": 0.3,
               "begin": 1000, "end": 2000}])
         self.assert_interpretation(
-            [self._actual_chunk_interpretation(self.chunks[0])[0],
-             self._actual_chunk_interpretation(self.chunks[1])[0]])
+            self._actual_chunk_interpretation(self.chunks[0]) +
+            self._actual_chunk_interpretation(self.chunks[1]))
 
     def test_grouping_tolerates_interwoven_peers(self):
         self.given_files([{"duration": 2.0,
