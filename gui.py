@@ -42,7 +42,7 @@ class GUI(wx.Frame):
         self._vbox = wx.BoxSizer(wx.VERTICAL)
         self._create_control_buttons()
         self._create_clock()
-        self._create_peer_buttons()
+        self._create_layer_buttons()
         self._create_timeline()
         self.SetSizer(self._vbox)
         self.catch_key_events()
@@ -83,7 +83,7 @@ class GUI(wx.Frame):
         self.timeline.Bind(wx.EVT_RIGHT_DOWN, self._on_zoom_selection_start)
         self.timeline.Bind(wx.EVT_MOTION, self._on_mouse_moved)
         self.timeline.Bind(wx.EVT_RIGHT_UP, self._on_zoom_selection_stop)
-        hbox.Add(self._timeline_button_box)
+        hbox.Add(self._layers_box)
         hbox.Add(self.timeline, 1, flag=wx.EXPAND)
         self._vbox.Add(hbox, 1, flag=wx.EXPAND)
 
@@ -105,22 +105,46 @@ class GUI(wx.Frame):
         glOrtho(0.0, width, height, 0.0, -1.0, 1.0);
         glMatrixMode(GL_MODELVIEW)
 
+    def _create_layer_buttons(self):
+        self._layers_box = wx.BoxSizer(wx.VERTICAL)
+        self._create_chunks_button()
+        self._create_sounds_button()
+        self._create_peer_buttons()
+
+    def _create_chunks_button(self):
+        self._chunks_button = wx.CheckBox(self, label="Chunks")
+        self._chunks_button.SetValue(True)
+        self._chunks_button.Bind(wx.EVT_CHECKBOX, self._chunks_button_toggled, self._chunks_button)
+        self._layers_box.Add(self._chunks_button)
+
+    def _chunks_button_toggled(self, event):
+        self.refresh_chunks()
+        self.catch_key_events()
+
+    def _create_sounds_button(self):
+        self._sounds_button = wx.CheckBox(self, label="Sounds")
+        self._sounds_button.SetValue(True)
+        self._sounds_button.Bind(wx.EVT_CHECKBOX, self._sounds_button_toggled, self._sounds_button)
+        self._layers_box.Add(self._sounds_button)
+
+    def _sounds_button_toggled(self, event):
+        self.refresh_chunks()
+        self.catch_key_events()
+        
     def _create_peer_buttons(self):
-        self._timeline_button_box = wx.BoxSizer(wx.VERTICAL)
         self._peer_buttons = []
         for i in range(len(self.tr_log.peers)):
             button = wx.CheckBox(self, i, 'Peer %d' % (i+1))
             button.SetValue(True)
             button.SetForegroundColour(self.PLAYER_COLOURS[i % len(self.PLAYER_COLOURS)])
             button.Bind(wx.EVT_CHECKBOX, self._peer_button_toggled, button)
-            self._timeline_button_box.Add(button)
+            self._layers_box.Add(button)
             self._peer_buttons.append(button)
 
     def _peer_button_toggled(self, event):
         peer_id = event.GetId()
         self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
         self.refresh_chunks()
-        self.timeline.Refresh()
         self.catch_key_events()
 
     def main_loop(self):
@@ -203,7 +227,6 @@ class GUI(wx.Frame):
         self.width = size.width
         self.height = size.height
         self.refresh_chunks()
-        self.timeline.Refresh()
 
     def _reset_displayed_time(self):
         self._displayed_time_begin = 0
@@ -217,7 +240,6 @@ class GUI(wx.Frame):
         self._reset_displayed_time()
         self._reset_displayed_bytes()
         self.refresh_chunks()
-        self.timeline.Refresh()
         self.catch_key_events()
 
     def _on_scrub_start(self, event):
@@ -250,7 +272,6 @@ class GUI(wx.Frame):
 
             self._zoom_selection_taking_place = False
             self.refresh_chunks()
-            self.timeline.Refresh()
 
     def _on_mouse_moved(self, event):
         if self._zoom_selection_taking_place:
@@ -287,26 +308,31 @@ class GUI(wx.Frame):
         if self.chunks_and_score_display_list:
             glDeleteLists(self.chunks_and_score_display_list, 1)
             self.chunks_and_score_display_list = None
+        self.timeline.Refresh()
 
     def render_and_draw_chunks_and_score(self):
         self.chunks_and_score_display_list = glGenLists(1)
         glNewList(self.chunks_and_score_display_list, GL_COMPILE_AND_EXECUTE)
-
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        if self._chunks_button.GetValue():
+            self.draw_chunks()
+        if self._sounds_button.GetValue():
+            self.draw_sounds()
+        glEndList()
 
+    def draw_chunks(self):
         glBegin(GL_QUADS)
         for chunk in self.tr_log.chunks:
             self.draw_chunk(chunk)
         glEnd()
 
+    def draw_sounds(self):
         glLineWidth(1)
         glBegin(GL_LINES)
         for sound in self.score:
             self.draw_sound(sound, opacity=0.3)
         glEnd()
-
-        glEndList()
 
     def draw_chunk(self, chunk, size=0):
         x = self.time_to_px(chunk["t"])
