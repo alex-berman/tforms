@@ -52,7 +52,7 @@ class File(visualizer.File):
         height = 3
         x1 = MARGIN
         x2 = self.visualizer.width - MARGIN
-        glColor3f(0.8, 0.8, 0.9)
+        glColor3f(0.9, 0.9, 0.9)
         glBegin(GL_QUADS)
         glVertex2i(x1, self.y2)
         glVertex2i(x2, self.y2)
@@ -69,9 +69,9 @@ class File(visualizer.File):
             self.draw_playing_segment(segment)
 
     def draw_gathered_segment(self, segment):
-        glColor3f(0, 0, 0)
+        glColor3f(0.4, 0.8, 0.4)
         x1, x2 = self.segment_position(segment)
-        glBegin(GL_LINE_LOOP)
+        glBegin(GL_QUADS)
         glVertex2i(x1, self.y2)
         glVertex2i(x2, self.y2)
         glVertex2i(x2, self.y1)
