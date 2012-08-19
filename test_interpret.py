@@ -28,7 +28,7 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 0, "end": 3000,
               "duration": 0.5}])
 
-    def test_non_consecutive_chunks_are_divided_into_different_sounds(self):
+    def test_non_consecutive_chunks_are_divided_into_different_segments(self):
         self.given_files([{"duration": 2.0,
                            "length": 10000}])
         self.given_chunks(
@@ -116,6 +116,18 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 1000, "end": 2000}])
         self.assert_interpretation_length(2)
 
+    def test_simulataneous_chunks_do_not_yield_zero_duration(self):
+        self.given_files([{"duration": 2.0,
+                           "length": 10000}])
+        self.given_chunks(
+            [{"t": 0,
+              "begin": 0, "end": 1000},
+             {"t": 0,
+              "begin": 1000, "end": 2000}])
+        self.assert_interpretation(
+            [{"onset": 0,
+              "begin": 0, "end": 2000,
+              "duration": 2.0*0.2}])
 
 
     def setUp(self):
@@ -144,9 +156,9 @@ class InterpretTestCase(unittest.TestCase):
                              zip(expected_score, actual_score))
         self.assertEquals(expected_score, actual_score)
 
-    def _replace_durations_with_float_comparable_instances(self, sound):
-        sound["duration"] = Duration(sound["duration"])
-        return sound
+    def _replace_durations_with_float_comparable_instances(self, segment):
+        segment["duration"] = Duration(segment["duration"])
+        return segment
 
     def _fill_potential_gaps_with_actual_values(self, (expected_dict_pattern, actual_dict)):
         expected_dict = {}

@@ -35,6 +35,7 @@ class File(visualizer.File):
         outdated = filter(lambda segment_id: self.playing_segments[segment_id].relative_age() > 1,
                           self.playing_segments)
         for segment_id in outdated:
+            self.gatherer.add(self.playing_segments[segment_id])
             del self.playing_segments[segment_id]
 
     def render(self):
@@ -68,8 +69,7 @@ class File(visualizer.File):
             self.draw_playing_segment(segment)
 
     def draw_gathered_segment(self, segment):
-        opacity = 0.2
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        glColor3f(0, 0, 0)
         x1, x2 = self.segment_position(segment)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, self.y2)
@@ -80,7 +80,9 @@ class File(visualizer.File):
 
     def draw_playing_segment(self, segment):
         glColor3f(1, 0, 0)
-        x1, x2 = self.segment_position(segment)
+        x1 = self.byte_to_px(segment.begin)
+        x2 = self.byte_to_px(segment.begin + segment.byte_size * segment.relative_age())
+        x2 = max(x2, x1 + 1)
         glBegin(GL_QUADS)
         glVertex2i(x1, self.y2)
         glVertex2i(x2, self.y2)
@@ -91,8 +93,7 @@ class File(visualizer.File):
     def segment_position(self, segment):
         x1 = self.byte_to_px(segment.begin)
         x2 = self.byte_to_px(segment.end)
-        if x2 == x1:
-            x2 = x1 + 1
+        x2 = max(x2, x1 + 1)
         return x1, x2
 
     def byte_to_px(self, byte):

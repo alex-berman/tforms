@@ -86,6 +86,10 @@ class Segment(Chunk):
     def relative_age(self):
         return (time.time() - self.arrival_time) / self.duration
 
+    def __str__(self):
+        return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
+            self.id, self.begin, self.end, self.filenum, self.duration)
+
 class Visualizer:
     def __init__(self, args, file_class=File, chunk_class=Chunk, segment_class=Segment):
         self.file_class = file_class
