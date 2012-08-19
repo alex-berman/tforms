@@ -8,6 +8,7 @@ import threading
 import time
 from orchestra import Orchestra
 from session import Session
+import subprocess
 
 logging.basicConfig(filename="play.log", 
                     level=logging.DEBUG, 
@@ -25,7 +26,8 @@ parser.add_option("--pretend-sequential", action="store_true", dest="pretend_seq
 parser.add_option("--gui", action="store_true", dest="gui_enabled")
 parser.add_option("--predecode", action="store_true", dest="predecode", default=True)
 parser.add_option("--download-location", dest="download_location", default="../../Downloads")
-parser.add_option("--visualizer", dest="visualizer_enabled", action="store_true")
+parser.add_option("--visualize", dest="visualizer_enabled", action="store_true")
+parser.add_option("--visualizer", dest="visualizer")
 parser.add_option("--loop", dest="loop", action="store_true")
 parser.add_option("--osc-log", dest="osc_log")
 (options, args) = parser.parse_args()
@@ -60,7 +62,7 @@ orchestra = Orchestra(sessiondir,
                       quiet=options.quiet,
                       predecoded=options.predecode,
                       file_location=options.download_location,
-                      visualizer_enabled=options.visualizer_enabled,
+                      visualizer_enabled=(options.visualizer_enabled or options.visualizer),
                       loop=options.loop,
                       osc_log=options.osc_log)
 
@@ -97,6 +99,9 @@ def wait_for_play_completion_or_interruption():
     global orchestra_thread
     while orchestra_thread.is_alive():
         time.sleep(0.1)
+
+if options.visualizer:
+    visualizer_process = subprocess.Popen(options.visualizer, shell=True, stdin=None)
 
 if options.realtime:
     run_realtime()

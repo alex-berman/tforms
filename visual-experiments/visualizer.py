@@ -1,7 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
-import sys
+import sys, os
 import liblo
 import time
 import argparse
@@ -9,7 +9,7 @@ import collections
 from vector import Vector
 import logging
 
-sys.path.append("..")
+sys.path.append(os.path.dirname(__file__)+"/..")
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
