@@ -21,7 +21,7 @@ class GUI(wx.Frame):
         self.height = 600
         self.min_byte = min(orchestra.chunks, key=lambda chunk: chunk["begin"])["begin"]
         self.max_byte = max(orchestra.chunks, key=lambda chunk: chunk["end"])["end"]
-        self._sounds_being_played = {}
+        self._segments_being_played = {}
         self._zoom_selection_taking_place = False
         self._playing = False
         self._scrubbing = False
@@ -107,7 +107,7 @@ class GUI(wx.Frame):
     def _create_layer_buttons(self):
         self._layers_box = wx.BoxSizer(wx.VERTICAL)
         self._create_chunks_button()
-        self._create_sounds_button()
+        self._create_segments_button()
         self._create_peer_buttons()
 
     def _create_chunks_button(self):
@@ -120,13 +120,13 @@ class GUI(wx.Frame):
         self.refresh_chunks()
         self.catch_key_events()
 
-    def _create_sounds_button(self):
-        self._sounds_button = wx.CheckBox(self, label="Sounds")
-        self._sounds_button.SetValue(True)
-        self._sounds_button.Bind(wx.EVT_CHECKBOX, self._sounds_button_toggled, self._sounds_button)
-        self._layers_box.Add(self._sounds_button)
+    def _create_segments_button(self):
+        self._segments_button = wx.CheckBox(self, label="Segments")
+        self._segments_button.SetValue(True)
+        self._segments_button.Bind(wx.EVT_CHECKBOX, self._segments_button_toggled, self._segments_button)
+        self._layers_box.Add(self._segments_button)
 
-    def _sounds_button_toggled(self, event):
+    def _segments_button_toggled(self, event):
         self.refresh_chunks()
         self.catch_key_events()
         
@@ -163,7 +163,7 @@ class GUI(wx.Frame):
         self._orchestra_thread.join()
         self.stop_button.Disable()
         self.play_button.Enable()
-        self._sounds_being_played = {}
+        self._segments_being_played = {}
         self._playing = False
         self.catch_key_events()
 
@@ -293,14 +293,14 @@ class GUI(wx.Frame):
             glCallList(self.chunks_and_score_display_list)
         else:
             self.render_and_draw_chunks_and_score()
-        self.draw_highlighted_sounds()
+        self.draw_highlighted_segments()
 
-    def draw_highlighted_sounds(self):
+    def draw_highlighted_segments(self):
         glLineWidth(4)
         glBegin(GL_LINES)
-        for sound_id in self._sounds_being_played.keys():
-            sound = self.orchestra.sounds_by_id[sound_id]
-            self.draw_sound(sound, opacity=0.8)
+        for segment_id in self._segments_being_played.keys():
+            segment = self.orchestra.segments_by_id[segment_id]
+            self.draw_segment(segment, opacity=0.8)
         glEnd()
 
     def refresh_chunks(self):
@@ -316,8 +316,8 @@ class GUI(wx.Frame):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         if self._chunks_button.GetValue():
             self.draw_chunks()
-        if self._sounds_button.GetValue():
-            self.draw_sounds()
+        if self._segments_button.GetValue():
+            self.draw_segments()
         glEndList()
 
     def draw_chunks(self):
@@ -326,11 +326,11 @@ class GUI(wx.Frame):
             self.draw_chunk(chunk)
         glEnd()
 
-    def draw_sounds(self):
+    def draw_segments(self):
         glLineWidth(1)
         glBegin(GL_LINES)
-        for sound in self.score:
-            self.draw_sound(sound, opacity=0.3)
+        for segment in self.score:
+            self.draw_segment(segment, opacity=0.3)
         glEnd()
 
     def draw_chunk(self, chunk, size=0):
@@ -349,15 +349,15 @@ class GUI(wx.Frame):
                 glVertex2f(x2, y2)
                 glVertex2f(x1, y2)
 
-    def draw_sound(self, sound, opacity):
-        player_id = self.orchestra.get_player_for_sound(sound).id
+    def draw_segment(self, segment, opacity):
+        player_id = self.orchestra.get_player_for_segment(segment).id
         if self._peer_buttons[player_id].GetValue() == True:
             pen = self.get_pen_for_player(player_id)
             self.set_pen(pen, opacity)
-            x1 = self.time_to_px(sound["onset"])
-            x2 = self.time_to_px(sound["onset"] + sound["duration"])
-            y1 = self.byte_to_py(sound["begin"])
-            y2 = self.byte_to_py(sound["end"])
+            x1 = self.time_to_px(segment["onset"])
+            x2 = self.time_to_px(segment["onset"] + segment["duration"])
+            y1 = self.byte_to_py(segment["begin"])
+            y2 = self.byte_to_py(segment["end"])
             glVertex2f(x1, y1)
             glVertex2f(x2, y2)
 
@@ -390,17 +390,17 @@ class GUI(wx.Frame):
     def update_clock(self):
         self.clock.SetLabel('%.2f' % self.orchestra.get_current_log_time())
 
-    def highlight_sound(self, sound):
-        self._sounds_being_played[sound["id"]] = True
+    def highlight_segment(self, segment):
+        self._segments_being_played[segment["id"]] = True
         wx.CallAfter(self.timeline.Refresh)
 
-    def unhighlight_sound(self, sound):
-        if self._sound_is_being_played(sound):
-            del self._sounds_being_played[sound["id"]]
+    def unhighlight_segment(self, segment):
+        if self._segment_is_being_played(segment):
+            del self._segments_being_played[segment["id"]]
             wx.CallAfter(self.timeline.Refresh)
 
-    def _sound_is_being_played(self, sound):
-        return sound["id"] in self._sounds_being_played
+    def _segment_is_being_played(self, segment):
+        return segment["id"] in self._segments_being_played
 
     def time_to_px(self, t):
         return (t - self._displayed_time_begin) * self.timeline_width / (

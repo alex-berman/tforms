@@ -29,10 +29,10 @@ class Player:
                                  self.id,
                                  self.bearing)
 
-    def play(self, sound, pan):
-        sound["pan"] = pan
-        self.interpret_sonically(sound)
-        self.orchestra.highlight_sound(sound)
+    def play(self, segment, pan):
+        segment["pan"] = pan
+        self.interpret_sonically(segment)
+        self.orchestra.highlight_segment(segment)
 
     def _bytecount_to_secs(self, byte_count, file_info):
         duration_secs = file_info["duration"]
@@ -43,18 +43,18 @@ class Player:
 
 
 class WavPlayer(Player):
-    def interpret_sonically(self, sound):
-        file_info = self.orchestra.tr_log.files[sound["filenum"]]
+    def interpret_sonically(self, segment):
+        file_info = self.orchestra.tr_log.files[segment["filenum"]]
         filename = file_info["decoded_name"]
-        start_time_in_file = self._bytecount_to_secs(sound["begin"]-file_info["offset"], file_info)
-        end_time_in_file = self._bytecount_to_secs(sound["end"]-file_info["offset"], file_info)
+        start_time_in_file = self._bytecount_to_secs(segment["begin"]-file_info["offset"], file_info)
+        end_time_in_file = self._bytecount_to_secs(segment["end"]-file_info["offset"], file_info)
 
         self.logger.debug("playing %s at position %fs with duration %fs" % (
-                filename, start_time_in_file, sound["duration"]))
+                filename, start_time_in_file, segment["duration"]))
 
-        sound["start_time_in_file"] = start_time_in_file
-        sound["end_time_in_file"] = end_time_in_file
-        self.orchestra.play_sound(sound)
+        segment["start_time_in_file"] = start_time_in_file
+        segment["end_time_in_file"] = end_time_in_file
+        self.orchestra.play_segment(segment)
         return True
 
 
@@ -92,7 +92,7 @@ class Orchestra:
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
         self.score = Interpreter().interpret(self.chunks, tr_log.files)
         self._chunks_by_id = {}
-        self.sounds_by_id = {}
+        self.segments_by_id = {}
         self._playing = False
         self._quitting = False
         self._informed_visualizer_about_torrent = False
@@ -146,7 +146,7 @@ class Orchestra:
         (chunk_id, pan) = args
         chunk = self._chunks_by_id[chunk_id]
         self.logger.debug("visualizing chunk %s with pan %s" % (chunk, pan))
-        self.synth.pan(chunk["sound_id"], pan)
+        self.synth.pan(chunk["segment_id"], pan)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -215,25 +215,25 @@ class Orchestra:
         self.stopwatch.start()
         no_more_events = False
         while self._playing and not no_more_events:
-            event = self._get_next_chunk_or_sound()
+            event = self._get_next_chunk_or_segment()
             if event:
                 self._handle_event(event)
             else:
                 no_more_events = True
         self.logger.debug("leaving _play_until_end")
 
-    def _get_next_chunk_or_sound(self):
-        self.logger.debug("sound index is %d" % self.current_sound_index)
+    def _get_next_chunk_or_segment(self):
+        self.logger.debug("segment index is %d" % self.current_segment_index)
         chunk = self._get_next_chunk()
-        sound = self._get_next_sound()
-        if chunk and sound:
-            return self._choose_nearest_chunk_or_sound(chunk, sound)
+        segment = self._get_next_segment()
+        if chunk and segment:
+            return self._choose_nearest_chunk_or_segment(chunk, segment)
         elif chunk:
             return {"type": "chunk",
                     "chunk": chunk}
-        elif sound:
-            return {"type": "sound",
-                    "sound": sound}
+        elif segment:
+            return {"type": "segment",
+                    "segment": segment}
         else:
             return None
 
@@ -241,27 +241,27 @@ class Orchestra:
         if self.current_chunk_index < len(self.chunks):
             return self.chunks[self.current_chunk_index]
 
-    def _get_next_sound(self):
-        if self.current_sound_index < len(self.score):
-            return self.score[self.current_sound_index]
+    def _get_next_segment(self):
+        if self.current_segment_index < len(self.score):
+            return self.score[self.current_segment_index]
 
     def _handle_event(self, event):
         if event["type"] == "chunk":
             self.handle_chunk(event["chunk"])
             self.current_chunk_index += 1
-        elif event["type"] == "sound":
-            self.handle_sound(event["sound"])
-            self.current_sound_index += 1
+        elif event["type"] == "segment":
+            self.handle_segment(event["segment"])
+            self.current_segment_index += 1
         else:
             raise Exception("unexpected event %s" % event)
 
-    def _choose_nearest_chunk_or_sound(self, chunk, sound):
-        if chunk["t"] < sound["onset"]:
+    def _choose_nearest_chunk_or_segment(self, chunk, segment):
+        if chunk["t"] < segment["onset"]:
             return {"type": "chunk",
                     "chunk": chunk}
         else:
-            return {"type": "sound",
-                    "sound": sound}
+            return {"type": "segment",
+                    "segment": segment}
             
     def scrub_to_time(self, target_log_time):
         self.logger.debug("scrub_to_time(%s)" % target_log_time)
@@ -274,28 +274,28 @@ class Orchestra:
 
     def _scrub_forward_to(self, target_log_time):
         reached_target = False
-        num_sounds = len(self.score)
+        num_segments = len(self.score)
         while not reached_target:
-            chunk = self.chunks[self.current_sound_index]
+            chunk = self.chunks[self.current_segment_index]
             if chunk["t"] >= target_log_time:
                 reached_target = True
             if not reached_target:
-                self.current_sound_index += 1
-                if self.current_sound_index == num_sounds:
+                self.current_segment_index += 1
+                if self.current_segment_index == num_segments:
                     reached_target = True
         player = self.get_player_for_chunk(chunk)
         player.play(chunk, pan=0.5)
 
     def _scrub_backward_to(self, target_log_time):
         reached_target = False
-        num_sounds = len(self.score)
+        num_segments = len(self.score)
         while not reached_target:
-            chunk = self.chunks[self.current_sound_index]
+            chunk = self.chunks[self.current_segment_index]
             if chunk["t"] <= target_log_time:
                 reached_target = True
             if not reached_target:
-                self.current_sound_index += 1
-                if self.current_sound_index < 0 or self.current_sound_index == num_sounds:
+                self.current_segment_index += 1
+                if self.current_segment_index < 0 or self.current_segment_index == num_segments:
                     reached_target = True
         player = self.get_player_for_chunk(chunk)
         player.play(chunk, pan=0.5)
@@ -306,13 +306,13 @@ class Orchestra:
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
 
-    def handle_sound(self, sound):
-        self.logger.debug("handling sound %s" % sound)
+    def handle_segment(self, segment):
+        self.logger.debug("handling segment %s" % segment)
         now = self.get_current_log_time()
-        time_margin = sound["onset"] - now
-        self.logger.debug("time_margin=%f-%f=%f" % (sound["onset"], now, time_margin))
-        player = self.get_player_for_sound(sound)
-        self.logger.debug("get_player_for_sound returned %s" % player)
+        time_margin = segment["onset"] - now
+        self.logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
+        player = self.get_player_for_segment(segment)
+        self.logger.debug("get_player_for_segment returned %s" % player)
         if not self.realtime and time_margin > 0:
             sleep_time = time_margin
             self.logger.debug("sleeping %f" % sleep_time)
@@ -320,7 +320,7 @@ class Orchestra:
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
-            player.play(sound, pan=0.5)
+            player.play(segment, pan=0.5)
 
     def handle_chunk(self, chunk):
         self.logger.debug("handling chunk %s" % chunk)
@@ -338,9 +338,9 @@ class Orchestra:
         if player and player.enabled:
             player.visualize(chunk)
 
-    def highlight_sound(self, sound):
+    def highlight_segment(self, segment):
         if self.gui:
-            self.gui.highlight_sound(sound)
+            self.gui.highlight_segment(segment)
 
     def visualize(self, chunk, player_id, bearing):
         if self.visualizer:
@@ -358,26 +358,26 @@ class Orchestra:
                                  player_id,
                                  bearing)
 
-    def stopped_playing(self, sound):
-        self.logger.debug("stopped sound %s" % sound)
+    def stopped_playing(self, segment):
+        self.logger.debug("stopped segment %s" % segment)
         if self.gui:
-            self.gui.unhighlight_sound(sound)
+            self.gui.unhighlight_segment(segment)
         # if self.visualizer:
         #     self.visualizer.send("/stopped_playing",
         #                          chunk["id"], chunk["filenum"])
 
-    def play_sound(self, sound):
-        self.sounds_by_id[sound["id"]] = sound
-        file_info = self.tr_log.files[sound["filenum"]]
-        self.synth.play_sound(
-            sound["filenum"],
-            sound["start_time_in_file"] / file_info["duration"],
-            sound["end_time_in_file"] / file_info["duration"],
-            sound["duration"],
-            sound["pan"])
+    def play_segment(self, segment):
+        self.segments_by_id[segment["id"]] = segment
+        file_info = self.tr_log.files[segment["filenum"]]
+        self.synth.play_segment(
+            segment["filenum"],
+            segment["start_time_in_file"] / file_info["duration"],
+            segment["end_time_in_file"] / file_info["duration"],
+            segment["duration"],
+            segment["pan"])
         self.scheduler.enter(
-            sound["duration"], 1,
-            self.stopped_playing, [sound])
+            segment["duration"], 1,
+            self.stopped_playing, [segment])
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
@@ -396,12 +396,12 @@ class Orchestra:
             chunk["player"] = peer_player
             return peer_player
 
-    def get_player_for_sound(self, sound):
+    def get_player_for_segment(self, segment):
         try:
-            return sound["player"]
+            return segment["player"]
         except KeyError:
-            peer_player = self.get_player_for_peer(sound["peeraddr"])
-            sound["player"] = peer_player
+            peer_player = self.get_player_for_peer(segment["peeraddr"])
+            segment["player"] = peer_player
             return peer_player
 
     def get_player_for_peer(self, peeraddr):
@@ -428,7 +428,7 @@ class Orchestra:
         if self._playing:
             self.stopwatch.restart()
         self.current_chunk_index = self._get_current_chunk_index()
-        self.current_sound_index = self._get_current_sound_index()
+        self.current_segment_index = self._get_current_segment_index()
 
     def _get_current_chunk_index(self):
         index = 0
@@ -439,7 +439,7 @@ class Orchestra:
             index += 1
         return len(self.chunks) - 1
 
-    def _get_current_sound_index(self):
+    def _get_current_segment_index(self):
         index = 0
         next_to_last_index = len(self.score) - 2
         while index < next_to_last_index:
