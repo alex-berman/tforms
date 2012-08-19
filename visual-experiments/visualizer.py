@@ -64,6 +64,10 @@ class Chunk:
         return Visualizer.bearing_to_border_position(
             self.bearing, self.visualizer.width, self.visualizer.height)
 
+    def __str__(self):
+        return "Chunk(id=%s, begin=%s, end=%s, filenum=%s)" % (
+            self.id, self.begin, self.end, self.filenum)
+
 class Visualizer:
     def __init__(self, args, file_class=File, chunk_class=Chunk):
         self.file_class = file_class

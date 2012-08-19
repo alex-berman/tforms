@@ -4,6 +4,8 @@ import time
 from OpenGL.GL import *
 from collections import OrderedDict
 
+MARGIN = 20
+
 class Smoother:
     RESPONSE_FACTOR = 5
 
@@ -31,8 +33,26 @@ class File(visualizer.File):
         self.playing_chunks[chunk.id] = chunk
 
     def render(self):
+        height = 3
+        y = float(self.visualizer.height) / (self.visualizer.num_files + 1) * (self.filenum + 1)
+        self.y1 = int(y)
+        self.y2 = int(y + height)
+
+        self.draw_background()
         self.draw_gathered_chunks()
         self.draw_playing_chunks()
+
+    def draw_background(self):
+        height = 3
+        x1 = MARGIN
+        x2 = self.visualizer.width - MARGIN
+        glColor3f(0.8, 0.8, 0.9)
+        glBegin(GL_QUADS)
+        glVertex2i(x1, self.y2)
+        glVertex2i(x2, self.y2)
+        glVertex2i(x2, self.y1)
+        glVertex2i(x1, self.y1)
+        glEnd()
 
     def draw_gathered_chunks(self):
         for chunk in self.gatherer.pieces():
@@ -45,38 +65,33 @@ class File(visualizer.File):
     def draw_gathered_chunk(self, chunk):
         opacity = 0.2
         glColor3f(1-opacity, 1-opacity, 1-opacity)
-        x1, y1, x2, y2 = self.chunk_position(chunk)
+        x1, x2 = self.chunk_position(chunk)
         glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
+        glVertex2i(x1, self.y2)
+        glVertex2i(x2, self.y2)
+        glVertex2i(x2, self.y1)
+        glVertex2i(x1, self.y1)
         glEnd()
 
     def draw_playing_chunk(self, chunk):
         glColor3f(1, 0, 0)
-        x1, y1, x2, y2 = self.chunk_position(chunk)
+        x1, x2 = self.chunk_position(chunk)
         glBegin(GL_QUADS)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
+        glVertex2i(x1, self.y2)
+        glVertex2i(x2, self.y2)
+        glVertex2i(x2, self.y1)
+        glVertex2i(x1, self.y1)
         glEnd()
 
     def chunk_position(self, chunk):
-        y_offset = 0
-        height = 3
-        y = float(self.visualizer.height) / (self.visualizer.num_files + 1) * (chunk.filenum + 1)
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
-        x1 = int(self.byte_to_px(chunk.begin))
-        x2 = int(self.byte_to_px(chunk.end))
+        x1 = self.byte_to_px(chunk.begin)
+        x2 = self.byte_to_px(chunk.end)
         if x2 == x1:
             x2 = x1 + 1
-        return x1, y1, x2, y2
+        return x1, x2
 
     def byte_to_px(self, byte):
-        return float(byte) / self.length * self.visualizer.width
+        return MARGIN + int(float(byte) / self.length * (self.visualizer.width - 2*MARGIN))
 
 class Simple(visualizer.Visualizer):
     def __init__(self, args):
