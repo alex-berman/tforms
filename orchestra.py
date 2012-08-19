@@ -25,9 +25,7 @@ class Player:
         self._previous_chunk_time = None
 
     def visualize(self, chunk):
-        self.orchestra.visualize(chunk,
-                                 self.id,
-                                 self.bearing)
+        self.orchestra.visualize_chunk(chunk, self.id, self.bearing)
 
     def play(self, segment, pan):
         segment["pan"] = pan
@@ -54,7 +52,7 @@ class WavPlayer(Player):
 
         segment["start_time_in_file"] = start_time_in_file
         segment["end_time_in_file"] = end_time_in_file
-        self.orchestra.play_segment(segment)
+        self.orchestra.play_segment(segment, self.id, self.bearing)
         return True
 
 
@@ -342,7 +340,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_segment(segment)
 
-    def visualize(self, chunk, player_id, bearing):
+    def visualize_chunk(self, chunk, player_id, bearing):
         if self.visualizer:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
@@ -358,15 +356,29 @@ class Orchestra:
                                  player_id,
                                  bearing)
 
+    def visualize_segment(self, segment, player_id, bearing):
+        if self.visualizer:
+            if not self._informed_visualizer_about_torrent:
+                self._send_torrent_info_to_visualizer()
+            file_info = self.tr_log.files[segment["filenum"]]
+            if not "informed_visualizer" in file_info:
+                self._send_file_info_to_visualizer(segment["filenum"])
+            self.segments_by_id[segment["id"]] = segment
+            self.visualizer.send("/segment",
+                                 segment["id"],
+                                 segment["begin"],
+                                 segment["end"] - segment["begin"],
+                                 segment["filenum"],
+                                 player_id,
+                                 bearing,
+                                 segment["duration"])
+
     def stopped_playing(self, segment):
         self.logger.debug("stopped segment %s" % segment)
         if self.gui:
             self.gui.unhighlight_segment(segment)
-        # if self.visualizer:
-        #     self.visualizer.send("/stopped_playing",
-        #                          chunk["id"], chunk["filenum"])
 
-    def play_segment(self, segment):
+    def play_segment(self, segment, player_id, bearing):
         self.segments_by_id[segment["id"]] = segment
         file_info = self.tr_log.files[segment["filenum"]]
         self.synth.play_segment(
@@ -378,6 +390,7 @@ class Orchestra:
         self.scheduler.enter(
             segment["duration"], 1,
             self.stopped_playing, [segment])
+        self.visualize_segment(segment, player_id, bearing)
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True

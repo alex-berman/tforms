@@ -31,6 +31,12 @@ class File:
         self.offset = offset
         self.length = length
 
+    def add_chunk(self, chunk):
+        pass
+
+    def add_segment(self, segment):
+        pass
+
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
                  filenum, peer_id, bearing,
@@ -68,10 +74,23 @@ class Chunk:
         return "Chunk(id=%s, begin=%s, end=%s, filenum=%s)" % (
             self.id, self.begin, self.end, self.filenum)
 
+class Segment(Chunk):
+    def __init__(self, chunk_id, begin, end, byte_size,
+                 filenum, peer_id, bearing, duration,
+                 arrival_time, visualizer):
+        Chunk.__init__(self, chunk_id, begin, end, byte_size,
+                 filenum, peer_id, bearing,
+                 arrival_time, visualizer)
+        self.duration = duration
+
+    def relative_age(self):
+        return (time.time() - self.arrival_time) / self.duration
+
 class Visualizer:
-    def __init__(self, args, file_class=File, chunk_class=Chunk):
+    def __init__(self, args, file_class=File, chunk_class=Chunk, segment_class=Segment):
         self.file_class = file_class
         self.chunk_class = chunk_class
+        self.segment_class = segment_class
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
@@ -127,15 +146,20 @@ class Visualizer:
                 peer_id, bearing, self.current_time(), self)
             self.files[filenum].add_chunk(chunk)
         else:
-            print "ignoring chunk from undeclared file"
+            print "ignoring chunk from undeclared file %s" % filenum
 
-    def handle_stopped_playing_message(self, path, args, types, src, data):
-        (chunk_id, filenum) = args
-        self.logger.debug("stopped_playing(%s, %s)" % (chunk_id, filenum))
-        self.stopped_playing(chunk_id, filenum)
-
-    def stopped_playing(self, chunk_id, filenum):
-        pass
+    def handle_segment_message(self, path, args, types, src, data):
+        (segment_id, torrent_position, byte_size, filenum,
+         peer_id, bearing, duration) = args
+        if filenum in self.files:
+            begin = torrent_position - self.files[filenum].offset
+            end = begin + byte_size
+            segment = self.segment_class(
+                segment_id, begin, end, byte_size, filenum,
+                peer_id, bearing, duration, self.current_time(), self)
+            self.files[filenum].add_segment(segment)
+        else:
+            print "ignoring chunk from undeclared file %s" % filenum
 
     def handle_shutdown(self):
         self.exiting = True
@@ -146,7 +170,7 @@ class Visualizer:
         self.server.add_method("/torrent", "i", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
-        self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
+        self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
 
     def InitGL(self):

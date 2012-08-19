@@ -25,12 +25,17 @@ class Smoother:
 class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
-        self.arriving_chunks = OrderedDict()
-        self.playing_chunks = OrderedDict()
+        self.playing_segments = OrderedDict()
         self.gatherer = Gatherer()
 
-    def add_chunk(self, chunk):
-        self.playing_chunks[chunk.id] = chunk
+    def add_segment(self, segment):
+        self.playing_segments[segment.id] = segment
+
+    def update(self):
+        outdated = filter(lambda segment_id: self.playing_segments[segment_id].relative_age() > 1,
+                          self.playing_segments)
+        for segment_id in outdated:
+            del self.playing_segments[segment_id]
 
     def render(self):
         height = 3
@@ -39,8 +44,8 @@ class File(visualizer.File):
         self.y2 = int(y + height)
 
         self.draw_background()
-        self.draw_gathered_chunks()
-        self.draw_playing_chunks()
+        self.draw_gathered_segments()
+        self.draw_playing_segments()
 
     def draw_background(self):
         height = 3
@@ -54,18 +59,18 @@ class File(visualizer.File):
         glVertex2i(x1, self.y1)
         glEnd()
 
-    def draw_gathered_chunks(self):
-        for chunk in self.gatherer.pieces():
-            self.draw_gathered_chunk(chunk)
+    def draw_gathered_segments(self):
+        for segment in self.gatherer.pieces():
+            self.draw_gathered_segment(segment)
 
-    def draw_playing_chunks(self):
-        for chunk in self.playing_chunks.values():
-            self.draw_playing_chunk(chunk)
+    def draw_playing_segments(self):
+        for segment in self.playing_segments.values():
+            self.draw_playing_segment(segment)
 
-    def draw_gathered_chunk(self, chunk):
+    def draw_gathered_segment(self, segment):
         opacity = 0.2
         glColor3f(1-opacity, 1-opacity, 1-opacity)
-        x1, x2 = self.chunk_position(chunk)
+        x1, x2 = self.segment_position(segment)
         glBegin(GL_LINE_LOOP)
         glVertex2i(x1, self.y2)
         glVertex2i(x2, self.y2)
@@ -73,9 +78,9 @@ class File(visualizer.File):
         glVertex2i(x1, self.y1)
         glEnd()
 
-    def draw_playing_chunk(self, chunk):
+    def draw_playing_segment(self, segment):
         glColor3f(1, 0, 0)
-        x1, x2 = self.chunk_position(chunk)
+        x1, x2 = self.segment_position(segment)
         glBegin(GL_QUADS)
         glVertex2i(x1, self.y2)
         glVertex2i(x2, self.y2)
@@ -83,9 +88,9 @@ class File(visualizer.File):
         glVertex2i(x1, self.y1)
         glEnd()
 
-    def chunk_position(self, chunk):
-        x1 = self.byte_to_px(chunk.begin)
-        x2 = self.byte_to_px(chunk.end)
+    def segment_position(self, segment):
+        x1 = self.byte_to_px(segment.begin)
+        x2 = self.byte_to_px(segment.end)
         if x2 == x1:
             x2 = x1 + 1
         return x1, x2
@@ -100,6 +105,7 @@ class Simple(visualizer.Visualizer):
 
     def render(self):
         for f in self.files.values():
+            f.update()
             f.render()
 
 visualizer.run(Simple)
