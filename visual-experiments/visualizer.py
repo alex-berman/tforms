@@ -24,18 +24,22 @@ MARGIN = 30
 BORDER_OPACITY = 0.7
 EXPORT_DIR = "export"
 
+class File:
+    def __init__(self, visualizer, filenum, offset, length):
+        self.visualizer = visualizer
+        self.filenum = filenum
+        self.offset = offset
+        self.length = length
+
 class Chunk:
-    def __init__(self, chunk_id, torrent_position, byte_size,
-                 filenum, file_offset, file_length, peer_id, bearing,
+    def __init__(self, chunk_id, begin, end, byte_size,
+                 filenum, peer_id, bearing,
                  arrival_time, visualizer):
         self.id = chunk_id
-        self.torrent_position = torrent_position
+        self.begin = begin
+        self.end = end
         self.byte_size = byte_size
         self.filenum = filenum
-        self.file_length = file_length
-        file_position = torrent_position - file_offset
-        self.begin = file_position
-        self.end = file_position + byte_size
         self.peer_id = peer_id
         self.bearing = bearing
         self.arrival_time = arrival_time
@@ -61,7 +65,8 @@ class Chunk:
             self.bearing, self.visualizer.width, self.visualizer.height)
 
 class Visualizer:
-    def __init__(self, args, chunk_class=Chunk):
+    def __init__(self, args, file_class=File, chunk_class=Chunk):
+        self.file_class = file_class
         self.chunk_class = chunk_class
         self.sync = args.sync
         self.width = args.width
@@ -100,15 +105,25 @@ class Visualizer:
         self.ReSizeGLScene(window_width, window_height)
         glutMainLoop()
 
+    def handle_torrent_message(self, path, args, types, src, data):
+        self.num_files = args[0]
+
+    def handle_file_message(self, path, args, types, src, data):
+        (filenum, offset, length) = args
+        self.files[filenum] = self.file_class(self, filenum, offset, length)
+
     def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum, file_offset, file_length,
+        (chunk_id, torrent_position, byte_size, filenum,
          peer_id, bearing) = args
-        chunk = self.chunk_class(
-            chunk_id, torrent_position, byte_size,
-            filenum, file_offset, file_length,
-            peer_id, bearing, self.current_time(), self)
-        self.logger.debug("add_chunk(id=%s, begin=%s, end=%s)" % (chunk_id, chunk.begin, chunk.end))
-        self.add_chunk(chunk)
+        if filenum in self.files:
+            begin = torrent_position - self.files[filenum].offset
+            end = begin + byte_size
+            chunk = self.chunk_class(
+                chunk_id, begin, end, byte_size, filenum,
+                peer_id, bearing, self.current_time(), self)
+            self.files[filenum].add_chunk(chunk)
+        else:
+            print "ignoring chunk from undeclared file"
 
     def handle_stopped_playing_message(self, path, args, types, src, data):
         (chunk_id, filenum) = args
@@ -124,7 +139,9 @@ class Visualizer:
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()
         self.server = OscReceiver(VISUALIZER_PORT, log_filename)
-        self.server.add_method("/chunk", "iiiiiiif", self.handle_chunk_message)
+        self.server.add_method("/torrent", "i", self.handle_torrent_message)
+        self.server.add_method("/file", "iii", self.handle_file_message)
+        self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
 

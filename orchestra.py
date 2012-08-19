@@ -95,6 +95,7 @@ class Orchestra:
         self.sounds_by_id = {}
         self._playing = False
         self._quitting = False
+        self._informed_visualizer_about_torrent = False
         self.set_time_cursor(start_time)
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
@@ -343,15 +344,17 @@ class Orchestra:
 
     def visualize(self, chunk, player_id, bearing):
         if self.visualizer:
-            self._chunks_by_id[chunk["id"]] = chunk
+            if not self._informed_visualizer_about_torrent:
+                self._send_torrent_info_to_visualizer()
             file_info = self.tr_log.files[chunk["filenum"]]
+            if not "informed_visualizer" in file_info:
+                self._send_file_info_to_visualizer(chunk["filenum"])
+            self._chunks_by_id[chunk["id"]] = chunk
             self.visualizer.send("/chunk",
                                  chunk["id"],
                                  chunk["begin"],
                                  chunk["end"] - chunk["begin"],
                                  chunk["filenum"],
-                                 file_info["offset"],
-                                 file_info["length"],
                                  player_id,
                                  bearing)
 
@@ -375,6 +378,15 @@ class Orchestra:
         self.scheduler.enter(
             sound["duration"], 1,
             self.stopped_playing, [sound])
+
+    def _send_torrent_info_to_visualizer(self):
+        self._informed_visualizer_about_torrent = True
+        self.visualizer.send("/torrent", len(self.tr_log.files))
+
+    def _send_file_info_to_visualizer(self, filenum):
+        file_info = self.tr_log.files[filenum]
+        self.visualizer.send("/file", filenum, file_info["offset"], file_info["length"])
+        file_info["informed_visualizer"] = True
 
     def get_player_for_chunk(self, chunk):
         try:
