@@ -113,3 +113,5 @@ else:
     else:
         play()
         wait_for_play_completion_or_interruption()
+
+orchestra.shutdown()

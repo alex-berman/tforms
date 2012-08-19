@@ -436,6 +436,10 @@ class Orchestra:
             index += 1
         return len(self.score) - 1
 
+    def shutdown(self):
+        if self.visualizer:
+            self.visualizer.send("/shutdown")
+
 class Stopwatch:
     def __init__(self):
         self._running = False

@@ -71,6 +71,7 @@ class Visualizer:
         self.logger = logging.getLogger("visualizer")
         self.first_frame = True
         self.synth = SynthController()
+        self.exiting = False
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
@@ -117,11 +118,15 @@ class Visualizer:
     def stopped_playing(self, chunk_id, filenum):
         pass
 
+    def handle_shutdown(self):
+        self.exiting = True
+
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()
         self.server = OscReceiver(VISUALIZER_PORT, log_filename)
         self.server.add_method("/chunk", "iiiiiiif", self.handle_chunk_message)
         self.server.add_method("/stopped_playing", "ii", self.handle_stopped_playing_message)
+        self.server.add_method("/shutdown", "", self.handle_shutdown)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -138,6 +143,9 @@ class Visualizer:
         glMatrixMode(GL_MODELVIEW)
 
     def DrawGLScene(self):
+        if self.exiting:
+            sys.exit()
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -200,7 +208,7 @@ class Visualizer:
 
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
-            sys.exit()
+            self.exiting = True
 
     def playing_chunk(self, chunk, pan):
         self.orchestra.visualizing_chunk(chunk.id, pan)
