@@ -382,6 +382,7 @@ class Orchestra:
         self.segments_by_id[segment["id"]] = segment
         file_info = self.tr_log.files[segment["filenum"]]
         self.synth.play_segment(
+            segment["id"],
             segment["filenum"],
             segment["start_time_in_file"] / file_info["duration"],
             segment["end_time_in_file"] / file_info["duration"],

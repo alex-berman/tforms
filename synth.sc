@@ -62,22 +62,23 @@ OSCresponder.new(nil, "/load",
 
 OSCresponder.new(nil, "/play",
   { arg t, r, msg;
-	  var sound_id = msg[1];
-	  var begin = msg[2];
-	  var end = msg[3];
-	  var duration = msg[4];
-	  var pan = msg[5] * 2 - 1;
+	  var segment_id = msg[1];
+	  var sound_id = msg[2];
+	  var begin = msg[3];
+	  var end = msg[4];
+	  var duration = msg[5];
+	  var pan = msg[6] * 2 - 1;
 	  //"numSynths=".post; s.numSynths.postln;
-	  ~synths[sound_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
+	  ~synths[segment_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
 		  \begin, begin, \end, end, \duration, duration,
 		  \pan, pan]);
   }).add;
 
 OSCresponder.new(nil, "/pan",
   { arg t, r, msg;
-	  var sound_id = msg[1];
+	  var segment_id = msg[1];
 	  var pan = msg[2];
-	  var synth = ~synths[sound_id];
+	  var synth = ~synths[segment_id];
 	  synth.set(\pan, pan);
   }).add;
 

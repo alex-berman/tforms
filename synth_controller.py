@@ -11,11 +11,11 @@ class SynthController:
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
 
-    def play_segment(self, sound_id, begin, end, duration, pan):
-        self._send("/play", sound_id, begin, end, duration, pan)
+    def play_segment(self, segment_id, sound_id, begin, end, duration, pan):
+        self._send("/play", segment_id, sound_id, begin, end, duration, pan)
 
-    def pan(self, sound_id, pan):
-        self._send("/pan", sound_id, pan)
+    def pan(self, segment_id, pan):
+        self._send("/pan", segment_id, pan)
 
     def stop_all(self):
         self._send("/stop_all")
