@@ -2,29 +2,29 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector
+from vector import Vector, Angle
 import random
 import math
 from bezier import make_bezier
 import colorsys
 import copy
 
+RADIUS = 80
+CIRCLE_THICKNESS = 20
 CIRCLE_PRECISION = 50
-CIRCLE_THICKNESS = 10
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
-RADIUS = 50
-DAMPING = 0.95
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-FORCE_DIRECTED_PLACEMENT = True
+FORCE_DIRECTED_PLACEMENT = False
+DAMPING = 0.95
 
 class Segment(visualizer.Segment):
     def target_position(self):
         return self.f.completion_position(
-            float(self.end) / self.f.length,
+            self.playback_byte_cursor(),
             (self.f.inner_radius + self.f.radius) / 2)
 
     def is_playing(self):
@@ -61,9 +61,10 @@ class Segment(visualizer.Segment):
         return bezier(CURVE_PRECISION)
 
     def draw_cursor_line(self):
-        relative_position = float(self.begin) / self.f.length
-        self.draw_line(self.f.completion_position(relative_position, self.f.inner_radius),
-                       self.f.completion_position(relative_position, self.f.radius))
+        self.draw_line(self.f.completion_position(self.playback_byte_cursor(),
+                                                  self.f.inner_radius),
+                       self.f.completion_position(self.playback_byte_cursor(),
+                                                  self.f.radius))
 
     def draw_line(self, p, q):
         glBegin(GL_LINES)
@@ -72,22 +73,29 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def draw_playing(self):
-        num_vertices = int(CIRCLE_PRECISION * float(self.end - self.begin) / self.byte_size)
-        num_vertices = max(num_vertices, 2)
-        glLineWidth(1)
+        # TODO: proper fade-out after playback ended
+        trace_age = min(self.duration, 1.0)
+        previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / self.duration * self.byte_size
+        self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor())
+
+    def draw_gradient(self, source, target):
+        source_angle = Angle(self.f.byte_cursor_to_angle(source))
+        target_angle = Angle(self.f.byte_cursor_to_angle(target))
+        angular_distance = target_angle - source_angle
+        num_vertices = CIRCLE_PRECISION
         glBegin(GL_POLYGON)
 
         for i in range(num_vertices):
-            byte_position = self.begin + self.byte_size * float(i) / (num_vertices-1)
-            p = self.f.completion_position(byte_position / self.f.length, self.f.inner_radius)
+            angle = source_angle + angular_distance * (float(i) / (num_vertices-1))
+            p = self.f.completion_position_by_angle(angle.get(), self.f.inner_radius)
             glColor3f(1,
                       float(num_vertices-i-1) / (num_vertices-1),
                       float(num_vertices-i-1) / (num_vertices-1)
                       )
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
-            byte_position = self.begin + self.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.f.completion_position(byte_position / self.f.length, self.f.radius)
+            angle = source_angle + angular_distance * (float(num_vertices-i-1) / (num_vertices-1))
+            p = self.f.completion_position_by_angle(angle.get(), self.f.radius)
             glColor3f(1,
                       float(i) / (num_vertices-1),
                       float(i) / (num_vertices-1)
@@ -183,8 +191,7 @@ class File(visualizer.File):
         self.velocity = Vector(0,0)
 
     def add_segment(self, segment):
-        pan = self.completion_position(
-            float(segment.begin) / self.length, self.radius).x / self.visualizer.width
+        pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
         segment.departure_position = segment.peer_position()
         self.gatherer.add(segment)
 
@@ -211,11 +218,11 @@ class File(visualizer.File):
 
         for i in range(num_vertices):
             byte_position = segment.begin + segment.byte_size * float(i) / (num_vertices-1)
-            p = self.completion_position(byte_position / self.length, self.inner_radius)
+            p = self.completion_position(byte_position, self.inner_radius)
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             byte_position = segment.begin + segment.byte_size * float(num_vertices-i-1) / (num_vertices-1)
-            p = self.completion_position(byte_position / self.length, self.radius)
+            p = self.completion_position(byte_position, self.radius)
             glVertex2f(p.x, p.y)
 
         glEnd()
@@ -226,22 +233,28 @@ class File(visualizer.File):
         glBegin(GL_LINE_LOOP)
         for i in range(num_vertices):
             byte_position = self.length * float(i) / (num_vertices-1)
-            p = self.completion_position(byte_position / self.length, self.inner_radius)
+            p = self.completion_position(byte_position, self.inner_radius)
             glVertex2f(p.x, p.y)
         glEnd()
 
         glBegin(GL_LINE_LOOP)
         for i in range(num_vertices):
             byte_position = self.length * float(i) / (num_vertices-1)
-            p = self.completion_position(byte_position / self.length, self.radius)
+            p = self.completion_position(byte_position, self.radius)
             glVertex2f(p.x, p.y)
         glEnd()
 
-    def completion_position(self, relative_position, radius):
-        angle = 2 * math.pi * relative_position
+    def completion_position(self, byte_cursor, radius):
+        angle = self.byte_cursor_to_angle(byte_cursor)
+        return self.completion_position_by_angle(angle, radius)
+
+    def completion_position_by_angle(self, angle, radius):
         x = self.visualizer.x_offset + self.position.x + radius * math.cos(angle)
         y = self.visualizer.y_offset + self.position.y + radius * math.sin(angle)
         return Vector(x, y)
+
+    def byte_cursor_to_angle(self, byte_cursor):
+        return 2 * math.pi * float(byte_cursor) / self.length
 
 class Puzzle(visualizer.Visualizer):
     def __init__(self, args):

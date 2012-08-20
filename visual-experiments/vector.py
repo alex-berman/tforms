@@ -32,6 +32,10 @@ class Angle:
         while x > 2*math.pi:
             x -= 2*math.pi
         return x
+
+    def __repr__(self):
+        return "Angle(%s)" % self.value
+
         
 class Vector:
     def __init__(self, x, y):

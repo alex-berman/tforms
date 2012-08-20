@@ -89,6 +89,9 @@ class Segment(Chunk):
     def relative_age(self):
         return self.age() / self.duration
 
+    def playback_byte_cursor(self):
+        return self.begin + min(self.relative_age(), 1) * self.byte_size
+
     def __str__(self):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
             self.id, self.begin, self.end, self.filenum, self.duration)
@@ -185,8 +188,8 @@ class Visualizer:
 
     def add_segment(self, segment):
         f = self.files[segment.filenum]
-        f.add_segment(segment)
         segment.f = f
+        f.add_segment(segment)
 
         if not segment.peer_id in self.peers:
             self.peers[segment.peer_id] = self.peer_class(self)
