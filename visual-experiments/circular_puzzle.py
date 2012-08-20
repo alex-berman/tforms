@@ -18,6 +18,7 @@ DAMPING = 0.95
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
+SEGMENT_DECAY_TIME = 1.0
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -27,6 +28,12 @@ class Segment(visualizer.Segment):
 
     def is_playing(self):
         return self.relative_age() < 1
+
+    def decay_time(self):
+        return self.age() - self.duration
+
+    def outdated(self):
+        return (self.age() - self.duration) > SEGMENT_DECAY_TIME
 
     def draw_curve(self):
         glBegin(GL_LINE_STRIP)
@@ -103,7 +110,7 @@ class Peer(visualizer.Peer):
         self.segments[segment.id] = segment
 
     def update(self):
-        outdated = filter(lambda segment_id: self.segments[segment_id].relative_age() > 1,
+        outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
                           self.segments)
         for segment_id in outdated:
             del self.segments[segment_id]

@@ -83,8 +83,11 @@ class Segment(Chunk):
                  arrival_time, visualizer)
         self.duration = duration
 
+    def age(self):
+        return time.time() - self.arrival_time
+
     def relative_age(self):
-        return (time.time() - self.arrival_time) / self.duration
+        return self.age() / self.duration
 
     def __str__(self):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
