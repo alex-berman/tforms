@@ -102,7 +102,6 @@ class File(visualizer.File):
 class Simple(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, file_class=File)
-        self.files = {}
 
     def render(self):
         for f in self.files.values():

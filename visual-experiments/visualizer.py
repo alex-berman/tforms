@@ -90,20 +90,35 @@ class Segment(Chunk):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
             self.id, self.begin, self.end, self.filenum, self.duration)
 
+class Peer:
+    def __init__(self, visualizer):
+        self.visualizer = visualizer
+
+    def add_segment(self, segment):
+        pass
+
 class Visualizer:
-    def __init__(self, args, file_class=File, chunk_class=Chunk, segment_class=Segment):
+    def __init__(self, args,
+                 file_class=File,
+                 chunk_class=Chunk,
+                 segment_class=Segment,
+                 peer_class=Peer):
         self.file_class = file_class
         self.chunk_class = chunk_class
         self.segment_class = segment_class
+        self.peer_class = peer_class
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
         self.show_fps = args.show_fps
         self.export = args.export
         self.logger = logging.getLogger("visualizer")
+        self.files = {}
+        self.peers = {}
         self.first_frame = True
         self.synth = SynthController()
         self.exiting = False
+        self.time_increment = 0
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
@@ -161,9 +176,20 @@ class Visualizer:
             segment = self.segment_class(
                 segment_id, begin, end, byte_size, filenum,
                 peer_id, bearing, duration, self.current_time(), self)
-            self.files[filenum].add_segment(segment)
+            self.add_segment(segment)
         else:
-            print "ignoring chunk from undeclared file %s" % filenum
+            print "ignoring segment from undeclared file %s" % filenum
+
+    def add_segment(self, segment):
+        f = self.files[segment.filenum]
+        f.add_segment(segment)
+        segment.f = f
+
+        if not segment.peer_id in self.peers:
+            self.peers[segment.peer_id] = self.peer_class(self)
+        peer = self.peers[segment.peer_id]
+        peer.add_segment(segment)
+        segment.peer = peer
 
     def handle_shutdown(self):
         self.exiting = True
