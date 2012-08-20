@@ -76,15 +76,20 @@ class Segment(visualizer.Segment):
         trace_age = min(self.duration, 0.2)
         previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
             self.duration * self.byte_size
-        self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor())
+        if self.relative_age() < 1:
+            opacity = 1
+        else:
+            opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
+        self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
 
-    def draw_gradient(self, source, target):
+    def draw_gradient(self, source, target, opacity):
         source_angle = Angle(self.f.byte_cursor_to_angle(source))
         target_angle = Angle(self.f.byte_cursor_to_angle(target))
         angular_distance = target_angle - source_angle
 
         source_color = Vector3d(1, 1, 1)
         target_color = Vector3d(1, 0, 0)
+        target_color += (source_color - target_color) * (1-opacity)
         num_vertices = CIRCLE_PRECISION
         glBegin(GL_POLYGON)
 
