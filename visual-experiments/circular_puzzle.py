@@ -19,7 +19,7 @@ CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-FORCE_DIRECTED_PLACEMENT = False
+FORCE_DIRECTED_PLACEMENT = True
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -251,11 +251,10 @@ class Puzzle(visualizer.Visualizer):
                                        segment_class=Segment)
         self.x_offset = 0
         self.y_offset = 0
-        self.x_offset_smoother = Smoother(.5)
-        self.y_offset_smoother = Smoother(.5)
         self.segments = {}
         if FORCE_DIRECTED_PLACEMENT:
             self.force_directed_placer = ForceDirectedPlacer(self)
+            self.centralizer = Centralizer(self)
 
     def render(self):
         glEnable(GL_LINE_SMOOTH)
@@ -270,18 +269,9 @@ class Puzzle(visualizer.Visualizer):
     def draw_gathered_segments(self):
         if FORCE_DIRECTED_PLACEMENT:
             self.force_directed_placer.reposition_files()
-            self.center()
+            self.centralizer.center()
         for f in self.files.values():
             f.draw()
-
-    def center(self):
-        if len(self.files) > 0:
-            new_x_offset = self.width / 2 - (min([f.position.x for f in self.files.values()]) +
-                                             max([f.position.x for f in self.files.values()])) / 2
-            new_y_offset = self.height / 2 - (min([f.position.y for f in self.files.values()]) +
-                                              max([f.position.y for f in self.files.values()])) / 2
-            self.x_offset = self.x_offset_smoother.smooth(new_x_offset, self.time_increment)
-            self.y_offset = self.y_offset_smoother.smooth(new_y_offset, self.time_increment)
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -345,6 +335,25 @@ class ForceDirectedPlacer:
     def apply_hooke_attraction(self, f, other):
         d = other - f.position
         f.force += d * 0.0001
+
+class Centralizer:
+    def __init__(self, visualizer):
+        self.visualizer = visualizer
+        self.x_offset_smoother = Smoother(.5)
+        self.y_offset_smoother = Smoother(.5)
+
+    def center(self):
+        if len(self.visualizer.files) > 0:
+            new_x_offset = self.visualizer.width / 2 - \
+                (min([f.position.x for f in self.visualizer.files.values()]) +
+                 max([f.position.x for f in self.visualizer.files.values()])) / 2
+            new_y_offset = self.visualizer.height / 2 - \
+                (min([f.position.y for f in self.visualizer.files.values()]) +
+                 max([f.position.y for f in self.visualizer.files.values()])) / 2
+            self.x_offset = self.x_offset_smoother.smooth(
+                new_x_offset, self.visualizer.time_increment)
+            self.y_offset = self.y_offset_smoother.smooth(
+                new_y_offset, self.visualizer.time_increment)
 
 class FreePositionLocator:
     def __init__(self, visualizer):
