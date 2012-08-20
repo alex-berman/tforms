@@ -254,6 +254,8 @@ class Puzzle(visualizer.Visualizer):
         self.x_offset_smoother = Smoother(.5)
         self.y_offset_smoother = Smoother(.5)
         self.segments = {}
+        if FORCE_DIRECTED_PLACEMENT:
+            self.force_directed_placer = ForceDirectedPlacer(self)
 
     def render(self):
         glEnable(GL_LINE_SMOOTH)
@@ -267,17 +269,10 @@ class Puzzle(visualizer.Visualizer):
 
     def draw_gathered_segments(self):
         if FORCE_DIRECTED_PLACEMENT:
-            self.force_direct_placement()
+            self.force_directed_placer.reposition_files()
             self.center()
         for f in self.files.values():
             f.draw()
-
-    def force_direct_placement(self):
-        for f in self.files.values():
-            f.velocity = (f.velocity + self.repositioning_force(f)) * DAMPING
-            f.velocity.limit(3.0)
-        for f in self.files.values():
-            f.position += f.velocity
 
     def center(self):
         if len(self.files) > 0:
@@ -303,6 +298,20 @@ class Puzzle(visualizer.Visualizer):
         return Vector(random.uniform(self.scale(RADIUS), self.width - self.scale(RADIUS)),
                       random.uniform(self.scale(RADIUS), self.height - self.scale(RADIUS)))
 
+    def scale(self, unscaled):
+        return float(unscaled) / 640 * self.width
+
+class ForceDirectedPlacer:
+    def __init__(self, visualizer):
+        self.visualizer = visualizer
+
+    def reposition_files(self):
+        for f in self.visualizer.files.values():
+            f.velocity = (f.velocity + self.repositioning_force(f)) * DAMPING
+            f.velocity.limit(3.0)
+        for f in self.visualizer.files.values():
+            f.position += f.velocity
+
     def repositioning_force(self, f):
         f.force = Vector(0,0)
         self.repel_from_and_attract_to_other_files(f)
@@ -310,13 +319,13 @@ class Puzzle(visualizer.Visualizer):
         return f.force
 
     def repel_from_and_attract_to_other_files(self, f):
-        for other in self.files.values():
+        for other in self.visualizer.files.values():
             if other != f:
                 self.apply_coulomb_repulsion(f, other.position)
                 self.apply_hooke_attraction(f, other.position)
 
     def attract_to_peers(self, f):
-        for peer in self.peers.values():
+        for peer in self.visualizer.peers.values():
             if f.filenum in [segment.filenum for segment in peer.segments.values()]:
                 self.attract_to_peer(f, peer)
 
@@ -336,9 +345,6 @@ class Puzzle(visualizer.Visualizer):
     def apply_hooke_attraction(self, f, other):
         d = other - f.position
         f.force += d * 0.0001
-
-    def scale(self, unscaled):
-        return float(unscaled) / 640 * self.width
 
 class FreePositionLocator:
     def __init__(self, visualizer):
