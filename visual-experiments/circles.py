@@ -5,7 +5,7 @@ from collections import OrderedDict
 import math
 import random
 from boid import Boid
-from vector import Vector
+from vector import Vector2d
 
 CIRCLE_PRECISION = 10
 CHUNK_SIZE_FACTOR = 0.000001
@@ -39,13 +39,13 @@ class File:
         else:
             x = self.visualizer.width
         y = chunk.height * self.visualizer.height
-        return Vector(x, y)
+        return Vector2d(x, y)
 
     def get_arrival_position(self, chunk):
         angle = 2 * math.pi * chunk.begin / chunk.file_length
         x = self.x + self.radius * math.cos(angle)
         y = self.y + self.radius * math.sin(angle)
-        return Vector(x, y)
+        return Vector2d(x, y)
         
 class Circles(Visualizer):
     def __init__(self, args):

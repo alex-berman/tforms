@@ -1,10 +1,10 @@
 import copy
-from vector import Vector
+from vector import Vector2d
 
 class Boid:
     def __init__(self, l, maxspeed, maxforce):
         self.target = None
-        self.vel = Vector(0,0)
+        self.vel = Vector2d(0,0)
         self.loc = copy.copy(l)
         self.maxspeed = maxspeed
         self.maxforce = maxforce
@@ -30,5 +30,5 @@ class Boid:
             steer = desired - self.vel
             steer.limit(self.maxforce)
         else:
-            steer = Vector(0,0)
+            steer = Vector2d(0,0)
         return steer

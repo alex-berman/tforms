@@ -1,5 +1,6 @@
 import liblo
 import pickle
+import traceback, sys
 
 class OscReceiver(liblo.Server):
     def __init__(self, port, log_filename=None):
@@ -37,3 +38,20 @@ class OscReceiver(liblo.Server):
                 self.serve()
             else:
                 return
+
+    def add_method(self, path, typespec, callback):
+        liblo.Server.add_method(self, path, typespec,
+                                self._fire_callback_with_exception_handler, callback)
+
+    def _fire_callback_with_exception_handler(self, path, args, types, src, callback):
+        data = None
+        try:
+            callback(path, args, types, src, data)
+        except Exception as err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print >> sys.stderr, "".join(traceback.format_exception(exc_type, exc_value,
+                                                                    exc_traceback))            
+            raise err
+
+
+

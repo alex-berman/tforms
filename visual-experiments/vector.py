@@ -38,59 +38,90 @@ class Angle:
 
         
 class Vector:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    DIMENSIONS = {"x": 0,
+                  "y": 1,
+                  "z": 2}
+
+    def __init__(self, n, v):
+        self.n = n
+        self.v = v
 
     def __eq__(self, other):
         try:
-            return self.x == other.x and self.y == other.y
-        except AttributeError:
+            return all([self[i] == other[i]
+                        for i in range(self.n)])
+        except (AttributeError, TypeError):
             return False
+
+    def __getitem__(self, i):
+        return self.v[i]
+
+    def __setitem__(self, i, value):
+        self.v[i] = value
+
+    def __getattr__(self, attr):
+        try:
+            i = self.DIMENSIONS[attr]
+            return self.v[i]
+        except KeyError:
+            raise AttributeError
+
+    def __setattr__(self, attr, value):
+        try:
+            i = self.DIMENSIONS[attr]
+            self.__dict__["v"][i] = value
+        except KeyError:
+            self.__dict__[attr] = value
 
     def __ne__(self, other):
         return not (self == other)
 
     def __add__(self, other):
-        return Vector(self.x + other.x,
-                      self.y + other.y)
+        return Vector(self.n,
+                      [self[i] + other[i]
+                       for i in range(self.n)])
 
     def __radd__(self, value):
-        return Vector(self.x + value,
-                      self.y + value)
+        return Vector(self.n,
+                      [self[i] + value
+                       for i in range(self.n)])
     
     def __sub__(self, other):
-        return Vector(self.x - other.x,
-                      self.y - other.y)
+        return Vector(self.n,
+                      [self[i] - other[i]
+                       for i in range(self.n)])
 
     def __mul__(self, factor):
-        return Vector(self.x * factor,
-                      self.y * factor)
+        return Vector(self.n,
+                      [self[i] * factor
+                       for i in range(self.n)])
 
     def __div__(self, factor):
-        return Vector(self.x / factor,
-                      self.y / factor)
+        return Vector(self.n,
+                      [self[i] / factor
+                       for i in range(self.n)])
 
     def __imul__(self, factor):
-        self.x *= factor
-        self.y *= factor
+        for i in range(self.n):
+            self[i] *= other[i]
         return self
 
     def __iadd__(self, other):
-        self.x += other.x
-        self.y += other.y
+        for i in range(self.n):
+            self[i] += other[i]
         return self
 
     def __neg__(self):
         return self * (-1)
 
     def mag(self):
-        return math.sqrt(self.x * self.x + self.y * self.y)
+        return math.sqrt(sum([self[i]*self[i]
+                              for i in range(self.n)]))
 
     def normalize(self):
         m = self.mag()
-        self.x /= m
-        self.y /= m
+        for i in range(self.n):
+            self[i] /= m
 
     def limit(self, desired_magnitude):
         m = self.mag()
@@ -98,17 +129,25 @@ class Vector:
             self *= desired_magnitude / m
 
     def set(self, other):
-        self.x = other.x
-        self.y = other.y
+        for i in range(self.n):
+            self[i] = other[i]
 
     def angle(self):
-        return Angle(math.atan2(self.y, self.x))
+        return Angle(math.atan2(self.y(), self.x()))
 
     def __repr__(self):
-        return 'Vector(%s, %s)' % (self.x, self.y)
+        return 'Vector(%s, %s)' % (self.n, self.v)
 
-class DirectionalVector(Vector):
+class Vector2d(Vector):
+    def __init__(self, x, y):
+        Vector.__init__(self, 2, [x,y])
+
+class Vector3d(Vector):
+    def __init__(self, x, y, z):
+        Vector.__init__(self, 3, [x,y,z])
+
+class DirectionalVector(Vector2d):
     def __init__(self, angle, magnitude):
-        Vector.__init__(self,
-                        math.cos(angle) * magnitude,
-                        math.sin(angle) * magnitude)
+        Vector2d.__init__(self,
+                          math.cos(angle) * magnitude,
+                          math.sin(angle) * magnitude)

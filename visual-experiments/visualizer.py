@@ -6,10 +6,14 @@ import liblo
 import time
 import argparse
 import collections
-from vector import Vector
+from vector import Vector2d
 import logging
 
-sys.path.append(os.path.dirname(__file__)+"/..")
+dirname = os.path.dirname(__file__)
+if dirname:
+    sys.path.append(dirname + "/..")
+else:
+    sys.path.append("..")
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
@@ -197,7 +201,7 @@ class Visualizer:
         peer.add_segment(segment)
         segment.peer = peer
 
-    def handle_shutdown(self):
+    def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
 
     def setup_osc(self, log_filename):
@@ -301,20 +305,25 @@ class Visualizer:
         else:
             return time.time()
 
+    def set_color(self, color_vector):
+        glColor3f(color_vector[0],
+                  color_vector[1],
+                  color_vector[2])
+
     @staticmethod
     def bearing_to_border_position(bearing, width, height):
         total_border_size = width*2 + height*2
         peer_border_position = bearing * total_border_size
         if peer_border_position < width:
-            return Vector(peer_border_position, 0)
+            return Vector2d(peer_border_position, 0)
         peer_border_position -= width
         if peer_border_position < height:
-            return Vector(width, peer_border_position)
+            return Vector2d(width, peer_border_position)
         peer_border_position -= height
         if peer_border_position < width:
-            return Vector(width - peer_border_position, height)
+            return Vector2d(width - peer_border_position, height)
         peer_border_position -= width
-        return Vector(0, height - peer_border_position)
+        return Vector2d(0, height - peer_border_position)
 
 
 def run(visualizer_class):

@@ -2,7 +2,7 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector, Angle
+from vector import Vector2d, Vector3d, Angle
 import random
 import math
 from bezier import make_bezier
@@ -73,33 +73,34 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def draw_playing(self):
-        # TODO: proper fade-out after playback ended
-        trace_age = min(self.duration, 1.0)
-        previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / self.duration * self.byte_size
+        trace_age = min(self.duration, 0.2)
+        previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
+            self.duration * self.byte_size
         self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor())
 
     def draw_gradient(self, source, target):
         source_angle = Angle(self.f.byte_cursor_to_angle(source))
         target_angle = Angle(self.f.byte_cursor_to_angle(target))
         angular_distance = target_angle - source_angle
+
+        source_color = Vector3d(1, 1, 1)
+        target_color = Vector3d(1, 0, 0)
         num_vertices = CIRCLE_PRECISION
         glBegin(GL_POLYGON)
 
         for i in range(num_vertices):
             angle = source_angle + angular_distance * (float(i) / (num_vertices-1))
             p = self.f.completion_position_by_angle(angle.get(), self.f.inner_radius)
-            glColor3f(1,
-                      float(num_vertices-i-1) / (num_vertices-1),
-                      float(num_vertices-i-1) / (num_vertices-1)
-                      )
+            self.visualizer.set_color(source_color + \
+                                          (target_color-source_color) * \
+                                          (float(i) / (num_vertices-1)))
             glVertex2f(p.x, p.y)
         for i in range(num_vertices):
             angle = source_angle + angular_distance * (float(num_vertices-i-1) / (num_vertices-1))
             p = self.f.completion_position_by_angle(angle.get(), self.f.radius)
-            glColor3f(1,
-                      float(i) / (num_vertices-1),
-                      float(i) / (num_vertices-1)
-                      )
+            self.visualizer.set_color(source_color + \
+                                          (target_color-source_color) * \
+                                          (float(num_vertices-i-1) / (num_vertices-1)))
             glVertex2f(p.x, p.y)
 
         glEnd()
@@ -188,7 +189,7 @@ class File(visualizer.File):
         self.gatherer = Gatherer()
         self.inner_radius = self.visualizer.scale(RADIUS - CIRCLE_THICKNESS)
         self.radius = self.visualizer.scale(RADIUS)
-        self.velocity = Vector(0,0)
+        self.velocity = Vector2d(0,0)
 
     def add_segment(self, segment):
         pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
@@ -251,7 +252,7 @@ class File(visualizer.File):
     def completion_position_by_angle(self, angle, radius):
         x = self.visualizer.x_offset + self.position.x + radius * math.cos(angle)
         y = self.visualizer.y_offset + self.position.y + radius * math.sin(angle)
-        return Vector(x, y)
+        return Vector2d(x, y)
 
     def byte_cursor_to_angle(self, byte_cursor):
         return 2 * math.pi * float(byte_cursor) / self.length
@@ -298,8 +299,8 @@ class Puzzle(visualizer.Visualizer):
             return FreePositionLocator(self).free_position()
 
     def random_position(self):
-        return Vector(random.uniform(self.scale(RADIUS), self.width - self.scale(RADIUS)),
-                      random.uniform(self.scale(RADIUS), self.height - self.scale(RADIUS)))
+        return Vector2d(random.uniform(self.scale(RADIUS), self.width - self.scale(RADIUS)),
+                        random.uniform(self.scale(RADIUS), self.height - self.scale(RADIUS)))
 
     def scale(self, unscaled):
         return float(unscaled) / 640 * self.width
@@ -316,7 +317,7 @@ class ForceDirectedPlacer:
             f.position += f.velocity
 
     def repositioning_force(self, f):
-        f.force = Vector(0,0)
+        f.force = Vector2d(0,0)
         self.repel_from_and_attract_to_other_files(f)
         self.attract_to_peers(f)
         return f.force
@@ -339,8 +340,8 @@ class ForceDirectedPlacer:
         d = f.position - other
         distance = d.mag()
         if distance == 0:
-            f.force += Vector(random.uniform(0.0, 0.1),
-                              random.uniform(0.0, 0.1))
+            f.force += Vector2d(random.uniform(0.0, 0.1),
+                                random.uniform(0.0, 0.1))
         else:
             d.normalize()
             f.force += d / pow(distance, 2) * 1000

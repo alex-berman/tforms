@@ -2,7 +2,7 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector, DirectionalVector, Angle
+from vector import Vector2d, DirectionalVector, Angle
 import copy
 import math
 import random
@@ -13,10 +13,10 @@ JOINT_SIZE = 3.0 / 640
 INNER_MARGIN = 20.0 / 640
 OUTER_MARGIN = 40
 
-class JointPosition(Vector):
+class JointPosition(Vector2d):
     def __init__(self, joint):
         self.joint = joint
-        Vector.__init__(self, 0,0)
+        Vector2d.__init__(self, 0,0)
 
     def __repr__(self):
         return 'JointPosition(%s, %s, %s)' % (self.joint, self.x, self.y)
@@ -97,7 +97,7 @@ class Chunk(visualizer.Chunk):
                 return True
 
     def pick_random_target(self):
-        self.joints["begin"].target_position = Vector(
+        self.joints["begin"].target_position = Vector2d(
             random.uniform(self.visualizer.width * INNER_MARGIN,
                            self.visualizer.width * (1 - INNER_MARGIN*2)),
             random.uniform(self.visualizer.height * INNER_MARGIN,
@@ -110,10 +110,10 @@ class Chunk(visualizer.Chunk):
         else:
             x = self.visualizer.width + OUTER_MARGIN
         y = self.height * self.visualizer.height
-        return Vector(x, y)
+        return Vector2d(x, y)
 
     def update(self):
-        self.force = Vector(0,0)
+        self.force = Vector2d(0,0)
         self.attract_to_neighbours()
         self.force.limit(6.0)
         self.position += self.force

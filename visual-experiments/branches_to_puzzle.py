@@ -3,7 +3,7 @@ from gatherer import Gatherer
 import time
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector
+from vector import Vector2d
 import random
 import math
 from bezier import make_bezier
@@ -40,7 +40,7 @@ class Branch:
     def target_position(self):
         x = self.f.byte_to_coord(self.cursor)
         y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
-        return Vector(x, y)
+        return Vector2d(x, y)
 
     def update(self):
         for chunk in self.playing_chunks.values():
@@ -160,8 +160,8 @@ class Peer:
             glVertex2f(x, y)
         glEnd()
         if branch.age() < BRANCH_SUSTAIN:
-            self.draw_line(Vector(target.x, target.y-ARRIVED_HEIGHT/2),
-                           Vector(target.x, target.y+ARRIVED_HEIGHT/2))
+            self.draw_line(Vector2d(target.x, target.y-ARRIVED_HEIGHT/2),
+                           Vector2d(target.x, target.y+ARRIVED_HEIGHT/2))
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -227,7 +227,7 @@ class File:
         else:
             x = self.visualizer.width
         y = chunk.height * self.visualizer.height
-        return Vector(x, y)
+        return Vector2d(x, y)
 
 class Puzzle(Visualizer):
     def __init__(self, args):
