@@ -19,6 +19,7 @@ CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
+FORCE_DIRECTED_PLACEMENT = False
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -175,7 +176,7 @@ class Smoother:
 class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
-        self.position = self.visualizer.place_new_circle()
+        self.position = self.visualizer.position_for_new_file()
         self.gatherer = Gatherer()
         self.inner_radius = self.visualizer.scale(RADIUS - CIRCLE_THICKNESS)
         self.radius = self.visualizer.scale(RADIUS)
@@ -265,13 +266,18 @@ class Puzzle(visualizer.Visualizer):
         glDisable(GL_BLEND)
 
     def draw_gathered_segments(self):
+        if FORCE_DIRECTED_PLACEMENT:
+            self.force_direct_placement()
+            self.center()
+        for f in self.files.values():
+            f.draw()
+
+    def force_direct_placement(self):
         for f in self.files.values():
             f.velocity = (f.velocity + self.repositioning_force(f)) * DAMPING
             f.velocity.limit(3.0)
         for f in self.files.values():
             f.position += f.velocity
-            f.draw()
-        self.center()
 
     def center(self):
         if len(self.files) > 0:
@@ -287,8 +293,11 @@ class Puzzle(visualizer.Visualizer):
             peer.update()
             peer.draw()
 
-    def place_new_circle(self):
-        return self.random_position()
+    def position_for_new_file(self):
+        if len(self.files) == 0 or FORCE_DIRECTED_PLACEMENT:
+            return self.random_position()
+        else:
+            return FreePositionLocator(self).free_position()
 
     def random_position(self):
         return Vector(random.uniform(self.scale(RADIUS), self.width - self.scale(RADIUS)),
@@ -330,6 +339,21 @@ class Puzzle(visualizer.Visualizer):
 
     def scale(self, unscaled):
         return float(unscaled) / 640 * self.width
+
+class FreePositionLocator:
+    def __init__(self, visualizer):
+        self.visualizer = visualizer
+
+    def free_position(self):
+        return self.pick_freest_random_position()
+
+    def pick_freest_random_position(self):
+        positions = [self.visualizer.random_position() for i in range(10)]
+        return max(positions, key=self.distance_to_nearest_file)
+
+    def distance_to_nearest_file(self, position):
+        return min([(position - other.position).mag()
+                    for other in self.visualizer.files.values()])
 
 if __name__ == '__main__':
     visualizer.run(Puzzle)
