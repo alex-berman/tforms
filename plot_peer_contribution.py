@@ -6,7 +6,6 @@ import colors
 from PIL import Image
 sys.path.insert(0, "visual-experiments")
 from gatherer import Gatherer
-from visualizer import Chunk
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir", type=str)
