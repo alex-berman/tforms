@@ -22,7 +22,7 @@ Depending on your local settings, you may also need to start and configure Jack 
 
 Replay the session:
 
-./play.py -s sessions/120715-101708/ --predecoded
+./play.py sessions/120715-101708/ --predecoded
 
 Wait until SC has displayed that it has loaded all wav files. Then press Play (or space) in the GUI.
 

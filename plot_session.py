@@ -1,21 +1,21 @@
 #!/usr/bin/python
 
 from tr_log_reader import *
-from optparse import OptionParser
+from argparse import ArgumentParser
 import subprocess
 
-parser = OptionParser()
-parser.add_option("-s", "--sessiondir", dest="sessiondir")
-parser.add_option("-t", "--torrent", dest="torrentname", default="")
-parser.add_option("-n", "--filenum", dest="filenum", type="int")
-parser.add_option("--splitfiles", dest="splitfiles", action="store_true")
-parser.add_option("--splitpeers", dest="splitpeers", action="store_true")
-parser.add_option("--datatitles", dest="datatitles", action="store_true")
-parser.add_option("--png", dest="save_png", action="store_true")
-parser.add_option("--plot", dest="plot",
-                  choices=["chunks", "speed"],
-                  default="chunks")
-(options, args) = parser.parse_args()
+parser = ArgumentParser()
+parser.add_argument("sessiondir", type=str)
+parser.add_argument("-t", "--torrent", dest="torrentname", default="")
+parser.add_argument("-n", "--filenum", dest="filenum", type=int)
+parser.add_argument("--splitfiles", dest="splitfiles", action="store_true")
+parser.add_argument("--splitpeers", dest="splitpeers", action="store_true")
+parser.add_argument("--datatitles", dest="datatitles", action="store_true")
+parser.add_argument("--png", dest="save_png", action="store_true")
+parser.add_argument("--plot", dest="plot",
+                    choices=["chunks", "speed"],
+                    default="chunks")
+options = parser.parse_args()
 
 logfilename = "%s/session.log" % options.sessiondir
 log = TrLogReader(logfilename, options.torrentname, options.filenum).get_log()

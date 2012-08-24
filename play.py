@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from tr_log_reader import TrLogReader
-from optparse import OptionParser
+from argparse import ArgumentParser
 import logging
 import Queue
 import threading
@@ -15,22 +15,22 @@ logging.basicConfig(filename="play.log",
                     filemode="w")
 logger = logging.getLogger("play")
 
-parser = OptionParser()
-parser.add_option("--rt", action="store_true", dest="realtime")
-parser.add_option("-s", "--sessiondir", dest="sessiondir")
-parser.add_option("-t", "--torrent", dest="torrentname", default="")
-parser.add_option("-z", "--timefactor", dest="timefactor", type="float", default=1)
-parser.add_option("--start", dest="start_time", type="float", default=0)
-parser.add_option("-q", "--quiet", action="store_true", dest="quiet")
-parser.add_option("--pretend-sequential", action="store_true", dest="pretend_sequential")
-parser.add_option("--gui", action="store_true", dest="gui_enabled")
-parser.add_option("--predecode", action="store_true", dest="predecode", default=True)
-parser.add_option("--download-location", dest="download_location", default="../../Downloads")
-parser.add_option("--visualize", dest="visualizer_enabled", action="store_true")
-parser.add_option("--visualizer", dest="visualizer")
-parser.add_option("--loop", dest="loop", action="store_true")
-parser.add_option("--osc-log", dest="osc_log")
-(options, args) = parser.parse_args()
+parser = ArgumentParser()
+parser.add_argument("sessiondir")
+parser.add_argument("--rt", action="store_true", dest="realtime")
+parser.add_argument("-t", "--torrent", dest="torrentname", default="")
+parser.add_argument("-z", "--timefactor", dest="timefactor", type=float, default=1)
+parser.add_argument("--start", dest="start_time", type=float, default=0)
+parser.add_argument("-q", "--quiet", action="store_true", dest="quiet")
+parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
+parser.add_argument("--gui", action="store_true", dest="gui_enabled")
+parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
+parser.add_argument("--download-location", dest="download_location", default="../../Downloads")
+parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
+parser.add_argument("--visualizer", dest="visualizer")
+parser.add_argument("--loop", dest="loop", action="store_true")
+parser.add_argument("--osc-log", dest="osc_log")
+options = parser.parse_args()
 
 if options.realtime:
     session = Session(realtime=True)
