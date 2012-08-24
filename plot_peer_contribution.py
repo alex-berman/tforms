@@ -2,8 +2,6 @@
 
 from tr_log_reader import *
 from argparse import ArgumentParser
-import subprocess
-import matplotlib
 import colors
 from PIL import Image
 sys.path.insert(0, "visual-experiments")
