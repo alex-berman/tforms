@@ -13,7 +13,7 @@ parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-n", "--filenum", dest="filenum", type=int)
 parser.add_argument("-width", type=int, default=500)
 parser.add_argument("-height", type=int, default=500)
-parser.add_argument("-output", default="progress.png")
+parser.add_argument("-output", default="peer_contribution.png")
 options = parser.parse_args()
 
 logfilename = "%s/session.log" % options.sessiondir
@@ -22,6 +22,7 @@ print >> sys.stderr, "found %d chunks" % len(log.chunks)
 
 total_size = max([chunk["end"] for chunk in log.chunks])
 
+def time_to_x(t): return int(t / log.lastchunktime() * options.width)
 def byte_to_y(byte_pos): return min(int(float(byte_pos) / total_size * options.height), options.height-1)
 
 class Piece:
@@ -44,9 +45,7 @@ def render_slice(x):
             for y in range(y1, y2):
                 pixels[x, y] = color
 
-previous_slice_time = None
-seconds_per_slice = log.lastchunktime() / options.width
-x = 0
+previous_x = None
 for chunk in log.chunks:
     peer_id = log.peeraddr_to_id[chunk["peeraddr"]]
     try:
@@ -54,11 +53,12 @@ for chunk in log.chunks:
     except KeyError:
         peer = peers[peer_id] = Gatherer()
     peer.add(Piece(chunk["begin"], chunk["end"]))
-    if previous_slice_time is None or (chunk["t"] - previous_slice_time) >= seconds_per_slice:
-        render_slice(x)
-        x += 1
-        if x == options.width:
-            break
-        previous_slice_time = chunk["t"]
+    new_x = time_to_x(chunk["t"])
+    if previous_x is None:
+        render_slice(new_x)
+    else:
+        for x in range(previous_x, new_x):
+            render_slice(x)
+    previous_x = new_x
 
 image.save(options.output)

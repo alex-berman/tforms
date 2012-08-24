@@ -94,18 +94,17 @@ class BranchingTracer:
         #print "\n".join([str(branching) for branching in tracker.branchings]); return
         self.branchings = tracker.branchings
 
-        print '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">'
-
         print >> sys.stderr, "total_size=%s" % total_size
         self.t = log.lastchunktime()
         self.byte_pos = 0
+        self.points = []
         while self.byte_pos < total_size:
             print >> sys.stderr, (self.t, self.byte_pos)
             if not self.search_backwards_for_branching():
                 break
 
-            self.draw_line(self.t, self.byte_pos,
-                           self.branching["start_time"], self.byte_pos)
+            self.points.append((self.t, self.byte_pos))
+            self.points.append((self.branching["start_time"], self.byte_pos))
 
             self.t = self.branching["start_time"]
             self.byte_pos = self.branching["begin"]
@@ -115,6 +114,12 @@ class BranchingTracer:
             self.t = self.branching["end_time"]
             self.byte_pos = self.branching["end"]
             print >> sys.stderr, (self.t, self.byte_pos)
+
+        print '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">'
+        print '  <polygon points="'
+        for (t, byte_pos) in self.points:
+            print '%f,%f ' % (time_to_x(t), byte_to_y(byte_pos))
+        print '" style="fill:#f0f0f0;stroke:black;stroke-width:%f" />' % options.stroke_width
         print '</svg>'
 
     def search_backwards_for_branching(self):
@@ -129,21 +134,7 @@ class BranchingTracer:
             return False
 
     def follow_forwards_until_join(self):
-        t1 = self.t
-        b1 = self.byte_pos
         for piece in self.branching["pieces"]:
-            t2 = piece.t
-            b2 = piece.begin
-            self.draw_line(t1, b1, t2, b2)
-            t1 = t2
-            b1 = b2
-
-    def draw_line(self, t1, b1, t2, b2):
-        x1 = time_to_x(t1)
-        x2 = time_to_x(t2)
-        y1 = byte_to_y(b1)
-        y2 = byte_to_y(b2)
-        print '  <line x1="%f" y1="%f" x2="%f" y2="%f" stroke="black" stroke-width="%f" />' % (
-            x1, y1, x2, y2, options.stroke_width)
+            self.points.append((piece.t, piece.begin))
 
 BranchingTracer(log.chunks).trace()
