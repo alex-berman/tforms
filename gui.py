@@ -2,17 +2,9 @@ import wx
 import threading
 from wx import glcanvas
 from OpenGL.GL import *
+import colors
 
 class GUI(wx.Frame):
-    PLAYER_COLOURS = [(255,0,0),
-                      (0,255,0),
-                      (0,0,255),
-                      (155,155,0),
-                      (255,0,255),
-                      (0,255,255),
-                      (100,100,255),
-                      (50,50,50)]
-
     def __init__(self, orchestra):
         self.orchestra = orchestra
         self.score = orchestra.score
@@ -30,8 +22,10 @@ class GUI(wx.Frame):
         self.chunks_and_score_display_list = None
         self.app = wx.App(False)
         self.unplayed_pen = wx.Pen(wx.LIGHT_GREY, width=2)
-        self.player_pens = map(self.create_pens_with_colour,
-                               self.PLAYER_COLOURS)
+        self.peer_colors = [wx.Colour(r*255, g*255, b*255)
+                            for (r,g,b,a) in colors.colors(len(orchestra.tr_log.peers))]
+        self.player_pens = [wx.Pen(color, width=2)
+                            for color in self.peer_colors]
         style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
         wx.Frame.__init__(self, None, wx.ID_ANY, "Torrential Forms",
                           size=wx.Size(self.width, self.height), style=style)
@@ -135,7 +129,7 @@ class GUI(wx.Frame):
         for i in range(len(self.orchestra.tr_log.peers)):
             button = wx.CheckBox(self, i, 'Peer %d' % (i+1))
             button.SetValue(True)
-            button.SetForegroundColour(self.PLAYER_COLOURS[i % len(self.PLAYER_COLOURS)])
+            button.SetForegroundColour(self.peer_colors[i])
             button.Bind(wx.EVT_CHECKBOX, self._peer_button_toggled, button)
             self._layers_box.Add(button)
             self._peer_buttons.append(button)
@@ -370,10 +364,6 @@ class GUI(wx.Frame):
         glVertex2f(x1, y1)
         glVertex2f(x2, y2)
         glEnd()
-
-    def create_pens_with_colour(self, rgb):
-        colour = wx.Colour(*rgb)
-        return wx.Pen(colour, width=2)
 
     def get_pen_for_player(self, player_id):
         pen_id = player_id % len(self.player_pens)
