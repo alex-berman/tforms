@@ -32,6 +32,7 @@ class TrLog:
         cPickle.dump(self.files, f)
         cPickle.dump(self.chunks, f)
         cPickle.dump(self.peers, f)
+        cPickle.dump(self.peeraddr_to_id, f)
         cPickle.dump(self.totalsize, f)
         f.close()
 
@@ -42,6 +43,7 @@ class TrLog:
         log.files = cPickle.load(f)
         log.chunks = cPickle.load(f)
         log.peers = cPickle.load(f)
+        log.peeraddr_to_id = cPickle.load(f)
         log.totalsize = cPickle.load(f)
         f.close()
         return log
@@ -80,6 +82,7 @@ class TrLogReader:
         self.id = None
         self.files = []
         self.peers = []
+        self.peeraddr_to_id = {}
         self._chunk_count = 0
 
     def get_log(self, use_cache=True):
@@ -94,6 +97,7 @@ class TrLogReader:
             log.files = self.files
             log.chunks = self.chunks
             log.peers = self.peers
+            log.peeraddr_to_id = self.peeraddr_to_id
             log.totalsize = self.totalsize
             if use_cache:
                 self._cache_log(log)
@@ -220,7 +224,8 @@ class TrLogReader:
         return chunk
 
     def _add_peer_unless_already_added(self, peeraddr):
-        if peeraddr not in self.peers:
+        if peeraddr not in self.peeraddr_to_id:
+            self.peeraddr_to_id[peeraddr] = len(self.peers)
             self.peers.append(peeraddr)
 
     def _process_file_info_line(self, m):
