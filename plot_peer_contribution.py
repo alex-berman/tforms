@@ -13,7 +13,6 @@ parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-n", "--filenum", dest="filenum", type=int)
 parser.add_argument("-width", type=int, default=500)
 parser.add_argument("-height", type=int, default=500)
-parser.add_argument("-stroke_width", type=float, default=5)
 parser.add_argument("-output", default="progress.png")
 options = parser.parse_args()
 
