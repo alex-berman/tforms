@@ -116,17 +116,13 @@ class AncestryPlotter:
 
     def _follow_piece(self, piece):
         if len(piece.growth) > 0:
-            first_piece = piece
-            self._write_svg('<path style="stroke:red;stroke-opacity=0.5;fill:none;" d="M%f,%f' % (
-                    self._time_to_x(first_piece.t),
-                    self._byte_to_y((first_piece.begin + first_piece.end) / 2)))
-            for older_version in piece.growth:
-                self._write_svg(' L%f,%f' % (
-                        self._time_to_x(older_version.t),
-                        self._byte_to_y((older_version.begin + older_version.end) / 2)))
-            self._write_svg('" />')
+            path = [(piece.t,
+                    (piece.begin + piece.end) / 2)]
+            for older_version in reversed(piece.growth):
+                path.append((older_version.t,
+                             (older_version.begin + older_version.end) / 2))
+            self._draw_path(path)
 
-        self._write_svg('<!-- _follow_piece %s -->' % piece)
         for parent in piece.parents.values():
             self._draw_line(piece.t, (piece.begin + piece.end) / 2,
                             parent.t, (parent.begin + parent.end) / 2)
@@ -134,3 +130,14 @@ class AncestryPlotter:
 
     def _write_svg(self, line):
         print line
+
+    def _draw_path(self, points):
+        t1, b1 = points[0]
+        self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;" d="M%f,%f' % (
+                self._time_to_x(t1),
+                self._byte_to_y(b1)))
+        for (t, b) in points[1:]:
+            self._write_svg(' L%f,%f' % (
+                    self._time_to_x(t),
+                    self._byte_to_y(b)))
+        self._write_svg('" />')

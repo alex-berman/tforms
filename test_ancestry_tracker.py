@@ -102,6 +102,8 @@ class AncestryTrackerTest(unittest.TestCase):
             ]
         self.assert_growth(expected_growth, last_piece.growth)
 
+
+
     def given_chunks(self, chunks):
         self.chunks = chunks
 
@@ -126,7 +128,7 @@ class AncestryTrackerTest(unittest.TestCase):
 
 
 class AncestryPlotterTest(unittest.TestCase):
-    def test_plot(self):
+    def test_lines_from_child_to_parents(self):
         self.given_chunks([
                 {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
                 {'id': 1, 'begin': 200, 'end': 400, 't': 10.0},
@@ -136,6 +138,7 @@ class AncestryPlotterTest(unittest.TestCase):
 
                 {'id': 4, 'begin': 500, 'end': 600, 't': 40.0},
                 ])
+        self.when_plotted()
         self.expect_plotted_lines([
                 (40.0, (100+700)/2,
                  20.0, (100+500)/2),
@@ -143,13 +146,51 @@ class AncestryPlotterTest(unittest.TestCase):
                  30.0, (600+700)/2)
                 ])
 
+    def test_growth_paths(self):
+        self.given_chunks([
+                {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
+                {'id': 1, 'begin': 200, 'end': 300, 't': 10.0},
+                {'id': 2, 'begin': 300, 'end': 400, 't': 20.0},
+
+                {'id': 3, 'begin': 500, 'end': 600, 't': 30.0},
+                {'id': 4, 'begin': 600, 'end': 700, 't': 40.0},
+                {'id': 5, 'begin': 700, 'end': 800, 't': 50.0},
+
+                {'id': 6, 'begin': 900, 'end':1000, 't': 60.0},
+                {'id': 7, 'begin':1000, 'end':1100, 't': 70.0},
+                {'id': 8, 'begin':1100, 'end':1200, 't': 80.0},
+
+                {'id': 9, 'begin': 400, 'end': 500, 't': 90.0},
+
+                {'id':10, 'begin': 800, 'end': 900, 't':100.0},
+                ])
+        self.when_plotted()
+        self.expect_plotted_paths([
+                [(80.0, (900+1200)/2),
+                 (70.0, (900+1100)/2),
+                 (60.0, (900+1000)/2)],
+
+                [(50.0, (500+800)/2),
+                 (40.0, (500+700)/2),
+                 (30.0, (500+600)/2)],
+
+                [(20.0, (100+400)/2),
+                 (10.0, (100+300)/2),
+                 ( 0.0, (100+200)/2)]
+                ])
+
+
+
     def given_chunks(self, chunks):
         self.chunks = chunks
 
-    def expect_plotted_lines(self, expected_lines):
+    def when_plotted(self):
         class TestedAncestryPlotter(AncestryPlotter):
             def _draw_line(self, t1, b1, t2, b2):
                 self.plotted_lines.append((t1, b1, t2, b2))
+
+            def _draw_path(self, path):
+                self.plotted_paths.append(path)
 
             def _write_svg(self, line): pass
             def _override_recursion_limit(self): pass
@@ -158,7 +199,15 @@ class AncestryPlotterTest(unittest.TestCase):
             width = 1
             height = 1
 
-        plotter = TestedAncestryPlotter(self.chunks, MockupOptions())
-        plotter.plotted_lines = []
-        plotter.plot()
-        self.assertEqual(sorted(expected_lines), sorted(plotter.plotted_lines))
+        self.plotter = TestedAncestryPlotter(self.chunks, MockupOptions())
+        self.plotter.plotted_lines = []
+        self.plotter.plotted_paths = []
+        self.plotter.plot()
+
+    def expect_plotted_lines(self, expected_lines):
+        self.assertEqual(sorted(expected_lines), sorted(self.plotter.plotted_lines))
+
+    def expect_plotted_paths(self, expected_paths):
+        print sorted(expected_paths)
+        print sorted(self.plotter.plotted_paths)
+        self.assertEqual(sorted(expected_paths), sorted(self.plotter.plotted_paths))
