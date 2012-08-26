@@ -1,3 +1,4 @@
+import sys
 import copy
 
 class Piece:
@@ -72,3 +73,64 @@ class AncestryTracker:
                 (piece1.begin <= piece2.begin <= piece1.end) or
                 (piece1.begin <= piece2.end <= piece1.end))
 
+
+class AncestryPlotter:
+    def __init__(self, chunks, options):
+        self._chunks = chunks
+        self._options = options
+        self._tracker = AncestryTracker()
+        for chunk in chunks:
+            self._tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
+
+        self._total_size = max([chunk["end"] for chunk in chunks])
+        self._time_end = max([piece.t for piece in self._tracker.last_pieces()])
+
+    def _time_to_x(self, t):
+        return t / self._time_end * self._options.width
+
+    def _byte_to_y(self, byte_pos):
+        return float(byte_pos) / self._total_size * self._options.height
+
+    def plot(self):
+        self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
+        self._write_svg('<g>')
+        self._write_svg('<rect width="%f" height="%f" fill="white" />' % (
+            self._options.width, self._options.height))
+        print >> sys.stderr, "final pieces: %s" % self._tracker.last_pieces()
+        self._override_recursion_limit()
+        for piece in self._tracker.last_pieces():
+            self._follow_piece(piece)
+        self._write_svg('</g>')
+        self._write_svg('</svg>')
+
+    def _override_recursion_limit(self):
+        sys.setrecursionlimit(len(self._chunks))
+
+    def _draw_line(self, t1, b1, t2, b2, color="black"):
+        x1 = self._time_to_x(t1)
+        x2 = self._time_to_x(t2)
+        y1 = self._byte_to_y(b1)
+        y2 = self._byte_to_y(b2)
+        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
+                x1, y1, x2, y2, color, self._options.stroke_width))
+
+    def _follow_piece(self, piece):
+        if len(piece.growth) > 0:
+            first_piece = piece
+            self._write_svg('<path style="stroke:red;stroke-opacity=0.5;fill:none;" d="M%f,%f' % (
+                    self._time_to_x(first_piece.t),
+                    self._byte_to_y((first_piece.begin + first_piece.end) / 2)))
+            for older_version in piece.growth:
+                self._write_svg(' L%f,%f' % (
+                        self._time_to_x(older_version.t),
+                        self._byte_to_y((older_version.begin + older_version.end) / 2)))
+            self._write_svg('" />')
+
+        self._write_svg('<!-- _follow_piece %s -->' % piece)
+        for parent in piece.parents.values():
+            self._draw_line(piece.t, (piece.begin + piece.end) / 2,
+                            parent.t, (parent.begin + parent.end) / 2)
+            self._follow_piece(parent)
+
+    def _write_svg(self, line):
+        print line

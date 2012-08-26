@@ -123,3 +123,42 @@ class AncestryTrackerTest(unittest.TestCase):
                               actual_piece.end)
             self.assertEquals(expected_piece_as_dict["t"],
                               actual_piece.t)
+
+
+class AncestryPlotterTest(unittest.TestCase):
+    def test_plot(self):
+        self.given_chunks([
+                {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
+                {'id': 1, 'begin': 200, 'end': 400, 't': 10.0},
+                {'id': 2, 'begin': 400, 'end': 500, 't': 20.0},
+
+                {'id': 3, 'begin': 600, 'end': 700, 't': 30.0},
+
+                {'id': 4, 'begin': 500, 'end': 600, 't': 40.0},
+                ])
+        self.expect_plotted_lines([
+                (40.0, (100+700)/2,
+                 20.0, (100+500)/2),
+                (40.0, (100+700)/2,
+                 30.0, (600+700)/2)
+                ])
+
+    def given_chunks(self, chunks):
+        self.chunks = chunks
+
+    def expect_plotted_lines(self, expected_lines):
+        class TestedAncestryPlotter(AncestryPlotter):
+            def _draw_line(self, t1, b1, t2, b2):
+                self.plotted_lines.append((t1, b1, t2, b2))
+
+            def _write_svg(self, line): pass
+            def _override_recursion_limit(self): pass
+
+        class MockupOptions:
+            width = 1
+            height = 1
+
+        plotter = TestedAncestryPlotter(self.chunks, MockupOptions())
+        plotter.plotted_lines = []
+        plotter.plot()
+        self.assertEqual(sorted(expected_lines), sorted(plotter.plotted_lines))

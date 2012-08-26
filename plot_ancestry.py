@@ -18,49 +18,5 @@ logfilename = "%s/session.log" % options.sessiondir
 log = TrLogReader(logfilename, options.torrentname, options.filenum).get_log()
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
 
-tracker = AncestryTracker()
 log.ignore_non_downloaded_files()
-for chunk in log.chunks:
-    tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
-
-total_size = max([chunk["end"] for chunk in log.chunks])
-
-def time_to_x(t): return t / log.lastchunktime() * options.width
-def byte_to_y(byte_pos): return float(byte_pos) / total_size * options.height
-
-def draw_line(t1, b1, t2, b2, color="black"):
-    x1 = time_to_x(t1)
-    x2 = time_to_x(t2)
-    y1 = byte_to_y(b1)
-    y2 = byte_to_y(b2)
-    print '<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
-        x1, y1, x2, y2, color, options.stroke_width)
-
-def follow_piece(piece):
-    if len(piece.growth) > 0:
-        first_piece = piece.growth[0]
-        print '  <path style="stroke:red;stroke-opacity=0.5;fill:none;" d="M%f,%f' % (
-            time_to_x(first_piece.t),
-            byte_to_y((first_piece.begin + first_piece.end) / 2))
-        previous_piece = None
-        for older_version in piece.growth[1:]:
-            print ' L%f,%f' % (
-                time_to_x(older_version.t),
-                byte_to_y((older_version.begin + older_version.end) / 2))
-        print '" />'
-
-    print '<!-- follow_piece %s -->' % piece
-    for parent in piece.parents.values():
-        draw_line(piece.t, (piece.begin + piece.end) / 2,
-                  parent.t, (parent.begin + parent.end) / 2)
-        follow_piece(parent)
-
-print '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">'
-print '<g>'
-print '<rect width="%f" height="%f" fill="white" />' % (options.width, options.height)
-print >> sys.stderr, "final pieces: %s" % tracker.last_pieces()
-sys.setrecursionlimit(len(log.chunks))
-for piece in tracker.last_pieces():
-    follow_piece(piece)
-print '</g>'
-print '</svg>'
+AncestryPlotter(log.chunks, options).plot()
