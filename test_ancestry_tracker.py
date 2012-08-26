@@ -12,7 +12,7 @@ class AncestryTrackerTest(unittest.TestCase):
         self.assertEquals(20, last_piece.t)
         self.assertEquals(100, last_piece.begin)
         self.assertEquals(500, last_piece.end)
-        self.assertEquals(1, len(last_piece.parents))
+        self.assertEquals(0, len(last_piece.parents))
 
     def test_2_generations(self):
         self.given_chunks([
@@ -72,6 +72,36 @@ class AncestryTrackerTest(unittest.TestCase):
         self.assertEquals(set([120.0, 130.0]),
                           set([parent.t for parent in parent2.parents.values()]))
 
+    def test_growth_preserves_parenthood(self):
+        self.given_chunks([
+                {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
+                {'id': 1, 'begin': 200, 'end': 400, 't': 10.0},
+                {'id': 2, 'begin': 400, 'end': 500, 't': 20.0},
+
+                {'id': 3, 'begin': 600, 'end': 700, 't': 30.0},
+
+                {'id': 4, 'begin': 500, 'end': 600, 't': 40.0},
+
+
+                {'id': 5, 'begin': 700, 'end': 800, 't': 40.0},
+                ])
+        last_piece = self.last_tracked_piece()
+        self.assertEquals(set([20.0, 30.0]),
+                          set([parent.t for parent in last_piece.parents.values()]))
+
+    def test_growth_tracking(self):
+        self.given_chunks([
+                {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
+                {'id': 1, 'begin': 200, 'end': 400, 't': 10.0},
+                {'id': 2, 'begin': 400, 'end': 500, 't': 20.0}
+                ])
+        last_piece = self.last_tracked_piece()
+        expected_growth = [
+            {'begin': 100, 'end': 200, 't': 0.0},
+            {'begin': 100, 'end': 400, 't': 10.0}
+            ]
+        self.assert_growth(expected_growth, last_piece.growth)
+
     def given_chunks(self, chunks):
         self.chunks = chunks
 
@@ -81,3 +111,15 @@ class AncestryTrackerTest(unittest.TestCase):
             tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
         self.assertEquals(1, len(tracker.last_pieces()))
         return tracker.last_pieces()[0]
+
+    def assert_growth(self, expected_growth_as_dicts, actual_growth):
+        self.assertEquals(len(expected_growth_as_dicts),
+                          len(actual_growth))
+        for (expected_piece_as_dict, actual_piece) in zip(
+            expected_growth_as_dicts, actual_growth):
+            self.assertEquals(expected_piece_as_dict["begin"],
+                              actual_piece.begin)
+            self.assertEquals(expected_piece_as_dict["end"],
+                              actual_piece.end)
+            self.assertEquals(expected_piece_as_dict["t"],
+                              actual_piece.t)

@@ -1,12 +1,13 @@
 import copy
 
 class Piece:
-    def __init__(self, id, t, begin, end, parents={}):
+    def __init__(self, id, t, begin, end, parents={}, growth=[]):
         self.id = id
         self.t = t
         self.begin = begin
         self.end = end
         self.parents = parents
+        self.growth = growth
 
     def __repr__(self):
         return "Piece(id=%s, t=%s, begin=%s, end=%s, parent_ids=%s)" % (
@@ -25,10 +26,13 @@ class AncestryTracker:
                 parents = {}
                 for parent_id in overlapping_pieces:
                     parents[parent_id] = self._pieces[parent_id]
+                growth = []
             else:
                 parent = self._pieces[overlapping_pieces[0]]
                 replacement_id = new_piece.id
-                parents = {parent.id: parent}
+                parents = copy.copy(parent.parents)
+                growth = copy.copy(parent.growth)
+                growth.append(parent)
 
             new_extension = [new_piece]
             new_extension.extend([self._pieces[key] for key in overlapping_pieces])
@@ -39,7 +43,8 @@ class AncestryTracker:
                 t = max([piece.t for piece in new_extension]),
                 begin = min([piece.begin for piece in new_extension]),
                 end = max([piece.end for piece in new_extension]),
-                parents = parents)
+                parents = parents,
+                growth = growth)
             self._add_piece(replacement_piece)
         else:
             self._add_piece(new_piece)

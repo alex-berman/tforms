@@ -28,15 +28,28 @@ total_size = max([chunk["end"] for chunk in log.chunks])
 def time_to_x(t): return t / log.lastchunktime() * options.width
 def byte_to_y(byte_pos): return float(byte_pos) / total_size * options.height
 
-def draw_line(t1, b1, t2, b2):
+def draw_line(t1, b1, t2, b2, color="black"):
     x1 = time_to_x(t1)
     x2 = time_to_x(t2)
     y1 = byte_to_y(b1)
     y2 = byte_to_y(b2)
-    print '  <line x1="%f" y1="%f" x2="%f" y2="%f" stroke="black" stroke-width="%f" />' % (
-        x1, y1, x2, y2, options.stroke_width)
+    print '<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
+        x1, y1, x2, y2, color, options.stroke_width)
 
 def follow_piece(piece):
+    if len(piece.growth) > 0:
+        first_piece = piece.growth[0]
+        print '  <path style="stroke:red;stroke-opacity=0.5;fill:none;" d="M%f,%f' % (
+            time_to_x(first_piece.t),
+            byte_to_y((first_piece.begin + first_piece.end) / 2))
+        previous_piece = None
+        for older_version in piece.growth[1:]:
+            print ' L%f,%f' % (
+                time_to_x(older_version.t),
+                byte_to_y((older_version.begin + older_version.end) / 2))
+        print '" />'
+
+    print '<!-- follow_piece %s -->' % piece
     for parent in piece.parents.values():
         draw_line(piece.t, (piece.begin + piece.end) / 2,
                   parent.t, (parent.begin + parent.end) / 2)
