@@ -109,3 +109,26 @@ class TrLogTests(unittest.TestCase):
         log.chunks = unflattened_chunks
         log.flatten()
         self.assertEquals(expected_result, log.chunks)
+
+    def test_ignore_non_downloaded_files(self):
+        log = TrLog()
+        log.files = [
+            {'offset': 0,    'length': 1000},
+            {'offset': 1000, 'length': 1000},
+            {'offset': 2000, 'length': 1000},
+            {'offset': 3000, 'length': 1000},
+            ]
+        log.chunks = [
+            {'filenum': 1, 'begin': 1200, 'end': 1300},
+            {'filenum': 1, 'begin': 1400, 'end': 1500},
+            {'filenum': 3, 'begin': 3200, 'end': 3300},
+            {'filenum': 3, 'begin': 3400, 'end': 3500},
+            ]
+        expected_result = [
+            {'filenum': 1, 'begin':  200, 'end':  300},
+            {'filenum': 1, 'begin':  400, 'end':  500},
+            {'filenum': 3, 'begin': 1200, 'end': 1300},
+            {'filenum': 3, 'begin': 1400, 'end': 1500}
+            ]
+        log.ignore_non_downloaded_files()
+        self.assertEquals(expected_result, log.chunks)

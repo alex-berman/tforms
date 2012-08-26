@@ -19,6 +19,7 @@ log = TrLogReader(logfilename, options.torrentname, options.filenum).get_log()
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
 
 tracker = AncestryTracker()
+log.ignore_non_downloaded_files()
 for chunk in log.chunks:
     tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
 
@@ -44,9 +45,9 @@ def follow_piece(piece):
 print '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">'
 print '<g>'
 print '<rect width="%f" height="%f" fill="white" />' % (options.width, options.height)
-print >> sys.stderr, "final pieces: %s" % tracker.pieces()
+print >> sys.stderr, "final pieces: %s" % tracker.last_pieces()
 sys.setrecursionlimit(len(log.chunks))
-for piece in tracker.pieces():
+for piece in tracker.last_pieces():
     follow_piece(piece)
 print '</g>'
 print '</svg>'

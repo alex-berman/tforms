@@ -66,6 +66,24 @@ class TrLog:
                 peer_cursor[chunk['peeraddr']] = chunk
         self.chunks = result
 
+    def ignore_non_downloaded_files(self):
+        for filenum in reversed(range(len(self.files))):
+            if not self._file_was_downloaded(filenum):
+                self._ignore_non_downloaded_file(self.files[filenum])
+
+    def _file_was_downloaded(self, filenum):
+        for chunk in self.chunks:
+            if chunk["filenum"] == filenum:
+                return True
+
+    def _ignore_non_downloaded_file(self, f):
+        file_begin = f["offset"]
+        file_length = f["length"]
+        file_end = file_begin + file_length
+        for chunk in self.chunks:
+            if chunk["begin"] >= file_end:
+                chunk["begin"] -= file_length
+                chunk["end"] -= file_length
 
 class TrLogReader:
     NO_MORE_CHUNKS = {}
