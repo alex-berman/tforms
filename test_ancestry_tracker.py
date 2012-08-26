@@ -79,4 +79,5 @@ class AncestryTrackerTest(unittest.TestCase):
         tracker = AncestryTracker()
         for chunk in self.chunks:
             tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
-        return tracker.last_piece()
+        self.assertEquals(1, len(tracker.last_pieces()))
+        return tracker.last_pieces()[0]

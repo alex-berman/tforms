@@ -42,7 +42,11 @@ def follow_piece(piece):
         follow_piece(parent)
 
 print '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">'
+print '<g>'
 print '<rect width="%f" height="%f" fill="white" />' % (options.width, options.height)
+print >> sys.stderr, "final pieces: %s" % tracker.pieces()
 sys.setrecursionlimit(len(log.chunks))
-follow_piece(tracker.last_piece())
+for piece in tracker.pieces():
+    follow_piece(piece)
+print '</g>'
 print '</svg>'

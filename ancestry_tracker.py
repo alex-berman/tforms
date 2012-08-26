@@ -8,7 +8,7 @@ class Piece:
         self.end = end
         self.parents = parents
 
-    def __str__(self):
+    def __repr__(self):
         return "Piece(id=%s, t=%s, begin=%s, end=%s, parent_ids=%s)" % (
             self.id, self.t, self.begin, self.end, self.parents.keys())
 
@@ -48,21 +48,14 @@ class AncestryTracker:
         if piece.id in self._pieces:
             raise Exception("piece with ID %s already added" % piece.id)
         self._pieces[piece.id] = piece
-        self._last_piece = piece
 
     def _new_piece_id(self):
         new_id = "n%d" % self._counter
         self._counter += 1
         return new_id
 
-    def pieces(self):
+    def last_pieces(self):
         return self._pieces.values()
-
-    def piece(self, key):
-        return self._pieces[key]
-
-    def last_piece(self):
-        return self._last_piece
 
     def _overlapping_pieces(self, piece):
         return filter(lambda key: self._pieces_overlap(piece, self._pieces[key]),
