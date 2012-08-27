@@ -1,4 +1,4 @@
-from interpret import Interpreter
+import interpret
 import unittest
 
 class InterpretTestCase(unittest.TestCase):
@@ -116,6 +116,36 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 1000, "end": 2000}])
         self.assert_interpretation_length(2)
 
+    def test_online_constraint_for_max_segment_duration_is_simulated_offline(self):
+        self.given_files([{"duration": 10.0,
+                           "length": 10000}])
+        self.given_max_segment_duration(1.25)
+        self.given_chunks(
+            [{"filenum": 0,
+              "t": 0,
+              "begin": 0, "end": 1000},
+             {"filenum": 0,
+              "t": 0.5,
+              "begin": 1000, "end": 2000},
+             {"filenum": 0,
+              "t": 1.0,
+              "begin": 2000, "end": 4000},
+             {"filenum": 0,
+              "t": 1.5,
+              "begin": 4000, "end": 5000},
+             {"filenum": 0,
+              "t": 2.0,
+              "begin": 5000, "end": 6000},
+             ])
+        self.assert_interpretation(
+            [{"onset": 0,
+              "begin": 0, "end": 4000,
+              "duration": 1.0},
+             {"onset": 1.5,
+              "begin": 4000, "end": 6000,
+              "duration": 0.5},
+             ])
+
     def test_simulataneous_chunks_do_not_yield_zero_duration(self):
         self.given_files([{"duration": 2.0,
                            "length": 10000}])
@@ -131,13 +161,16 @@ class InterpretTestCase(unittest.TestCase):
 
 
     def setUp(self):
-        self.interpreter = Interpreter()
+        self.interpreter = interpret.Interpreter()
 
     def given_files(self, files):
         self.files = files
 
     def given_chunks(self, chunks):
         self.chunks = map(self._set_filenum_and_peer, chunks)
+
+    def given_max_segment_duration(self, duration):
+        interpret.MAX_SEGMENT_DURATION = duration
 
     def _set_filenum_and_peer(self, chunk):
         if not "filenum" in chunk:
@@ -150,13 +183,14 @@ class InterpretTestCase(unittest.TestCase):
 
     def assert_interpretation(self, expected_score):
         actual_score = self.interpreter.interpret(self.chunks, self.files)
-        expected_score = map(self._replace_durations_with_float_comparable_instances,
-                             expected_score)
+        self.assertEquals(len(expected_score), len(actual_score),
+                          "Score length mismatch: actual score is %s" % actual_score)
+        map(self._replace_duration_with_float_comparable_instance, expected_score)
         expected_score = map(self._fill_potential_gaps_with_actual_values,
                              zip(expected_score, actual_score))
         self.assertEquals(expected_score, actual_score)
 
-    def _replace_durations_with_float_comparable_instances(self, segment):
+    def _replace_duration_with_float_comparable_instance(self, segment):
         segment["duration"] = Duration(segment["duration"])
         return segment
 

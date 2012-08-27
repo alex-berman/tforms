@@ -28,10 +28,12 @@ class Interpreter:
         return segments
 
     def _chunk_appendable_to_segment(self, chunk, segment):
-        return (chunk["begin"] == segment["end"] and
-                chunk["peeraddr"] == segment["peeraddr"] and
-                chunk["filenum"] == segment["filenum"] and
-                ((chunk["t"] - (segment["onset"]+segment["duration"])) < MAX_PAUSE_WITHIN_SEGMENT))
+        return (
+            chunk["begin"] == segment["end"] and
+            chunk["peeraddr"] == segment["peeraddr"] and
+            chunk["filenum"] == segment["filenum"] and
+            ((chunk["t"] - (segment["onset"]+segment["duration"])) < MAX_PAUSE_WITHIN_SEGMENT) and
+            (chunk["t"] - segment["onset"]) < MAX_SEGMENT_DURATION)
 
     def _new_segment(self, chunk):
         segment = copy.copy(chunk)
