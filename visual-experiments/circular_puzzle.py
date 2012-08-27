@@ -198,6 +198,7 @@ class File(visualizer.File):
 
     def add_segment(self, segment):
         pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
+        self.visualizer.playing_segment(segment, pan)
         segment.departure_position = segment.peer_position()
         self.gatherer.add(segment)
 
