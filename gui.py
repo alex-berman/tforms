@@ -100,25 +100,22 @@ class GUI(wx.Frame):
 
     def _create_layer_buttons(self):
         self._layers_box = wx.BoxSizer(wx.VERTICAL)
-        self._create_chunks_button()
-        self._create_segments_button()
+        self._chunks_button = self._create_layers_checkbox(
+            "Chunks", self._chunks_button_toggled, default=True)
+        self._segments_button = self._create_layers_checkbox(
+            "Segments", self._segments_button_toggled, default=True)
         self._create_peer_buttons()
 
-    def _create_chunks_button(self):
-        self._chunks_button = wx.CheckBox(self, label="Chunks")
-        self._chunks_button.SetValue(True)
-        self._chunks_button.Bind(wx.EVT_CHECKBOX, self._chunks_button_toggled, self._chunks_button)
-        self._layers_box.Add(self._chunks_button)
+    def _create_layers_checkbox(self, label, callback, default):
+        button = wx.CheckBox(self, label=label)
+        button.SetValue(default)
+        button.Bind(wx.EVT_CHECKBOX, callback, button)
+        self._layers_box.Add(button)
+        return button
 
     def _chunks_button_toggled(self, event):
         self.refresh_chunks()
         self.catch_key_events()
-
-    def _create_segments_button(self):
-        self._segments_button = wx.CheckBox(self, label="Segments")
-        self._segments_button.SetValue(True)
-        self._segments_button.Bind(wx.EVT_CHECKBOX, self._segments_button_toggled, self._segments_button)
-        self._layers_box.Add(self._segments_button)
 
     def _segments_button_toggled(self, event):
         self.refresh_chunks()
