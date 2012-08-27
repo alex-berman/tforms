@@ -109,13 +109,15 @@ class GUI(wx.Frame):
         self._create_layers_button("Select no peers", self._select_no_peers)
 
     def _select_all_peers(self, event):
-        for peer_button in self._peer_buttons:
-            peer_button.SetValue(True)
-        self._layers_modified()
+        self._set_all_peers_enabled(True)
 
     def _select_no_peers(self, event):
-        for peer_button in self._peer_buttons:
-            peer_button.SetValue(False)
+        self._set_all_peers_enabled(False)
+
+    def _set_all_peers_enabled(self, enabled):
+        for i in range(len(self._peer_buttons)):
+            self._peer_buttons[i].SetValue(enabled)
+            self.orchestra.players[i].enabled = enabled
         self._layers_modified()
 
     def _create_layers_checkbox(self, label, callback, default):
@@ -147,8 +149,11 @@ class GUI(wx.Frame):
 
     def _peer_button_toggled(self, event):
         peer_id = event.GetId()
-        self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
+        self._set_peer_enabled(peer_id, self._peer_buttons[peer_id].GetValue())
         self._layers_modified()
+
+    def _set_peer_enabled(self, peer_id, enabled):
+        self.orchestra.players[peer_id].enabled = enabled
 
     def main_loop(self):
         self.app.MainLoop()
