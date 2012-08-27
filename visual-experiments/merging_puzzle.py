@@ -4,7 +4,6 @@ import time
 from OpenGL.GL import *
 from collections import OrderedDict
 
-DURATION = 0.5
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
@@ -33,28 +32,24 @@ class File(visualizer.File):
         self.min_byte = None
         self.max_byte = None
         self.x_ratio = None
-        self.arriving_segments = OrderedDict()
         self.playing_segments = OrderedDict()
         self.gatherer = Gatherer()
 
     def add_segment(self, segment):
-        segment.duration = DURATION
         if self.min_byte == None:
             self.min_byte = segment.begin
             self.max_byte = segment.end
         else:
             self.min_byte = min(self.min_byte, segment.begin)
             self.max_byte = max(self.max_byte, segment.end)
-        self.arriving_segments[segment.id] = segment
-
-    def play_segment(self, segment):
-        pan = self.byte_to_coord(segment.begin)
-        del self.arriving_segments[segment.id]
         self.playing_segments[segment.id] = segment
 
-    def gather_segment(self, segment):
-        del self.playing_segments[segment.id]
-        self.gatherer.add(segment)
+    def update(self):
+        outdated = filter(lambda segment_id: self.playing_segments[segment_id].relative_age() > 1,
+                          self.playing_segments)
+        for segment_id in outdated:
+            self.gatherer.add(self.playing_segments[segment_id])
+            del self.playing_segments[segment_id]
 
     def update_x_scope(self, time_increment):
         self._smoothed_min_byte.smooth(self.min_byte, time_increment)
@@ -79,47 +74,32 @@ class Puzzle(visualizer.Visualizer):
         self._smoothed_max_filenum = Smoother()
         self.segments = {}
 
-    def stopped_playing(self, segment_id, filenum):
-        segment = self.segments[segment_id]
-        self.files[filenum].gather_segment(segment)
-
     def render(self):
         if len(self.files) > 0:
+            for f in self.files.values():
+                f.update()
             self.draw_segments()
 
     def draw_segments(self):
         self.update_y_scope()
         for f in self.files.values():
-            self.update_segments(f)
             self.draw_file(f)
 
     def draw_file(self, f):
         y = self.filenum_to_y_coord(f.filenum)
         f.update_x_scope(self.time_increment)
         self.draw_gathered_segments(f, y)
-        self.draw_arriving_segments(f, y)
         self.draw_playing_segments(f, y)
 
     def draw_gathered_segments(self, f, y):
         for segment in f.gatherer.pieces():
             self.draw_segment(segment, 0, f, y)
 
-    def update_segments(self, f):
-        for segment in f.arriving_segments.values():
-            age = self.now - segment.arrival_time
-            if age > segment.duration:
-                f.play_segment(segment)
-
-    def draw_arriving_segments(self, f, y):
-        for segment in f.arriving_segments.values():
-            age = self.now - segment.arrival_time
-            actuality = 1 - float(age) / segment.duration
-            self.draw_segment(segment, actuality, f, y)
-
     def draw_playing_segments(self, f, y):
         for segment in f.playing_segments.values():
-            self.draw_playing_segment(segment, f, y)
-        
+            actuality = 1 - segment.relative_age()
+            self.draw_segment(segment, actuality, f, y)
+
     def draw_segment(self, segment, actuality, f, y):
         y_offset = actuality * 10
         height = 3 + actuality * 10
@@ -133,23 +113,6 @@ class Puzzle(visualizer.Visualizer):
         opacity = 0.2 + (actuality * 0.8)
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
-        
-    def draw_playing_segment(self, segment, f, y):
-        y_offset = 0
-        height = 3
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
-        x1 = self.prepend_margin_width + int(f.byte_to_coord(segment.begin) * self.safe_width)
-        x2 = self.prepend_margin_width + int(f.byte_to_coord(segment.end) * self.safe_width)
-        if x2 == x1:
-            x2 = x1 + 1
-        glColor3f(1, 0, 0)
-        glBegin(GL_QUADS)
         glVertex2i(x1, y2)
         glVertex2i(x2, y2)
         glVertex2i(x2, y1)
