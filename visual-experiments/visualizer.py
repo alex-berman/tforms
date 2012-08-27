@@ -295,9 +295,9 @@ class Visualizer:
         if args[0] == ESCAPE:
             self.exiting = True
 
-    def playing_chunk(self, chunk, pan):
-        self.orchestra.visualizing_chunk(chunk.id, pan)
-        chunk.playing = True
+    def playing_segment(self, segment, pan):
+        self.orchestra.visualizing_segment(segment.id, pan)
+        segment.playing = True
 
     def current_time(self):
         if self.export:

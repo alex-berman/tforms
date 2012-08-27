@@ -77,7 +77,7 @@ OSCresponder.new(nil, "/play",
 OSCresponder.new(nil, "/pan",
   { arg t, r, msg;
 	  var segment_id = msg[1];
-	  var pan = msg[2];
+	  var pan = msg[2] * 2 - 1;
 	  var synth = ~synths[segment_id];
 	  synth.set(\pan, pan);
   }).add;

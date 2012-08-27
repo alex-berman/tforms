@@ -141,10 +141,10 @@ class Orchestra:
             time.sleep(0.01)
 
     def _handle_visualizing_message(self, path, args, types, src, data):
-        (chunk_id, pan) = args
-        chunk = self._chunks_by_id[chunk_id]
-        self.logger.debug("visualizing chunk %s with pan %s" % (chunk, pan))
-        self.synth.pan(chunk["segment_id"], pan)
+        (segment_id, pan) = args
+        segment = self.segments_by_id[segment_id]
+        self.logger.debug("visualizing segment %s with pan %s" % (segment, pan))
+        self.synth.pan(segment_id, pan)
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:

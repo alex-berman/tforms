@@ -29,6 +29,8 @@ class File(visualizer.File):
         self.gatherer = Gatherer()
 
     def add_segment(self, segment):
+        pan = (float(segment.begin) + float(segment.end))/2 / self.length
+        self.visualizer.playing_segment(segment, pan)
         self.playing_segments[segment.id] = segment
 
     def update(self):
