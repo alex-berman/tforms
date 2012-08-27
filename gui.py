@@ -105,11 +105,29 @@ class GUI(wx.Frame):
         self._segments_button = self._create_layers_checkbox(
             "Segments", self._layers_modified, default=True)
         self._create_peer_buttons()
+        self._create_layers_button("Select all peers", self._select_all_peers)
+        self._create_layers_button("Select no peers", self._select_no_peers)
+
+    def _select_all_peers(self, event):
+        for peer_button in self._peer_buttons:
+            peer_button.SetValue(True)
+        self._layers_modified()
+
+    def _select_no_peers(self, event):
+        for peer_button in self._peer_buttons:
+            peer_button.SetValue(False)
+        self._layers_modified()
 
     def _create_layers_checkbox(self, label, callback, default):
         button = wx.CheckBox(self, label=label)
         button.SetValue(default)
         button.Bind(wx.EVT_CHECKBOX, callback, button)
+        self._layers_box.Add(button)
+        return button
+
+    def _create_layers_button(self, label, callback):
+        button = wx.Button(self, label=label)
+        button.Bind(wx.EVT_BUTTON, callback, button)
         self._layers_box.Add(button)
         return button
 
