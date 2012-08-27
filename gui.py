@@ -101,9 +101,9 @@ class GUI(wx.Frame):
     def _create_layer_buttons(self):
         self._layers_box = wx.BoxSizer(wx.VERTICAL)
         self._chunks_button = self._create_layers_checkbox(
-            "Chunks", self._chunks_button_toggled, default=True)
+            "Chunks", self._layers_modified, default=True)
         self._segments_button = self._create_layers_checkbox(
-            "Segments", self._segments_button_toggled, default=True)
+            "Segments", self._layers_modified, default=True)
         self._create_peer_buttons()
 
     def _create_layers_checkbox(self, label, callback, default):
@@ -113,11 +113,7 @@ class GUI(wx.Frame):
         self._layers_box.Add(button)
         return button
 
-    def _chunks_button_toggled(self, event):
-        self.refresh_chunks()
-        self.catch_key_events()
-
-    def _segments_button_toggled(self, event):
+    def _layers_modified(self, event=None):
         self.refresh_chunks()
         self.catch_key_events()
         
@@ -134,8 +130,7 @@ class GUI(wx.Frame):
     def _peer_button_toggled(self, event):
         peer_id = event.GetId()
         self.orchestra.players[peer_id].enabled = self._peer_buttons[peer_id].GetValue()
-        self.refresh_chunks()
-        self.catch_key_events()
+        self._layers_modified()
 
     def main_loop(self):
         self.app.MainLoop()
