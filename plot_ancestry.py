@@ -17,6 +17,10 @@ options = parser.parse_args()
 logfilename = "%s/session.log" % options.sessiondir
 log = TrLogReader(logfilename, options.torrentname, options.filenum).get_log()
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
-
 log.ignore_non_downloaded_files()
-AncestryPlotter(log.chunks, options).plot()
+
+output_filename = "%s/ancestry.svg" % options.sessiondir
+output = open(output_filename, "w")
+AncestryPlotter(log.chunks, options).plot(output)
+output.close()
+print "plot: %s" % output_filename

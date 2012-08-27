@@ -192,7 +192,6 @@ class AncestryPlotterTest(unittest.TestCase):
             def _draw_path(self, path):
                 self.plotted_paths.append(path)
 
-            def _write_svg(self, line): pass
             def _override_recursion_limit(self): pass
 
         class MockupOptions:
@@ -208,6 +207,4 @@ class AncestryPlotterTest(unittest.TestCase):
         self.assertEqual(sorted(expected_lines), sorted(self.plotter.plotted_lines))
 
     def expect_plotted_paths(self, expected_paths):
-        print sorted(expected_paths)
-        print sorted(self.plotter.plotted_paths)
         self.assertEqual(sorted(expected_paths), sorted(self.plotter.plotted_paths))

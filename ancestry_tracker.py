@@ -91,12 +91,12 @@ class AncestryPlotter:
     def _byte_to_y(self, byte_pos):
         return float(byte_pos) / self._total_size * self._options.height
 
-    def plot(self):
+    def plot(self, svg_output=None):
+        self._svg_output = svg_output
         self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
         self._write_svg('<g>')
         self._write_svg('<rect width="%f" height="%f" fill="white" />' % (
             self._options.width, self._options.height))
-        print >> sys.stderr, "final pieces: %s" % self._tracker.last_pieces()
         self._override_recursion_limit()
         for piece in self._tracker.last_pieces():
             self._follow_piece(piece)
@@ -129,7 +129,8 @@ class AncestryPlotter:
             self._follow_piece(parent)
 
     def _write_svg(self, line):
-        print line
+        if self._svg_output:
+            print >>self._svg_output, line
 
     def _draw_path(self, points):
         t1, b1 = points[0]
