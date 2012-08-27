@@ -1,22 +1,29 @@
 import copy
+from collections import defaultdict
 
 MAX_PAUSE_WITHIN_SEGMENT = 1.0
+MAX_SEGMENT_DURATION = 3.0
+
+class Peer:
+    def __init__(self):
+        self.segment_cursor = None
 
 class Interpreter:
     def interpret(self, chunks, files):
         self._files = files
         segments = []
-        peers = {}
+        peers = defaultdict(Peer)
         for chunk in chunks:
+            segment_cursor = len(segments)
             if chunk["peeraddr"] in peers:
-                peer_segment_index = peers[chunk["peeraddr"]]
-                if self._chunk_appendable_to_segment(chunk, segments[peer_segment_index]):
-                    self._append_chunk_to_segment(chunk, segments[peer_segment_index])
+                peer = peers[chunk["peeraddr"]]
+                if self._chunk_appendable_to_segment(chunk, segments[peer.segment_cursor]):
+                    self._append_chunk_to_segment(chunk, segments[peer.segment_cursor])
                 else:
-                    peers[chunk["peeraddr"]] = len(segments)
+                    peer.segment_cursor = segment_cursor
                     segments.append(self._new_segment(chunk))
             else:
-                peers[chunk["peeraddr"]] = len(segments)
+                peers[chunk["peeraddr"]].segment_cursor = segment_cursor
                 segments.append(self._new_segment(chunk))
         return segments
 
