@@ -71,51 +71,32 @@ class File(visualizer.File):
     def byte_to_coord(self, byte):
         return self.x_ratio * (byte - self.byte_offset)
 
-class Puzzle(visualizer.Visualizer):
-    def __init__(self, args):
-        visualizer.Visualizer.__init__(self, args, file_class=File)
-        self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
-        self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
-        self.files = {}
-        self._smoothed_min_filenum = Smoother()
-        self._smoothed_max_filenum = Smoother()
-        self.segments = {}
-
     def render(self):
-        if len(self.files) > 0:
-            for f in self.files.values():
-                f.update()
-            self.draw_segments()
+        self.y = self.visualizer.filenum_to_y_coord(self.filenum)
+        self.draw_gathered_segments()
+        self.draw_playing_segments()
 
-    def draw_segments(self):
-        self.update_y_scope()
-        for f in self.files.values():
-            self.draw_file(f)
+    def draw_gathered_segments(self):
+        for segment in self.gatherer.pieces():
+            self.draw_segment(segment, 0)
 
-    def draw_file(self, f):
-        y = self.filenum_to_y_coord(f.filenum)
-        self.draw_gathered_segments(f, y)
-        self.draw_playing_segments(f, y)
+    def draw_playing_segments(self):
+        for segment in self.playing_segments.values():
+            self.draw_playing_segment(segment)
 
-    def draw_gathered_segments(self, f, y):
-        for segment in f.gatherer.pieces():
-            self.draw_segment(segment, 0, f, y)
-
-    def draw_playing_segments(self, f, y):
-        for segment in f.playing_segments.values():
-            self.draw_playing_segment(segment, f, y)
-
-    def draw_playing_segment(self, segment, f, y):
+    def draw_playing_segment(self, segment):
         actuality = 1 - segment.relative_age()
-        self.draw_segment(segment, actuality, f, y)
+        self.draw_segment(segment, actuality)
 
-    def draw_segment(self, segment, actuality, f, y):
+    def draw_segment(self, segment, actuality):
         y_offset = actuality * 10
         height = 3 + actuality * 10
-        y1 = int(y + y_offset)
-        y2 = int(y + y_offset + height)
-        x1 = self.prepend_margin_width + int(f.byte_to_coord(segment.begin) * self.safe_width)
-        x2 = self.prepend_margin_width + int(f.byte_to_coord(segment.end) * self.safe_width)
+        y1 = int(self.y + y_offset)
+        y2 = int(self.y + y_offset + height)
+        x1 = self.visualizer.prepend_margin_width + \
+            int(self.byte_to_coord(segment.begin) * self.visualizer.safe_width)
+        x2 = self.visualizer.prepend_margin_width + \
+            int(self.byte_to_coord(segment.end) * self.visualizer.safe_width)
         x1, x2 = self.upscale(x1, x2, actuality)
         if x2 == x1:
             x2 = x1 + 1
@@ -137,6 +118,23 @@ class Puzzle(visualizer.Visualizer):
             x1 = mid - half_desired_size
             x2 = mid + half_desired_size
         return (x1, x2)
+
+class Puzzle(visualizer.Visualizer):
+    def __init__(self, args):
+        visualizer.Visualizer.__init__(self, args, file_class=File)
+        self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
+        self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
+        self.files = {}
+        self._smoothed_min_filenum = Smoother()
+        self._smoothed_max_filenum = Smoother()
+        self.segments = {}
+
+    def render(self):
+        if len(self.files) > 0:
+            self.update_y_scope()
+            for f in self.files.values():
+                f.update()
+                f.render()
 
     def filenum_to_y_coord(self, filenum):
         return self.y_ratio * (filenum - self.filenum_offset + 1)
