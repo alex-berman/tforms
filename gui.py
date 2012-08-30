@@ -180,6 +180,8 @@ class GUI(wx.Frame):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_SPACE:
             self._toggle_play(event)
+        elif keycode == wx.WXK_ESCAPE:
+            self.Destroy()
         event.Skip()
 
     def _toggle_play(self, event):
