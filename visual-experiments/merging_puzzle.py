@@ -27,25 +27,41 @@ class Smoother:
     def value(self):
         return self._current_value
 
+class DynamicScope:
+    def __init__(self):
+        self._smoothed_min_value = Smoother()
+        self._smoothed_max_value = Smoother()
+        self._min_value = None
+        self._max_value = None
+
+    def put(self, value):
+        self._min_value = min(filter(None, [self._min_value, value]))
+        self._max_value = max(filter(None, [self._max_value, value]))
+        self.update()
+
+    def update(self):
+        self._smoothed_min_value.smooth(self._min_value)
+        self._smoothed_max_value.smooth(self._max_value)
+        self._offset = self._smoothed_min_value.value()
+        diff = self._smoothed_max_value.value() - self._smoothed_min_value.value()
+        if diff == 0:
+            self._ratio = 1
+        else:
+            self._ratio = 1.0 / diff
+
+    def map(self, value):
+        return self._ratio * (value - self._offset)
+
 class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
-        self._smoothed_min_byte = Smoother()
-        self._smoothed_max_byte = Smoother()
-        self.min_byte = None
-        self.max_byte = None
-        self.x_ratio = None
         self.playing_segments = OrderedDict()
         self.gatherer = Gatherer()
+        self.x_scope = DynamicScope()
 
     def add_segment(self, segment):
-        if self.min_byte == None:
-            self.min_byte = segment.begin
-            self.max_byte = segment.end
-        else:
-            self.min_byte = min(self.min_byte, segment.begin)
-            self.max_byte = max(self.max_byte, segment.end)
-        self.update_x_scope()
+        self.x_scope.put(segment.begin)
+        self.x_scope.put(segment.end)
         pan = (self.byte_to_coord(segment.begin) + self.byte_to_coord(segment.end)) / 2
         self.visualizer.playing_segment(segment, pan)
         self.playing_segments[segment.id] = segment
@@ -56,20 +72,7 @@ class File(visualizer.File):
         for segment_id in outdated:
             self.gatherer.add(self.playing_segments[segment_id])
             del self.playing_segments[segment_id]
-        self.update_x_scope()
-
-    def update_x_scope(self):
-        self._smoothed_min_byte.smooth(self.min_byte)
-        self._smoothed_max_byte.smooth(self.max_byte)
-        self.byte_offset = self._smoothed_min_byte.value()
-        diff = self._smoothed_max_byte.value() - self._smoothed_min_byte.value()
-        if diff == 0:
-            self.x_ratio = 1
-        else:
-            self.x_ratio = 1.0 / diff
-
-    def byte_to_coord(self, byte):
-        return self.x_ratio * (byte - self.byte_offset)
+        self.x_scope.update()
 
     def render(self):
         self.y = self.visualizer.filenum_to_y_coord(self.filenum)
@@ -118,6 +121,9 @@ class File(visualizer.File):
             x1 = mid - half_desired_size
             x2 = mid + half_desired_size
         return (x1, x2)
+
+    def byte_to_coord(self, byte):
+        return self.x_scope.map(byte)
 
 class Puzzle(visualizer.Visualizer):
     def __init__(self, args):
