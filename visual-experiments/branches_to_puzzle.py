@@ -1,23 +1,21 @@
-from visualizer import Visualizer, run
+import visualizer
 from gatherer import Gatherer
-import time
 from OpenGL.GL import *
 from collections import OrderedDict
-from vector import Vector2d
+from dynamic_scope import DynamicScope
 import random
-import math
+import time
+from vector import Vector2d
 from bezier import make_bezier
-import colorsys
 
-DURATION = 0.5
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 MAX_BRANCH_AGE = 2.0
 BRANCH_SUSTAIN = 1.5
 ARRIVED_HEIGHT = 5
-MAX_HEIGHT = 13
 ARRIVED_OPACITY = 0.5
+CURVE_PRECISION = 50
 GREYSCALE = True
 
 class Branch:
@@ -27,11 +25,11 @@ class Branch:
         self.peer = peer
         self.visualizer = peer.visualizer
         self.f = self.visualizer.files[filenum]
-        self.playing_chunks = OrderedDict()
+        self.playing_segments = OrderedDict()
 
-    def add_chunk(self, chunk):
-        self.playing_chunks[chunk.id] = chunk
-        self.cursor = chunk.end
+    def add_segment(self, segment):
+        self.playing_segments[segment.id] = segment
+        self.cursor = segment.end
         self.last_updated = time.time()
 
     def age(self):
@@ -43,19 +41,19 @@ class Branch:
         return Vector2d(x, y)
 
     def update(self):
-        for chunk in self.playing_chunks.values():
-            age = self.visualizer.now - chunk.arrival_time
-            if age > chunk.duration:
-                del self.playing_chunks[chunk.id]
+        for segment in self.playing_segments.values():
+            age = self.visualizer.now - segment.arrival_time
+            if age > segment.duration:
+                del self.playing_segments[segment.id]
 
-    def draw_playing_chunks(self):
-        if len(self.playing_chunks) > 0:
-            chunks_list = list(self.playing_chunks.values())
+    def draw_playing_segments(self):
+        if len(self.playing_segments) > 0:
+            segments_list = list(self.playing_segments.values())
             y = self.visualizer.filenum_to_y_coord(self.filenum)
             y1 = int(y)
             y2 = int(y + ARRIVED_HEIGHT) - 1
-            x1 = int(self.f.byte_to_coord(chunks_list[0].begin))
-            x2 = int(self.f.byte_to_coord(chunks_list[-1].end))
+            x1 = int(self.f.byte_to_coord(segments_list[0].begin))
+            x2 = int(self.f.byte_to_coord(segments_list[-1].end))
             if x2 == x1:
                 x2 = x1 + 1
             glBegin(GL_QUADS)
@@ -67,27 +65,29 @@ class Branch:
             glVertex2i(x2, y2)
             glEnd()
 
-class Peer:
-    def __init__(self, departure_position, visualizer):
-        self.departure_position = departure_position
-        self.visualizer = visualizer
+class Peer(visualizer.Peer):
+    def __init__(self, *args):
+        visualizer.Peer.__init__(self, *args)
+        self.departure_position = None
         self.smoothed_branching_position = Smoother()
         self.branches = {}
         self.branch_count = 0
         self.hue = random.uniform(0, 1)
 
-    def add_chunk(self, chunk):
-        chunk.peer = self
-        branch = self.find_branch(chunk)
+    def add_segment(self, segment):
+        if self.departure_position is None:
+            self.departure_position = segment.departure_position
+        segment.peer = self
+        branch = self.find_branch(segment)
         if not branch:
-            branch = Branch(chunk.filenum, chunk.file_length, self)
+            branch = Branch(segment.filenum, segment.f.length, self)
             self.branches[self.branch_count] = branch
             self.branch_count += 1
-        branch.add_chunk(chunk)
+        branch.add_segment(segment)
 
-    def find_branch(self, chunk):
+    def find_branch(self, segment):
         for branch in self.branches.values():
-            if branch.filenum == chunk.filenum and branch.cursor == chunk.begin:
+            if branch.filenum == segment.filenum and branch.cursor == segment.begin:
                 return branch
 
     def update(self):
@@ -122,7 +122,7 @@ class Peer:
             for branch in self.branches.values():
                 self.set_color(0)
                 self.draw_curve(branch)
-                branch.draw_playing_chunks()
+                branch.draw_playing_segments()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
@@ -154,7 +154,7 @@ class Peer:
                 (1 - (branch.age() - BRANCH_SUSTAIN) / (MAX_BRANCH_AGE - BRANCH_SUSTAIN))
         points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier([t/50.0 for t in range(51)])
+        points = bezier(CURVE_PRECISION)
         glBegin(GL_LINE_STRIP)
         for x,y in points:
             glVertex2f(x, y)
@@ -182,105 +182,36 @@ class Smoother:
     def reset(self):
         self._current_value = None
 
-class File:
-    def __init__(self, filenum, length, visualizer):
-        self.filenum = filenum
-        self.length = length
-        self.visualizer = visualizer
-        self._smoothed_min_byte = Smoother()
-        self._smoothed_max_byte = Smoother()
-        self.min_byte = None
-        self.max_byte = None
-        self.x_ratio = None
+class File(visualizer.File):
+    def __init__(self, *args):
+        visualizer.File.__init__(self, *args)
         self.gatherer = Gatherer()
+        self.x_scope = DynamicScope()
 
-    def add_chunk(self, chunk):
-        chunk.departure_position = self.get_departure_position(chunk)
-        chunk.duration = DURATION
-        if self.min_byte == None:
-            self.min_byte = chunk.begin
-            self.max_byte = chunk.end
-        else:
-            self.min_byte = min(self.min_byte, chunk.begin)
-            self.max_byte = max(self.max_byte, chunk.end)
-        self.gatherer.add(chunk)
-
-    def update_x_scope(self, time_increment):
-        self._smoothed_min_byte.smooth(self.min_byte, time_increment)
-        self._smoothed_max_byte.smooth(self.max_byte, time_increment)
-        self.byte_offset = self._smoothed_min_byte.value()
-        diff = self._smoothed_max_byte.value() - self._smoothed_min_byte.value()
-        if diff == 0:
-            self.x_ratio = 1
-        else:
-            self.x_ratio = 1.0 / diff
-
-    def byte_to_coord(self, byte):
-        # return self.visualizer.prepend_margin_width + \
-        #     float(byte) / self.length * self.visualizer.safe_width
-        return self.visualizer.prepend_margin_width + \
-            (self.x_ratio * (byte - self.byte_offset)) * self.visualizer.safe_width
-
-    def get_departure_position(self, chunk):
-        if chunk.pan < 0.5:
-            x = 0
-        else:
-            x = self.visualizer.width
-        y = chunk.height * self.visualizer.height
-        return Vector2d(x, y)
-
-class Puzzle(Visualizer):
-    def __init__(self, args):
-        Visualizer.__init__(self, args)
-        self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
-        self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
-        self.files = {}
-        self.peers = {}
-        self._smoothed_min_filenum = Smoother()
-        self._smoothed_max_filenum = Smoother()
-
-    def add_chunk(self, chunk):
-        if not chunk.filenum in self.files:
-            self.files[chunk.filenum] = File(chunk.filenum, chunk.file_length, self)
-        self.files[chunk.filenum].add_chunk(chunk)
-
-        if not chunk.peer_id in self.peers:
-            self.peers[chunk.peer_id] = Peer(chunk.departure_position, self)
-        self.peers[chunk.peer_id].add_chunk(chunk)
-
-        self.play_chunk(chunk)
+    def add_segment(self, segment):
+        self.x_scope.put(segment.begin)
+        self.x_scope.put(segment.end)
+        segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
+        segment.departure_position = segment.peer_position()
+        self.gatherer.add(segment)
+        self.visualizer.playing_segment(segment, segment.pan)
 
     def render(self):
-        if len(self.files) > 0:
-            self.update_y_scope()
-            self.draw_chunks()
-            self.draw_branches()
+        self.x_scope.update()
+        self.y = self.visualizer.filenum_to_y_coord(self.filenum)
+        self.draw_gathered_segments()
 
-    def draw_branches(self):
-        for peer in self.peers.values():
-            peer.update()
-            peer.draw()
-
-    def draw_chunks(self):
-        for f in self.files.values():
-            self.draw_file(f)
-
-    def draw_file(self, f):
-        y = self.filenum_to_y_coord(f.filenum)
-        f.update_x_scope(self.time_increment)
-        self.draw_gathered_chunks(f, y)
-
-    def draw_gathered_chunks(self, f, y):
+    def draw_gathered_segments(self):
         opacity = ARRIVED_OPACITY
         glColor3f(1-opacity, 1-opacity, 1-opacity)
-        for chunk in f.gatherer.pieces():
-            self.draw_chunk(chunk, f, y)
+        for segment in self.gatherer.pieces():
+            self.draw_segment(segment)
 
-    def draw_chunk(self, chunk, f, y):
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT)
-        x1 = int(f.byte_to_coord(chunk.begin))
-        x2 = int(f.byte_to_coord(chunk.end))
+    def draw_segment(self, segment):
+        y1 = int(self.y)
+        y2 = int(self.y + ARRIVED_HEIGHT)
+        x1 = int(self.byte_to_coord(segment.begin))
+        x2 = int(self.byte_to_coord(segment.end))
         if x2 == x1:
             x2 = x1 + 1
         glBegin(GL_LINE_LOOP)
@@ -290,32 +221,41 @@ class Puzzle(Visualizer):
         glVertex2i(x1, y1)
         glEnd()
 
-    def get_zoom(self, actuality):
-        if actuality < .5:
-            return actuality*2
-        else:
-            return (1-actuality)*2
+    def byte_to_coord(self, byte):
+        return self.visualizer.prepend_margin_width + \
+            self.x_scope.map(byte) * self.visualizer.safe_width
 
-    def upscale(self, x1, x2, zoom):
-        unscaled_size = x2 - x1
-        desired_size = zoom * ARRIVAL_SIZE
-        if desired_size > unscaled_size:
-            mid = (x1 + x2) / 2
-            half_desired_size = int(desired_size/2)
-            x1 = mid - half_desired_size
-            x2 = mid + half_desired_size
-        return (x1, x2)
+class Puzzle(visualizer.Visualizer):
+    def __init__(self, args):
+        visualizer.Visualizer.__init__(self, args,
+                                       file_class=File,
+                                       peer_class=Peer)
+        self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
+        self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
+        self.files = {}
+        self.segments = {}
+        self.y_scope = DynamicScope(padding=1)
+
+    def render(self):
+        if len(self.files) > 0:
+            self.y_scope.update()
+            self.draw_segments()
+            self.draw_branches()
+
+    def draw_branches(self):
+        for peer in self.peers.values():
+            peer.update()
+            peer.draw()
+
+    def draw_segments(self):
+        for f in self.files.values():
+            f.render()
+
+    def added_file(self, f):
+        self.y_scope.put(f.filenum)
 
     def filenum_to_y_coord(self, filenum):
-        return self.y_ratio * (filenum - self.filenum_offset + 1)
+        return self.y_scope.map(filenum) * self.height
 
-    def update_y_scope(self):
-        min_filenum = min(self.files.keys())
-        max_filenum = max(self.files.keys())
-        self._smoothed_min_filenum.smooth(float(min_filenum), self.time_increment)
-        self._smoothed_max_filenum.smooth(float(max_filenum), self.time_increment)
-        self.filenum_offset = self._smoothed_min_filenum.value()
-        diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
-        self.y_ratio = float(self.height) / (diff + 1)
-
-run(Puzzle)
+if __name__ == '__main__':
+    visualizer.run(Puzzle)

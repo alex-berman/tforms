@@ -80,12 +80,13 @@ class Chunk:
 
 class Segment(Chunk):
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, peer_id, bearing, duration,
+                 filenum, f, peer_id, bearing, duration,
                  arrival_time, visualizer):
         Chunk.__init__(self, chunk_id, begin, end, byte_size,
                  filenum, peer_id, bearing,
                  arrival_time, visualizer)
         self.duration = duration
+        self.f = f
 
     def age(self):
         return time.time() - self.arrival_time
@@ -162,7 +163,8 @@ class Visualizer:
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
-        self.files[filenum] = self.file_class(self, filenum, offset, length)
+        f = self.files[filenum] = self.file_class(self, filenum, offset, length)
+        self.added_file(f)
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum,
@@ -181,10 +183,11 @@ class Visualizer:
         (segment_id, torrent_position, byte_size, filenum,
          peer_id, bearing, duration) = args
         if filenum in self.files:
-            begin = torrent_position - self.files[filenum].offset
+            f = self.files[filenum]
+            begin = torrent_position - f.offset
             end = begin + byte_size
             segment = self.segment_class(
-                segment_id, begin, end, byte_size, filenum,
+                segment_id, begin, end, byte_size, filenum, f,
                 peer_id, bearing, duration, self.current_time(), self)
             self.add_segment(segment)
         else:
@@ -200,6 +203,9 @@ class Visualizer:
         peer = self.peers[segment.peer_id]
         peer.add_segment(segment)
         segment.peer = peer
+
+    def added_file(self, f):
+        pass
 
     def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
