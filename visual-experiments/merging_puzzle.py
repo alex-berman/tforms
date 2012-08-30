@@ -14,12 +14,15 @@ class Smoother:
     def __init__(self):
         self._current_value = None
 
-    def smooth(self, new_value, time_increment):
+    def smooth(self, new_value):
+        now = time.time()
         if self._current_value:
+            time_increment = now - self._time_of_previous_update
             self._current_value += (new_value - self._current_value) * \
                 self.RESPONSE_FACTOR * time_increment
         else:
             self._current_value = new_value
+        self._time_of_previous_update = now
 
     def value(self):
         return self._current_value
@@ -42,6 +45,9 @@ class File(visualizer.File):
         else:
             self.min_byte = min(self.min_byte, segment.begin)
             self.max_byte = max(self.max_byte, segment.end)
+        self.update_x_scope()
+        pan = (self.byte_to_coord(segment.begin) + self.byte_to_coord(segment.end)) / 2
+        self.visualizer.playing_segment(segment, pan)
         self.playing_segments[segment.id] = segment
 
     def update(self):
@@ -51,9 +57,9 @@ class File(visualizer.File):
             self.gatherer.add(self.playing_segments[segment_id])
             del self.playing_segments[segment_id]
 
-    def update_x_scope(self, time_increment):
-        self._smoothed_min_byte.smooth(self.min_byte, time_increment)
-        self._smoothed_max_byte.smooth(self.max_byte, time_increment)
+    def update_x_scope(self):
+        self._smoothed_min_byte.smooth(self.min_byte)
+        self._smoothed_max_byte.smooth(self.max_byte)
         self.byte_offset = self._smoothed_min_byte.value()
         diff = self._smoothed_max_byte.value() - self._smoothed_min_byte.value()
         if diff == 0:
@@ -87,7 +93,6 @@ class Puzzle(visualizer.Visualizer):
 
     def draw_file(self, f):
         y = self.filenum_to_y_coord(f.filenum)
-        f.update_x_scope(self.time_increment)
         self.draw_gathered_segments(f, y)
         self.draw_playing_segments(f, y)
 
@@ -97,8 +102,11 @@ class Puzzle(visualizer.Visualizer):
 
     def draw_playing_segments(self, f, y):
         for segment in f.playing_segments.values():
-            actuality = 1 - segment.relative_age()
-            self.draw_segment(segment, actuality, f, y)
+            self.draw_playing_segment(segment, f, y)
+
+    def draw_playing_segment(self, segment, f, y):
+        actuality = 1 - segment.relative_age()
+        self.draw_segment(segment, actuality, f, y)
 
     def draw_segment(self, segment, actuality, f, y):
         y_offset = actuality * 10
@@ -135,8 +143,8 @@ class Puzzle(visualizer.Visualizer):
     def update_y_scope(self):
         min_filenum = min(self.files.keys())
         max_filenum = max(self.files.keys())
-        self._smoothed_min_filenum.smooth(float(min_filenum), self.time_increment)
-        self._smoothed_max_filenum.smooth(float(max_filenum), self.time_increment)
+        self._smoothed_min_filenum.smooth(float(min_filenum))
+        self._smoothed_max_filenum.smooth(float(max_filenum))
         self.filenum_offset = self._smoothed_min_filenum.value()
         diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
         self.y_ratio = float(self.height) / (diff + 1)
