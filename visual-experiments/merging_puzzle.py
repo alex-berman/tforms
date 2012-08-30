@@ -28,29 +28,32 @@ class Smoother:
         return self._current_value
 
 class DynamicScope:
-    def __init__(self):
+    def __init__(self, padding=0):
+        self._padding = padding
         self._smoothed_min_value = Smoother()
         self._smoothed_max_value = Smoother()
         self._min_value = None
         self._max_value = None
 
     def put(self, value):
-        self._min_value = min(filter(None, [self._min_value, value]))
-        self._max_value = max(filter(None, [self._max_value, value]))
+        self._min_value = min(filter(lambda x: x is not None, [self._min_value, value]))
+        self._max_value = max(filter(lambda x: x is not None, [self._max_value, value]))
         self.update()
 
     def update(self):
-        self._smoothed_min_value.smooth(self._min_value)
-        self._smoothed_max_value.smooth(self._max_value)
-        self._offset = self._smoothed_min_value.value()
-        diff = self._smoothed_max_value.value() - self._smoothed_min_value.value()
-        if diff == 0:
-            self._ratio = 1
-        else:
-            self._ratio = 1.0 / diff
+        if self._min_value is not None:
+            self._smoothed_min_value.smooth(self._min_value)
+            self._smoothed_max_value.smooth(self._max_value)
+            self._offset = self._smoothed_min_value.value()
+            diff = self._smoothed_max_value.value() - self._smoothed_min_value.value() + \
+                self._padding * 2
+            if diff == 0:
+                self._ratio = 1
+            else:
+                self._ratio = 1.0 / diff
 
     def map(self, value):
-        return self._ratio * (value - self._offset)
+        return self._ratio * (value - self._offset + self._padding)
 
 class File(visualizer.File):
     def __init__(self, *args):
@@ -131,28 +134,21 @@ class Puzzle(visualizer.Visualizer):
         self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
         self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
-        self._smoothed_min_filenum = Smoother()
-        self._smoothed_max_filenum = Smoother()
         self.segments = {}
+        self.y_scope = DynamicScope(padding=1)
 
     def render(self):
         if len(self.files) > 0:
-            self.update_y_scope()
+            self.y_scope.update()
             for f in self.files.values():
                 f.update()
                 f.render()
 
-    def filenum_to_y_coord(self, filenum):
-        return self.y_ratio * (filenum - self.filenum_offset + 1)
+    def added_file(self, f):
+        self.y_scope.put(f.filenum)
 
-    def update_y_scope(self):
-        min_filenum = min(self.files.keys())
-        max_filenum = max(self.files.keys())
-        self._smoothed_min_filenum.smooth(float(min_filenum))
-        self._smoothed_max_filenum.smooth(float(max_filenum))
-        self.filenum_offset = self._smoothed_min_filenum.value()
-        diff = self._smoothed_max_filenum.value() - self._smoothed_min_filenum.value() + 1
-        self.y_ratio = float(self.height) / (diff + 1)
+    def filenum_to_y_coord(self, filenum):
+        return self.y_scope.map(filenum) * self.height
 
 if __name__ == '__main__':
     visualizer.run(Puzzle)
