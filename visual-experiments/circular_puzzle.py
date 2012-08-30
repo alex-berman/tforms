@@ -128,6 +128,8 @@ class Peer(visualizer.Peer):
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
                           self.segments)
         for segment_id in outdated:
+            segment = self.segments[segment_id]
+            segment.f.gatherer.add(segment)
             del self.segments[segment_id]
         self.update_branching_position()
 
@@ -200,7 +202,6 @@ class File(visualizer.File):
         pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
         self.visualizer.playing_segment(segment, pan)
         segment.departure_position = segment.peer_position()
-        self.gatherer.add(segment)
 
     def draw(self):
         glLineWidth(1)
