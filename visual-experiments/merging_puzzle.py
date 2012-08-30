@@ -56,6 +56,7 @@ class File(visualizer.File):
         for segment_id in outdated:
             self.gatherer.add(self.playing_segments[segment_id])
             del self.playing_segments[segment_id]
+        self.update_x_scope()
 
     def update_x_scope(self):
         self._smoothed_min_byte.smooth(self.min_byte)
