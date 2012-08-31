@@ -18,6 +18,12 @@ class Gatherer:
             self._pieces[self._counter] = new_piece
             self._counter += 1
 
+    def would_append(self, new_piece):
+        for key in self._overlapping_pieces(new_piece):
+            overlapping_piece = self._pieces[key]
+            if overlapping_piece.end <= new_piece.begin:
+                return overlapping_piece
+
     def pieces(self):
         return self._pieces.values()
 

@@ -82,15 +82,16 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def draw_playing(self):
-        trace_age = min(self.duration, 0.2)
-        previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
-            self.duration * self.byte_size
-        if self.relative_age() < 1:
-            opacity = 1
-        else:
-            opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
-        self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
-        self.draw_playback_border()
+        if self.is_playing():
+            trace_age = min(self.duration, 0.2)
+            previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
+                self.duration * self.byte_size
+            if self.relative_age() < 1:
+                opacity = 1
+            else:
+                opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
+            self.draw_playback_border()
+            self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
 
     def draw_playback_border(self):
         x1 = int(self.f.byte_to_coord(self.begin))
@@ -101,8 +102,11 @@ class Segment(visualizer.Segment):
         y = self.visualizer.filenum_to_y_coord(self.filenum)
         y1 = int(y)
         y2 = int(y + ARRIVED_HEIGHT) - 1
-        x1 = int(self.f.byte_to_coord(source))
-        x2 = int(self.f.byte_to_coord(target))
+        if self.appending_to():
+            x1 = int(self.f.byte_to_coord(self.appending_to().end)) - 1
+        else:
+            x1 = int(self.f.byte_to_coord(source)) + 1
+        x2 = int(self.f.byte_to_coord(target)) - 1
 
         source_color = Vector3d(1, 1, 1)
         target_color = Vector3d(1, 0, 0)
@@ -117,6 +121,12 @@ class Segment(visualizer.Segment):
         glVertex2i(x2, y2)
         glEnd()
 
+    def appending_to(self):
+        if not hasattr(self, "_appending_to"):
+            self._appending_to = self.f.gatherer.would_append(self)
+        return self._appending_to
+
+
 class Peer(visualizer.Peer):
     def __init__(self, *args):
         visualizer.Peer.__init__(self, *args)
@@ -129,14 +139,19 @@ class Peer(visualizer.Peer):
         if self.departure_position is None:
             self.departure_position = segment.departure_position
         segment.peer = self
+        segment.gathered = False
         self.segments[segment.id] = segment
 
     def update(self):
+        for segment in self.segments.values():
+            if not segment.gathered and not segment.is_playing():
+                segment.f.gatherer.add(segment)
+                segment.gathered = True
+
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
                           self.segments)
         for segment_id in outdated:
             segment = self.segments[segment_id]
-            segment.f.gatherer.add(segment)
             del self.segments[segment_id]
         self.update_branching_position()
 
