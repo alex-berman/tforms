@@ -97,6 +97,9 @@ class Segment(Chunk):
     def playback_byte_cursor(self):
         return self.begin + min(self.relative_age(), 1) * self.byte_size
 
+    def is_playing(self):
+        return self.relative_age() < 1
+
     def __str__(self):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
             self.id, self.begin, self.end, self.filenum, self.duration)

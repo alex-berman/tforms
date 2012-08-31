@@ -5,130 +5,140 @@ from collections import OrderedDict
 from dynamic_scope import DynamicScope
 import random
 import time
-from vector import Vector2d
+from vector import Vector2d, Vector3d
 from bezier import make_bezier
 
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
-MAX_BRANCH_AGE = 2.0
-BRANCH_SUSTAIN = 1.5
 ARRIVED_HEIGHT = 5
 ARRIVED_OPACITY = 0.5
-CURVE_PRECISION = 50
 GREYSCALE = True
+CONTROL_POINTS_BEFORE_BRANCH = 15
+CURVE_PRECISION = 50
+CURVE_OPACITY = 0.8
+SEGMENT_DECAY_TIME = 1.0
 
-class Branch:
-    def __init__(self, filenum, file_length, peer):
-        self.filenum = filenum
-        self.file_length = file_length
-        self.peer = peer
-        self.visualizer = peer.visualizer
-        self.f = self.visualizer.files[filenum]
-        self.playing_segments = OrderedDict()
-
-    def add_segment(self, segment):
-        self.playing_segments[segment.id] = segment
-        self.cursor = segment.end
-        self.last_updated = time.time()
-
-    def age(self):
-        return self.visualizer.now - self.last_updated
-
+class Segment(visualizer.Segment):
     def target_position(self):
-        x = self.f.byte_to_coord(self.cursor)
+        x = self.f.byte_to_coord(self.playback_byte_cursor())
         y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
         return Vector2d(x, y)
 
-    def update(self):
-        for segment in self.playing_segments.values():
-            age = self.visualizer.now - segment.arrival_time
-            if age > segment.duration:
-                del self.playing_segments[segment.id]
+    def decay_time(self):
+        return self.age() - self.duration
 
-    def draw_playing_segments(self):
-        if len(self.playing_segments) > 0:
-            segments_list = list(self.playing_segments.values())
-            y = self.visualizer.filenum_to_y_coord(self.filenum)
-            y1 = int(y)
-            y2 = int(y + ARRIVED_HEIGHT) - 1
-            x1 = int(self.f.byte_to_coord(segments_list[0].begin))
-            x2 = int(self.f.byte_to_coord(segments_list[-1].end))
-            if x2 == x1:
-                x2 = x1 + 1
-            glBegin(GL_QUADS)
-            glColor3f(1,1,1)
-            glVertex2i(x1, y2)
-            glVertex2i(x1, y1)
-            glColor3f(1,0,0)
-            glVertex2i(x2, y1)
-            glVertex2i(x2, y2)
-            glEnd()
+    def outdated(self):
+        return (self.age() - self.duration) > SEGMENT_DECAY_TIME
+
+    def draw_curve(self):
+        glBegin(GL_LINE_STRIP)
+        for x,y in self.curve():
+            glVertex2f(x, y)
+        glEnd()
+        # if self.is_playing():
+        #     self.draw_cursor_line()
+
+    def curve(self):
+        control_points = []
+        branching_position = self.peer.smoothed_branching_position.value()
+        for i in range(CONTROL_POINTS_BEFORE_BRANCH):
+            r = float(i) / (CONTROL_POINTS_BEFORE_BRANCH-1)
+            control_points.append(self.peer.departure_position * (1-r) +
+                                 branching_position * r)
+        if self.is_playing():
+            target = self.target_position()
+        else:
+            target = branching_position + (self.target_position() - branching_position) * \
+                (1 - pow(self.decay_time(), 0.3))
+        control_points.append(target)
+        bezier = make_bezier([(p.x, p.y) for p in control_points])
+        return bezier(CURVE_PRECISION)
+
+    def draw_playing(self):
+        trace_age = min(self.duration, 0.2)
+        previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
+            self.duration * self.byte_size
+        if self.relative_age() < 1:
+            opacity = 1
+        else:
+            opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
+        self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
+
+    def draw_gradient(self, source, target, opacity):
+        y = self.visualizer.filenum_to_y_coord(self.filenum)
+        y1 = int(y)
+        y2 = int(y + ARRIVED_HEIGHT) - 1
+        x1 = int(self.f.byte_to_coord(source))
+        x2 = int(self.f.byte_to_coord(target))
+
+        source_color = Vector3d(1, 1, 1)
+        target_color = Vector3d(1, 0, 0)
+        target_color += (source_color - target_color) * (1-opacity)
+
+        glBegin(GL_QUADS)
+        self.visualizer.set_color(source_color)
+        glVertex2i(x1, y2)
+        glVertex2i(x1, y1)
+        self.visualizer.set_color(target_color)
+        glVertex2i(x2, y1)
+        glVertex2i(x2, y2)
+        glEnd()
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
         visualizer.Peer.__init__(self, *args)
         self.departure_position = None
         self.smoothed_branching_position = Smoother()
-        self.branches = {}
-        self.branch_count = 0
+        self.segments = {}
         self.hue = random.uniform(0, 1)
 
     def add_segment(self, segment):
         if self.departure_position is None:
             self.departure_position = segment.departure_position
         segment.peer = self
-        branch = self.find_branch(segment)
-        if not branch:
-            branch = Branch(segment.filenum, segment.f.length, self)
-            self.branches[self.branch_count] = branch
-            self.branch_count += 1
-        branch.add_segment(segment)
-
-    def find_branch(self, segment):
-        for branch in self.branches.values():
-            if branch.filenum == segment.filenum and branch.cursor == segment.begin:
-                return branch
+        self.segments[segment.id] = segment
 
     def update(self):
-        outdated = filter(lambda branch_id:
-                              self.branches[branch_id].age() > MAX_BRANCH_AGE,
-                          self.branches)
-        for branch_id in outdated:
-            del self.branches[branch_id]
+        outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
+                          self.segments)
+        for segment_id in outdated:
+            segment = self.segments[segment_id]
+            segment.f.gatherer.add(segment)
+            del self.segments[segment_id]
         self.update_branching_position()
 
-        for branch in self.branches.values():
-            branch.update()
-
     def update_branching_position(self):
-        if len(self.branches) == 0:
+        if len(self.segments) == 0:
             self.smoothed_branching_position.reset()
         else:
             average_target_position = \
-                sum([branch.target_position() for branch in self.branches.values()]) / \
-                len(self.branches)
+                sum([segment.target_position() for segment in self.segments.values()]) / \
+                len(self.segments)
             new_branching_position = self.departure_position*0.4 + average_target_position*0.6
             self.smoothed_branching_position.smooth(
                 new_branching_position, self.visualizer.time_increment)
 
     def draw(self):
-        if len(self.branches) > 0:
+        if len(self.segments) > 0:
             glLineWidth(1.0)
             glEnable(GL_LINE_SMOOTH)
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-            for branch in self.branches.values():
+            for segment in self.segments.values():
+                segment.draw_playing()
+            for segment in self.segments.values():
                 self.set_color(0)
-                self.draw_curve(branch)
-                branch.draw_playing_segments()
+                segment.draw_curve()
             glDisable(GL_LINE_SMOOTH)
             glDisable(GL_BLEND)
 
     def set_color(self, relative_age):
         if GREYSCALE:
-            glColor3f(0,0,0)
+            glColor3f(1 - CURVE_OPACITY,
+                      1 - CURVE_OPACITY,
+                      1 - CURVE_OPACITY)
         else:
             color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
             glColor3f(relative_age + color[0] * (1-relative_age),
@@ -140,28 +150,6 @@ class Peer(visualizer.Peer):
         glVertex2f(p.x, p.y)
         glVertex2f(q.x, q.y)
         glEnd()
-
-    def draw_curve(self, branch):
-        points = []
-        branching_position = self.smoothed_branching_position.value()
-        for i in range(15):
-            points.append(self.departure_position * (1-i/14.0)+
-                          branching_position * i/14.0)
-        if branch.age() < BRANCH_SUSTAIN:
-            target = branch.target_position()
-        else:
-            target = branching_position + (branch.target_position() - branching_position) * \
-                (1 - (branch.age() - BRANCH_SUSTAIN) / (MAX_BRANCH_AGE - BRANCH_SUSTAIN))
-        points.append(target)
-        bezier = make_bezier([(p.x, p.y) for p in points])
-        points = bezier(CURVE_PRECISION)
-        glBegin(GL_LINE_STRIP)
-        for x,y in points:
-            glVertex2f(x, y)
-        glEnd()
-        if branch.age() < BRANCH_SUSTAIN:
-            self.draw_line(Vector2d(target.x, target.y-ARRIVED_HEIGHT/2),
-                           Vector2d(target.x, target.y+ARRIVED_HEIGHT/2))
 
 class Smoother:
     RESPONSE_FACTOR = 5
@@ -193,7 +181,6 @@ class File(visualizer.File):
         self.x_scope.put(segment.end)
         segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
         segment.departure_position = segment.peer_position()
-        self.gatherer.add(segment)
         self.visualizer.playing_segment(segment, segment.pan)
 
     def render(self):
@@ -229,7 +216,8 @@ class Puzzle(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
-                                       peer_class=Peer)
+                                       peer_class=Peer,
+                                       segment_class=Segment)
         self.safe_width = int(self.width * (1 - APPEND_MARGIN - PREPEND_MARGIN))
         self.prepend_margin_width = int(self.width * PREPEND_MARGIN)
         self.files = {}
@@ -239,17 +227,17 @@ class Puzzle(visualizer.Visualizer):
     def render(self):
         if len(self.files) > 0:
             self.y_scope.update()
-            self.draw_segments()
+            self.draw_gathered_segments()
             self.draw_branches()
+
+    def draw_gathered_segments(self):
+        for f in self.files.values():
+            f.render()
 
     def draw_branches(self):
         for peer in self.peers.values():
             peer.update()
             peer.draw()
-
-    def draw_segments(self):
-        for f in self.files.values():
-            f.render()
 
     def added_file(self, f):
         self.y_scope.put(f.filenum)

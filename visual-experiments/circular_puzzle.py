@@ -27,9 +27,6 @@ class Segment(visualizer.Segment):
             self.playback_byte_cursor(),
             (self.f.inner_radius + self.f.radius) / 2)
 
-    def is_playing(self):
-        return self.relative_age() < 1
-
     def decay_time(self):
         return self.age() - self.duration
 
