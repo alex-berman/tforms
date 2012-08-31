@@ -32,12 +32,15 @@ class Segment(visualizer.Segment):
         return (self.age() - self.duration) > SEGMENT_DECAY_TIME
 
     def draw_curve(self):
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
         glBegin(GL_LINE_STRIP)
         for x,y in self.curve():
             glVertex2f(x, y)
         glEnd()
-        # if self.is_playing():
-        #     self.draw_cursor_line()
 
     def curve(self):
         control_points = []
@@ -55,6 +58,29 @@ class Segment(visualizer.Segment):
         bezier = make_bezier([(p.x, p.y) for p in control_points])
         return bezier(CURVE_PRECISION)
 
+    def draw_gathered(self):
+        x1 = int(self.f.byte_to_coord(self.begin))
+        x2 = int(self.f.byte_to_coord(self.end))
+        self.draw_border(x1, x2)
+
+    def draw_border(self, x1, x2):
+        y = self.visualizer.filenum_to_y_coord(self.filenum)
+        y1 = int(y)
+        y2 = int(y + ARRIVED_HEIGHT)
+        opacity = ARRIVED_OPACITY
+        glColor3f(1-opacity, 1-opacity, 1-opacity)
+        if x2 == x1:
+            x2 = x1 + 1
+
+        glDisable(GL_LINE_SMOOTH)
+        glDisable(GL_BLEND)
+        glBegin(GL_LINE_LOOP)
+        glVertex2i(x1, y2)
+        glVertex2i(x2, y2)
+        glVertex2i(x2, y1)
+        glVertex2i(x1, y1)
+        glEnd()
+
     def draw_playing(self):
         trace_age = min(self.duration, 0.2)
         previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
@@ -64,6 +90,12 @@ class Segment(visualizer.Segment):
         else:
             opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
         self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
+        self.draw_playback_border()
+
+    def draw_playback_border(self):
+        x1 = int(self.f.byte_to_coord(self.begin))
+        x2 = int(self.f.byte_to_coord(self.playback_byte_cursor()))
+        self.draw_border(x1, x2)
 
     def draw_gradient(self, source, target, opacity):
         y = self.visualizer.filenum_to_y_coord(self.filenum)
@@ -121,18 +153,11 @@ class Peer(visualizer.Peer):
 
     def draw(self):
         if len(self.segments) > 0:
-            glLineWidth(1.0)
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             for segment in self.segments.values():
                 segment.draw_playing()
             for segment in self.segments.values():
                 self.set_color(0)
                 segment.draw_curve()
-            glDisable(GL_LINE_SMOOTH)
-            glDisable(GL_BLEND)
 
     def set_color(self, relative_age):
         if GREYSCALE:
@@ -185,28 +210,11 @@ class File(visualizer.File):
 
     def render(self):
         self.x_scope.update()
-        self.y = self.visualizer.filenum_to_y_coord(self.filenum)
         self.draw_gathered_segments()
 
     def draw_gathered_segments(self):
-        opacity = ARRIVED_OPACITY
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
         for segment in self.gatherer.pieces():
-            self.draw_segment(segment)
-
-    def draw_segment(self, segment):
-        y1 = int(self.y)
-        y2 = int(self.y + ARRIVED_HEIGHT)
-        x1 = int(self.byte_to_coord(segment.begin))
-        x2 = int(self.byte_to_coord(segment.end))
-        if x2 == x1:
-            x2 = x1 + 1
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
+            segment.draw_gathered()
 
     def byte_to_coord(self, byte):
         return self.visualizer.prepend_margin_width + \
