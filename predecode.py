@@ -2,6 +2,22 @@ import os
 import subprocess
 import re
 
+class mp3_decoder:
+    def command(self, source_filename, target_filename, sample_rate=None):
+        cmd = 'mpg123'
+        if sample_rate:
+            cmd += ' -r %d' % sample_rate
+        cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
+        return cmd
+
+class m4b_decoder:
+    def command(self, source_filename, target_filename, sample_rate=None):
+        return 'faad -o "%s" "%s"' % (target_filename, source_filename)
+
+class flac_decoder:
+    def command(self, source_filename, target_filename, sample_rate=None):
+        return 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
+        
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
@@ -11,6 +27,12 @@ class Predecoder:
         self._sample_rate = sample_rate
         self.logger = logger
         self._extension_re = re.compile('\.(\w+)$')
+        self._decoders = dict([(extension, self._decoder_for_extension(extension))
+                               for extension in self.DECODABLE_FORMATS])
+
+    def _decoder_for_extension(self, extension):
+        class_name = "%s_decoder" % extension
+        return globals()[class_name]()
 
     def decode(self):
         for file_info in self.tr_log.files:
@@ -48,15 +70,8 @@ class Predecoder:
     def _decode_file(self, source_filename, target_filename):
         if os.path.isfile(source_filename):
             extension = self._extension(source_filename)
-            if extension == 'mp3':
-                cmd = 'mpg123'
-                if self._sample_rate:
-                    cmd += ' -r %d' % self._sample_rate
-                cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
-            elif extension == 'm4b':
-                cmd = 'faad -o "%s" "%s"' % (target_filename, source_filename)
-            elif extension == 'flac':
-                cmd = 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
+            decoder = self._decoders[extension]
+            cmd = decoder.command(source_filename, target_filename, self._sample_rate)
             self.logger.debug("decode command: %s" % cmd)
             subprocess.call(cmd, shell=True)
         else:
