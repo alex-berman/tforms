@@ -66,6 +66,9 @@ orchestra = Orchestra(sessiondir,
                       loop=options.loop,
                       osc_log=options.osc_log)
 
+if not options.realtime and len(orchestra.chunks) == 0:
+    raise Exception("No chunks to play. Unsupported file format?")
+
 def process_chunks_from_queue():
     while True:
         logger.debug("waiting for chunk")
@@ -89,6 +92,15 @@ def run_realtime():
     log_reader_thread.start()
     process_chunks_from_queue()
 
+def run_offline():
+    if options.gui_enabled:
+        from gui import GUI
+        gui = GUI(orchestra)
+        gui.main_loop()
+    else:
+        play()
+        wait_for_play_completion_or_interruption()
+
 def play():
     global orchestra_thread
     orchestra_thread = threading.Thread(target=orchestra.play_non_realtime)
@@ -106,12 +118,6 @@ if options.visualizer:
 if options.realtime:
     run_realtime()
 else:
-    if options.gui_enabled:
-        from gui import GUI
-        gui = GUI(orchestra)
-        gui.main_loop()
-    else:
-        play()
-        wait_for_play_completion_or_interruption()
+    run_offline()
 
 orchestra.shutdown()
