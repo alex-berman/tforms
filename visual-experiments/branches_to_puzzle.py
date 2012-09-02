@@ -2,7 +2,7 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from dynamic_scope import DynamicScope
+from dynamic_scope import DynamicScope, DensityDrivenScope
 import random
 import time
 from vector import Vector2d, Vector3d
@@ -145,13 +145,12 @@ class Peer(visualizer.Peer):
     def update(self):
         for segment in self.segments.values():
             if not segment.gathered and not segment.is_playing():
-                segment.f.gatherer.add(segment)
+                segment.f.gather_segment(segment)
                 segment.gathered = True
 
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
                           self.segments)
         for segment_id in outdated:
-            segment = self.segments[segment_id]
             del self.segments[segment_id]
         self.update_branching_position()
 
@@ -214,18 +213,23 @@ class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
         self.gatherer = Gatherer()
-        self.x_scope = DynamicScope()
+        self.x_scope = DensityDrivenScope(self.length, num_partitions=10000, blur_radius=0)
 
     def add_segment(self, segment):
-        self.x_scope.put(segment.begin)
-        self.x_scope.put(segment.end)
         segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
         segment.departure_position = segment.peer_position()
         self.visualizer.playing_segment(segment, segment.pan)
 
     def render(self):
-        self.x_scope.update()
         self.draw_gathered_segments()
+
+    def gather_segment(self, segment):
+        self.gatherer.add(segment)
+        self.update_x_scope()
+
+    def update_x_scope(self):
+        events = [segment.begin for segment in self.gatherer.pieces()]
+        self.x_scope.update(events)
 
     def draw_gathered_segments(self):
         for segment in self.gatherer.pieces():
