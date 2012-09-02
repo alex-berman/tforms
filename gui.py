@@ -5,6 +5,8 @@ from OpenGL.GL import *
 import colors
 
 class GUI(wx.Frame):
+    PLAYING, STOPPED, FF = range(3)
+
     def __init__(self, orchestra):
         self.orchestra = orchestra
         self.score = orchestra.score
@@ -15,8 +17,7 @@ class GUI(wx.Frame):
         self.max_byte = max(orchestra.chunks, key=lambda chunk: chunk["end"])["end"]
         self._segments_being_played = {}
         self._zoom_selection_taking_place = False
-        self._playing = False
-        self._scrubbing = False
+        self._state = self.STOPPED
         self._reset_displayed_time()
         self._reset_displayed_bytes()
         self.chunks_and_score_display_list = None
@@ -45,6 +46,7 @@ class GUI(wx.Frame):
     def _create_control_buttons(self):
         self._control_buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self._play_button = self._create_control_button("Play", self._play_button_clicked)
+        self._ff_button = self._create_control_button("Fast-forward", self._ff_button_clicked)
         self._stop_button = self._create_control_button("Stop", self._stop_button_clicked)
         self._zoom_out_button = self._create_control_button(
             "Zoom out", self._zoom_out_button_clicked)
@@ -72,8 +74,7 @@ class GUI(wx.Frame):
         self.timeline.Bind(wx.EVT_SIZE, self._on_resize_timeline)
         self.timeline.Bind(wx.EVT_PAINT, self._OnPaint)
         self.timeline.Bind(wx.EVT_KEY_DOWN, self._OnKeyDown)
-        self.timeline.Bind(wx.EVT_LEFT_DOWN, self._on_scrub_start)
-        self.timeline.Bind(wx.EVT_LEFT_UP, self._on_scrub_stop)
+        self.timeline.Bind(wx.EVT_LEFT_DOWN, self._set_time_cursor)
         self.timeline.Bind(wx.EVT_RIGHT_DOWN, self._on_zoom_selection_start)
         self.timeline.Bind(wx.EVT_MOTION, self._on_mouse_moved)
         self.timeline.Bind(wx.EVT_RIGHT_UP, self._on_zoom_selection_stop)
@@ -160,12 +161,27 @@ class GUI(wx.Frame):
         self.app.MainLoop()
 
     def _play_button_clicked(self, event):
+        self.orchestra.timefactor = 1
+        self.orchestra.playback_enabled = True
         self._orchestra_thread = threading.Thread(target=self.orchestra.play_non_realtime)
         self._orchestra_thread.daemon = True
         self._orchestra_thread.start()
         self._play_button.Disable()
         self._stop_button.Enable()
-        self._playing = True
+        self._ff_button.Disable()
+        self._state = self.PLAYING
+        self.catch_key_events()
+
+    def _ff_button_clicked(self, event):
+        self.orchestra.timefactor = 100
+        self.orchestra.playback_enabled = False
+        self._orchestra_thread = threading.Thread(target=self.orchestra.play_non_realtime)
+        self._orchestra_thread.daemon = True
+        self._orchestra_thread.start()
+        self._play_button.Disable()
+        self._stop_button.Enable()
+        self._ff_button.Disable()
+        self._state = self.FF
         self.catch_key_events()
 
     def _stop_button_clicked(self, event):
@@ -173,8 +189,10 @@ class GUI(wx.Frame):
         self._orchestra_thread.join()
         self._stop_button.Disable()
         self._play_button.Enable()
+        self._ff_button.Enable()
         self._segments_being_played = {}
-        self._playing = False
+        self._state = self.STOPPED
+        self.orchestra.set_time_cursor(self.orchestra.log_time_played_from) # this seems required after ff, or else irrelevant playback occurs, don't know why
         self.catch_key_events()
 
     def _OnKeyDown(self, event):
@@ -186,7 +204,7 @@ class GUI(wx.Frame):
         event.Skip()
 
     def _toggle_play(self, event):
-        if self._playing:
+        if self._state == self.PLAYING:
             self._stop_button_clicked(event)
         else:
             self._play_button_clicked(event)
@@ -253,14 +271,10 @@ class GUI(wx.Frame):
         self.refresh_chunks()
         self.catch_key_events()
 
-    def _on_scrub_start(self, event):
-        self._scrubbing = True
+    def _set_time_cursor(self, event):
         t = self.px_to_time(event.GetX())
         self.orchestra.set_time_cursor(t)
         self.timeline.Refresh()
-
-    def _on_scrub_stop(self, event):
-        self._scrubbing = False
 
     def _on_zoom_selection_start(self, event):
         self._zoom_selection_x1 = event.GetX()
@@ -289,16 +303,6 @@ class GUI(wx.Frame):
             self._zoom_selection_x2 = event.GetX()
             self._zoom_selection_y2 = event.GetY()
             self.timeline.Refresh()
-        elif self._scrubbing:
-            self._scrub(event)
-
-    def _scrub(self, event):
-        t = self.px_to_time(event.GetX())
-        if self._playing:
-            self.orchestra.set_time_cursor(t)
-        else:
-            self.orchestra.scrub_to_time(t)
-        self.timeline.Refresh()
 
     def draw_chunks_and_score(self):
         if self.chunks_and_score_display_list:

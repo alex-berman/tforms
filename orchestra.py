@@ -82,6 +82,7 @@ class Orchestra:
         self.file_location = file_location
         self._loop = loop
 
+        self.playback_enabled = True
         self.gui = None
         self._check_which_files_are_audio()
         self.synth = SynthController()
@@ -262,43 +263,6 @@ class Orchestra:
             return {"type": "segment",
                     "segment": segment}
             
-    def scrub_to_time(self, target_log_time):
-        self.logger.debug("scrub_to_time(%s)" % target_log_time)
-        if target_log_time > self.get_current_log_time():
-            self._scrub_forward_to(target_log_time)
-        else:
-            self._scrub_backward_to(target_log_time)
-        self.set_time_cursor(target_log_time)
-        self.logger.debug("scrub_to_time(%s) complete" % target_log_time)
-
-    def _scrub_forward_to(self, target_log_time):
-        reached_target = False
-        num_segments = len(self.score)
-        while not reached_target:
-            chunk = self.chunks[self.current_segment_index]
-            if chunk["t"] >= target_log_time:
-                reached_target = True
-            if not reached_target:
-                self.current_segment_index += 1
-                if self.current_segment_index == num_segments:
-                    reached_target = True
-        player = self.get_player_for_chunk(chunk)
-        player.play(chunk, pan=0.5)
-
-    def _scrub_backward_to(self, target_log_time):
-        reached_target = False
-        num_segments = len(self.score)
-        while not reached_target:
-            chunk = self.chunks[self.current_segment_index]
-            if chunk["t"] <= target_log_time:
-                reached_target = True
-            if not reached_target:
-                self.current_segment_index += 1
-                if self.current_segment_index < 0 or self.current_segment_index == num_segments:
-                    reached_target = True
-        player = self.get_player_for_chunk(chunk)
-        player.play(chunk, pan=0.5)
-        
     def stop(self):
         self.synth.stop_all()
         self._playing = False
@@ -381,17 +345,18 @@ class Orchestra:
 
     def play_segment(self, segment, player_id, bearing):
         self.segments_by_id[segment["id"]] = segment
-        file_info = self.tr_log.files[segment["filenum"]]
-        self.synth.play_segment(
-            segment["id"],
-            segment["filenum"],
-            segment["start_time_in_file"] / file_info["duration"],
-            segment["end_time_in_file"] / file_info["duration"],
-            segment["duration"],
-            segment["pan"])
-        self.scheduler.enter(
-            segment["duration"], 1,
-            self.stopped_playing, [segment])
+        if self.playback_enabled:
+            file_info = self.tr_log.files[segment["filenum"]]
+            self.synth.play_segment(
+                segment["id"],
+                segment["filenum"],
+                segment["start_time_in_file"] / file_info["duration"],
+                segment["end_time_in_file"] / file_info["duration"],
+                segment["duration"],
+                segment["pan"])
+            self.scheduler.enter(
+                segment["duration"], 1,
+                self.stopped_playing, [segment])
         self.visualize_segment(segment, player_id, bearing)
 
     def _send_torrent_info_to_visualizer(self):
