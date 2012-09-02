@@ -1,9 +1,12 @@
 import time
 
 class Smoother:
-    RESPONSE_FACTOR = 5
+    DEFAULT_RESPONSE_FACTOR = 5
 
-    def __init__(self):
+    def __init__(self, response_factor=None):
+        if response_factor is None:
+            response_factor = self.DEFAULT_RESPONSE_FACTOR
+        self._response_factor = response_factor
         self._current_value = None
 
     def smooth(self, new_value):
@@ -11,7 +14,7 @@ class Smoother:
         if self._current_value:
             time_increment = now - self._time_of_previous_update
             self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
+                self._response_factor * time_increment
         else:
             self._current_value = new_value
         self._time_of_previous_update = now
@@ -46,3 +49,25 @@ class DynamicScope:
 
     def map(self, value):
         return self._ratio * (value - self._offset + self._padding)
+
+class ActivityBasedScope:
+    def __init__(self, padding=0.5):
+        self._padding = padding
+        self._smoothed_min_value = Smoother(0.5)
+        self._smoothed_max_value = Smoother(0.5)
+
+    def update(self, target_min, target_max):
+        self._smoothed_min_value.smooth(target_min)
+        self._smoothed_max_value.smooth(target_max)
+        self._offset = self._smoothed_min_value.value()
+        diff = (self._smoothed_max_value.value() - self._offset) * (1 + self._padding)
+        if diff == 0:
+            self._ratio = 1
+        else:
+            self._ratio = 1.0 / diff
+
+    def map(self, value):
+        return self._ratio * (value - self._offset)
+
+    def ratio(self):
+        return self._ratio

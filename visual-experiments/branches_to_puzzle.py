@@ -2,7 +2,7 @@ import visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
-from dynamic_scope import DynamicScope
+from dynamic_scope import DynamicScope, ActivityBasedScope
 import random
 import time
 from vector import Vector2d, Vector3d
@@ -11,7 +11,7 @@ from bezier import make_bezier
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
-ARRIVED_HEIGHT = 5
+HEIGHT_SCALE = 100000
 ARRIVED_OPACITY = 0.5
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
@@ -22,7 +22,7 @@ SEGMENT_DECAY_TIME = 1.0
 class Segment(visualizer.Segment):
     def target_position(self):
         x = self.f.byte_to_coord(self.playback_byte_cursor())
-        y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
+        y = self.y()
         return Vector2d(x, y)
 
     def decay_time(self):
@@ -64,9 +64,8 @@ class Segment(visualizer.Segment):
         self.draw_border(x1, x2)
 
     def draw_border(self, x1, x2):
-        y = self.visualizer.filenum_to_y_coord(self.filenum)
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT)
+        y1 = int(self.y() - self.height())
+        y2 = int(self.y() + self.height())
         opacity = ARRIVED_OPACITY
         glColor3f(1-opacity, 1-opacity, 1-opacity)
         if x2 == x1:
@@ -80,6 +79,12 @@ class Segment(visualizer.Segment):
         glVertex2i(x2, y1)
         glVertex2i(x1, y1)
         glEnd()
+
+    def y(self):
+        return self.visualizer.filenum_to_y_coord(self.filenum)
+
+    def height(self):
+        return HEIGHT_SCALE * self.f.scope.ratio()
 
     def draw_playing(self):
         if self.is_playing():
@@ -99,9 +104,8 @@ class Segment(visualizer.Segment):
         self.draw_border(x1, x2)
 
     def draw_gradient(self, source, target, opacity):
-        y = self.visualizer.filenum_to_y_coord(self.filenum)
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT) - 1
+        y1 = int(self.y() - self.height())
+        y2 = int(self.y() + self.height() - 1)
         if self.appending_to():
             x1 = int(self.f.byte_to_coord(self.appending_to().end)) - 1
         else:
@@ -214,17 +218,18 @@ class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
         self.gatherer = Gatherer()
-        self.x_scope = DynamicScope()
+        self.scope = ActivityBasedScope()
+        self.active_segments = {}
 
     def add_segment(self, segment):
-        self.x_scope.put(segment.begin)
-        self.x_scope.put(segment.end)
-        segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
+        self.active_segments[segment.id] = segment
+        self.update_scope()
+        segment.pan = (self.scope.map(segment.begin) + self.scope.map(segment.end)) / 2
         segment.departure_position = segment.peer_position()
         self.visualizer.playing_segment(segment, segment.pan)
 
     def render(self):
-        self.x_scope.update()
+        self.update_scope()
         self.draw_gathered_segments()
 
     def draw_gathered_segments(self):
@@ -233,7 +238,23 @@ class File(visualizer.File):
 
     def byte_to_coord(self, byte):
         return self.visualizer.prepend_margin_width + \
-            self.x_scope.map(byte) * self.visualizer.safe_width
+            self.scope.map(byte) * self.visualizer.safe_width
+
+    def update_scope(self):
+        outdated = filter(lambda segment_id: self.active_segments[segment_id].outdated(),
+                          self.active_segments)
+        for segment_id in outdated:
+            del self.active_segments[segment_id]
+        
+        if len(self.active_segments) == 0:
+            gathered_min = min([piece.begin for piece in self.gatherer.pieces()])
+            gathered_max = max([piece.end   for piece in self.gatherer.pieces()])
+            self.scope.update(gathered_min, gathered_max)
+        else:
+            active_min = min([segment.begin for segment in self.active_segments.values()])
+            active_max = max([segment.end   for segment in self.active_segments.values()])
+            self.scope.update(active_min, active_max)
+            
 
 class Puzzle(visualizer.Visualizer):
     def __init__(self, args):
