@@ -196,7 +196,7 @@ class Orchestra:
     def get_current_log_time(self):
         return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
 
-    def play_non_realtime(self):
+    def play_non_realtime(self, quit_on_end=False):
         self.logger.debug("entering play_non_realtime")
         if self._loop:
             while True:
@@ -204,7 +204,8 @@ class Orchestra:
                 self.set_time_cursor(0)
         else:
             self._play_until_end()
-            self._quitting = True
+            if quit_on_end:
+                self._quitting = True
         self.logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
