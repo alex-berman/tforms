@@ -83,10 +83,13 @@ class Orchestra:
         self._loop = loop
 
         self.playback_enabled = True
+        self.fast_forwarding = False
+        self._log_time_for_last_handled_event = 0
         self.gui = None
         self._check_which_files_are_audio()
         self.synth = SynthController()
-        self._prepare_players()
+        self._create_players()
+        self._prepare_playable_files()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
         self.score = Interpreter().interpret(self.chunks, tr_log.files)
@@ -161,24 +164,36 @@ class Orchestra:
         if m:
             return m.group(1).lower()
 
-    def _prepare_players(self):
+    def _create_players(self):
         self._player_class = WavPlayer
-        if self.predecoded:
-            self._get_wav_files_info()
-        else:
-            raise Exception("playing wav without precoding is not supported")
         self.players = []
         self._player_for_peer = dict()
 
+    def _prepare_playable_files(self):
+        if self.predecoded:
+            self._get_wav_files_info()
+            self._load_sounds()
+        else:
+            raise Exception("playing wav without precoding is not supported")
+
+    def _load_sounds(self):
+        for filenum in range(len(self.tr_log.files)):
+            file_info = self.tr_log.files[filenum]
+            if "decoded_name" in file_info:
+                self.synth.load_sound(filenum, file_info["decoded_name"])
+
     def _get_wav_files_info(self):
-        for file_id in range(len(self.tr_log.files)):
-            file_info = self.tr_log.files[file_id]
+        playable_file_index = 0
+        for filenum in range(len(self.tr_log.files)):
+            file_info = self.tr_log.files[filenum]
             if "decoded_name" in file_info:
                 file_info["duration"] = self._get_file_duration(file_info)
                 file_info["num_channels"] = self._get_num_channels(file_info)
+                file_info["playable_file_index"] = playable_file_index
                 self.logger.debug("duration for %r: %r\n" %
                                   (file_info["name"], file_info["duration"]))
-                self.synth.load_sound(file_id, file_info["decoded_name"])
+                playable_file_index += 1
+        self._num_playable_files = playable_file_index
 
     def _get_file_duration(self, file_info):
         if "decoded_name" in file_info:
@@ -195,7 +210,10 @@ class Orchestra:
             return int(stdoutdata)
 
     def get_current_log_time(self):
-        return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
+        if self.fast_forwarding:
+            return self._log_time_for_last_handled_event
+        else:
+            return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
 
     def play_non_realtime(self, quit_on_end=False):
         self.logger.debug("entering play_non_realtime")
@@ -223,9 +241,12 @@ class Orchestra:
         self.logger.debug("leaving _play_until_end")
 
     def _get_next_chunk_or_segment(self):
-        self.logger.debug("segment index is %d" % self.current_segment_index)
+        self.logger.debug("chunk index = %d, segment index = %d" % (
+                self.current_chunk_index, self.current_segment_index))
         chunk = self._get_next_chunk()
         segment = self._get_next_segment()
+        self.logger.debug("next chunk: %s" % chunk)
+        self.logger.debug("next segment: %s" % segment)
         if chunk and segment:
             return self._choose_nearest_chunk_or_segment(chunk, segment)
         elif chunk:
@@ -271,35 +292,39 @@ class Orchestra:
 
     def handle_segment(self, segment):
         self.logger.debug("handling segment %s" % segment)
-        now = self.get_current_log_time()
-        time_margin = segment["onset"] - now
-        self.logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
         player = self.get_player_for_segment(segment)
         self.logger.debug("get_player_for_segment returned %s" % player)
-        if not self.realtime and time_margin > 0:
-            sleep_time = time_margin
-            self.logger.debug("sleeping %f" % sleep_time)
-            time.sleep(sleep_time)
+        if not self.fast_forwarding:
+            now = self.get_current_log_time()
+            time_margin = segment["onset"] - now
+            self.logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
+            if not self.realtime and time_margin > 0:
+                sleep_time = time_margin
+                self.logger.debug("sleeping %f" % sleep_time)
+                time.sleep(sleep_time)
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
             player.play(segment, pan=0.5)
+        self._log_time_for_last_handled_event = segment["onset"]
 
     def handle_chunk(self, chunk):
         self.logger.debug("handling chunk %s" % chunk)
-        now = self.get_current_log_time()
-        time_margin = chunk["t"] - now
-        self.logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
         player = self.get_player_for_chunk(chunk)
         self.logger.debug("get_player_for_chunk returned %s" % player)
-        if not self.realtime and time_margin > 0:
-            sleep_time = time_margin
-            self.logger.debug("sleeping %f" % sleep_time)
-            time.sleep(sleep_time)
+        if not self.fast_forwarding:
+            now = self.get_current_log_time()
+            time_margin = chunk["t"] - now
+            self.logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
+            if not self.realtime and time_margin > 0:
+                sleep_time = time_margin
+                self.logger.debug("sleeping %f" % sleep_time)
+                time.sleep(sleep_time)
         if player:
             self.logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
             player.visualize(chunk)
+        self._log_time_for_last_handled_event = chunk["t"]
 
     def highlight_segment(self, segment):
         if self.gui:
@@ -315,7 +340,7 @@ class Orchestra:
                                  chunk["id"],
                                  chunk["begin"],
                                  chunk["end"] - chunk["begin"],
-                                 chunk["filenum"],
+                                 file_info["playable_file_index"],
                                  player_id,
                                  bearing)
 
@@ -329,7 +354,7 @@ class Orchestra:
                                  segment["id"],
                                  segment["begin"],
                                  segment["end"] - segment["begin"],
-                                 segment["filenum"],
+                                 file_info["playable_file_index"],
                                  player_id,
                                  bearing,
                                  segment["duration"])
@@ -357,11 +382,14 @@ class Orchestra:
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
-        self.visualizer.send("/torrent", len(self.tr_log.files))
+        self.visualizer.send("/torrent", self._num_playable_files)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if "decoded_name" in file_info:
-                self.visualizer.send("/file", filenum, file_info["offset"], file_info["length"])
+                self.visualizer.send("/file",
+                                     file_info["playable_file_index"],
+                                     file_info["offset"],
+                                     file_info["length"])
 
     def get_player_for_chunk(self, chunk):
         try:

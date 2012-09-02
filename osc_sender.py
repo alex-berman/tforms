@@ -1,9 +1,11 @@
 import liblo
 import pickle
 import time
+import threading
 
 class OscSender:
     def __init__(self, port, log_filename=None):
+        self._lock = threading.Lock()
         self.address = liblo.Address(port)
         if log_filename:
             self.log = open(log_filename, "w")
@@ -12,7 +14,8 @@ class OscSender:
             self.log = None
 
     def send(self, *args):
-        liblo.send(self.address, *args)
+        with self._lock:
+            liblo.send(self.address, *args)
         if self.log:
             t = time.time() - self.start_time
             self.log.write(pickle.dumps((t, args)))

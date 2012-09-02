@@ -161,7 +161,7 @@ class GUI(wx.Frame):
         self.app.MainLoop()
 
     def _play_button_clicked(self, event):
-        self.orchestra.timefactor = 1
+        self.orchestra.fast_forwarding = False
         self.orchestra.playback_enabled = True
         self._orchestra_thread = threading.Thread(target=self.orchestra.play_non_realtime)
         self._orchestra_thread.daemon = True
@@ -173,7 +173,7 @@ class GUI(wx.Frame):
         self.catch_key_events()
 
     def _ff_button_clicked(self, event):
-        self.orchestra.timefactor = 100
+        self.orchestra.fast_forwarding = True
         self.orchestra.playback_enabled = False
         self._orchestra_thread = threading.Thread(target=self.orchestra.play_non_realtime)
         self._orchestra_thread.daemon = True
