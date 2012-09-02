@@ -310,8 +310,6 @@ class Orchestra:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
             file_info = self.tr_log.files[chunk["filenum"]]
-            if not "informed_visualizer" in file_info:
-                self._send_file_info_to_visualizer(chunk["filenum"])
             self._chunks_by_id[chunk["id"]] = chunk
             self.visualizer.send("/chunk",
                                  chunk["id"],
@@ -326,8 +324,6 @@ class Orchestra:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
             file_info = self.tr_log.files[segment["filenum"]]
-            if not "informed_visualizer" in file_info:
-                self._send_file_info_to_visualizer(segment["filenum"])
             self.segments_by_id[segment["id"]] = segment
             self.visualizer.send("/segment",
                                  segment["id"],
@@ -362,11 +358,10 @@ class Orchestra:
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
         self.visualizer.send("/torrent", len(self.tr_log.files))
-
-    def _send_file_info_to_visualizer(self, filenum):
-        file_info = self.tr_log.files[filenum]
-        self.visualizer.send("/file", filenum, file_info["offset"], file_info["length"])
-        file_info["informed_visualizer"] = True
+        for filenum in range(len(self.tr_log.files)):
+            file_info = self.tr_log.files[filenum]
+            if "decoded_name" in file_info:
+                self.visualizer.send("/file", filenum, file_info["offset"], file_info["length"])
 
     def get_player_for_chunk(self, chunk):
         try:
