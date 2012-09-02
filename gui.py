@@ -43,22 +43,23 @@ class GUI(wx.Frame):
         orchestra.gui = self
 
     def _create_control_buttons(self):
-        self._button_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.play_button = wx.Button(self, -1, "Play")
-        self.Bind(wx.EVT_BUTTON, self._play_button_clicked, self.play_button)
-        self.stop_button = wx.Button(self, -1, "Stop")
-        self.Bind(wx.EVT_BUTTON, self._stop_button_clicked, self.stop_button)
-        self.stop_button.Disable()
-        self.zoom_out_button = wx.Button(self, -1, "Zoom out")
-        self.Bind(wx.EVT_BUTTON, self._zoom_out_button_clicked, self.zoom_out_button)
-        self._button_box.Add(self.play_button, 1, flag=wx.EXPAND)
-        self._button_box.Add(self.stop_button, 1, flag=wx.EXPAND)
-        self._button_box.Add(self.zoom_out_button, 1, flag=wx.EXPAND)
-        self._vbox.Add(self._button_box)
+        self._control_buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self._play_button = self._create_control_button("Play", self._play_button_clicked)
+        self._stop_button = self._create_control_button("Stop", self._stop_button_clicked)
+        self._zoom_out_button = self._create_control_button(
+            "Zoom out", self._zoom_out_button_clicked)
+        self._stop_button.Disable()
+        self._vbox.Add(self._control_buttons_sizer)
+
+    def _create_control_button(self, label, callback):
+        button = wx.Button(self, -1, label)
+        self.Bind(wx.EVT_BUTTON, callback, button)
+        self._control_buttons_sizer.Add(button, 1, flag=wx.EXPAND)
+        return button
 
     def _create_clock(self):
         self.clock = wx.StaticText(self, -1)
-        self._button_box.Add(self.clock, 1, flag=wx.EXPAND)
+        self._control_buttons_sizer.Add(self.clock, 1, flag=wx.EXPAND)
     
     def _create_timeline(self):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -162,16 +163,16 @@ class GUI(wx.Frame):
         self._orchestra_thread = threading.Thread(target=self.orchestra.play_non_realtime)
         self._orchestra_thread.daemon = True
         self._orchestra_thread.start()
-        self.play_button.Disable()
-        self.stop_button.Enable()
+        self._play_button.Disable()
+        self._stop_button.Enable()
         self._playing = True
         self.catch_key_events()
 
     def _stop_button_clicked(self, event):
         self.orchestra.stop()
         self._orchestra_thread.join()
-        self.stop_button.Disable()
-        self.play_button.Enable()
+        self._stop_button.Disable()
+        self._play_button.Enable()
         self._segments_being_played = {}
         self._playing = False
         self.catch_key_events()
