@@ -14,6 +14,7 @@ from interpret import Interpreter
 
 PORT = 51233
 VISUALIZER_PORT = 51234
+MAX_MEM_SIZE_KB = 1100000
 
 class Player:
     def __init__(self, orchestra, _id, bearing):
@@ -189,6 +190,7 @@ class Orchestra:
 
     def _get_wav_files_info(self):
         playable_file_index = 0
+        estimated_mem_size = 0
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if "decoded_name" in file_info:
@@ -198,8 +200,15 @@ class Orchestra:
                     file_info["playable_file_index"] = playable_file_index
                     self.logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
+                    estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) * 2 * 4
                     playable_file_index += 1
         self._num_playable_files = playable_file_index
+
+        estimated_mem_size_kb = estimated_mem_size / 1024
+        self.logger.debug("estimated memory usage for sounds: %s kb" % estimated_mem_size_kb)
+        if estimated_mem_size_kb > MAX_MEM_SIZE_KB:
+            print >>sys.stderr, "WARNING: estimated mem size of %s exceeds max (%s)" % (
+                estimated_mem_size_kb, MAX_MEM_SIZE_KB)
 
     def _get_file_duration(self, file_info):
         if "decoded_name" in file_info:

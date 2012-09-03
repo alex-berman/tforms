@@ -1,4 +1,4 @@
-Server.local.options.memSize = 131072;
+Server.local.options.memSize = 1100000;
 s.boot;
 
 "langPort=".post; NetAddr.langPort.postln;
