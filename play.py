@@ -28,6 +28,8 @@ parser.add_argument("--predecode", action="store_true", dest="predecode", defaul
 parser.add_argument("--download-location", dest="download_location", default="../../Downloads")
 parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
 parser.add_argument("--visualizer", dest="visualizer")
+parser.add_argument("--fast-forward", action="store_true", dest="ff")
+parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
 parser.add_argument("--loop", dest="loop", action="store_true")
 parser.add_argument("--osc-log", dest="osc_log")
 options = parser.parse_args()
@@ -103,7 +105,8 @@ def run_offline():
 
 def play():
     global orchestra_thread
-    quit_on_end = True
+    quit_on_end = False
+    orchestra.fast_forwarding = options.ff
     orchestra_thread = threading.Thread(target=orchestra.play_non_realtime,
                                         args=[quit_on_end])
     orchestra_thread.daemon = True
@@ -111,7 +114,7 @@ def play():
 
 def wait_for_play_completion_or_interruption():
     global orchestra_thread
-    while orchestra_thread.is_alive():
+    while orchestra_thread.is_alive() or not options.quit_at_end:
         time.sleep(0.1)
 
 if options.visualizer:

@@ -137,6 +137,7 @@ class Visualizer:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
         self.setup_osc(args.osc_log)
+        self.orchestra.register()
         if self.export:
             self.export_fps = args.export_fps
             from exporter import Exporter

@@ -80,6 +80,7 @@ class Orchestra:
         self.quiet = quiet
         self.predecoded = predecoded
         self.file_location = file_location
+        self._visualizer_enabled = visualizer_enabled
         self._loop = loop
 
         self.playback_enabled = True
@@ -102,7 +103,7 @@ class Orchestra:
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
-        if visualizer_enabled:
+        if self._visualizer_enabled:
             self.visualizer = OscSender(VISUALIZER_PORT, osc_log)
             self._setup_osc()
         else:
@@ -135,6 +136,8 @@ class Orchestra:
     def _setup_osc(self):
         self.server = liblo.Server(PORT)
         self.server.add_method("/visualizing", "if", self._handle_visualizing_message)
+        self.server.add_method("/register", "", self._handle_register)
+        self._visualized_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -144,11 +147,18 @@ class Orchestra:
             self.server.recv(0.01)
             time.sleep(0.01)
 
+    def _wait_for_visualizer_to_register(self):
+        while not self._visualized_registered:
+            time.sleep(0.1)
+
     def _handle_visualizing_message(self, path, args, types, src, data):
         (segment_id, pan) = args
         segment = self.segments_by_id[segment_id]
         self.logger.debug("visualizing segment %s with pan %s" % (segment, pan))
         self.synth.pan(segment_id, pan)
+
+    def _handle_register(self, path, args, types, src, data):
+        self._visualized_registered = True
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -217,6 +227,8 @@ class Orchestra:
 
     def play_non_realtime(self, quit_on_end=False):
         self.logger.debug("entering play_non_realtime")
+        if self._visualizer_enabled:
+            self._wait_for_visualizer_to_register()
         if self._loop:
             while True:
                 self._play_until_end()

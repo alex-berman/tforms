@@ -5,6 +5,9 @@ class OrchestraController:
     def __init__(self):
         self.target = liblo.Address(orchestra.PORT)
 
+    def register(self):
+        self._send("/register")
+
     def visualizing_segment(self, segment_id, pan):
         self._send("/visualizing", segment_id, pan)
 
