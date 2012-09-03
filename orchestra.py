@@ -95,7 +95,7 @@ class Orchestra:
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_playable_chunks(tr_log.chunks)
-        self.score = Interpreter().interpret(self.chunks, tr_log.files)
+        self._interpret_chunks_to_score()
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -110,6 +110,11 @@ class Orchestra:
             self._setup_osc()
         else:
             self.visualizer = None
+
+    def _interpret_chunks_to_score(self):
+        self.score = Interpreter().interpret(self.chunks, self.tr_log.files)
+        for segment in self.score:
+            segment["duration"] /= self.timefactor
 
     def _filter_playable_chunks(self, chunks):
         return filter(lambda chunk: (self._chunk_is_playable(chunk)),
