@@ -222,7 +222,8 @@ class Orchestra:
             cmd = 'soxi -D "%s"' % file_info["decoded_name"]
             try:
                 stdoutdata, stderrdata = subprocess.Popen(
-                    cmd, shell=True, stdout=subprocess.PIPE).communicate()
+                    cmd, shell=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
                 return float(stdoutdata)
             except:
                 self.logger.debug("failed to get duration for %s" % file_info["decoded_name"])
