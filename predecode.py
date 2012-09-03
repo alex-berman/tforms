@@ -7,7 +7,7 @@ class mp3_decoder:
         cmd = 'mpg123'
         if sample_rate:
             cmd += ' -r %d' % sample_rate
-        cmd += ' -w "%s" "%s"' % (target_filename, source_filename)
+        cmd += ' --mono -w "%s" "%s"' % (target_filename, source_filename)
         return cmd
 
 class m4b_decoder:
@@ -16,7 +16,7 @@ class m4b_decoder:
 
 class flac_decoder:
     def command(self, source_filename, target_filename, sample_rate=None):
-        return 'flac -d "%s" -o "%s"' % (source_filename, target_filename)
+        return 'flac -d "%s" --channels=1 -o "%s"' % (source_filename, target_filename)
         
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']

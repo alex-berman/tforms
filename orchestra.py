@@ -15,6 +15,7 @@ from interpret import Interpreter
 PORT = 51233
 VISUALIZER_PORT = 51234
 MAX_MEM_SIZE_KB = 1100000
+BYTES_PER_SAMPLE = 4
 
 class Player:
     def __init__(self, orchestra, _id, bearing):
@@ -200,7 +201,8 @@ class Orchestra:
                     file_info["playable_file_index"] = playable_file_index
                     self.logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
-                    estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) * 2 * 4
+                    estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) \
+                        * file_info["num_channels"] * BYTES_PER_SAMPLE
                     playable_file_index += 1
         self._num_playable_files = playable_file_index
 
@@ -213,9 +215,13 @@ class Orchestra:
     def _get_file_duration(self, file_info):
         if "decoded_name" in file_info:
             cmd = 'soxi -D "%s"' % file_info["decoded_name"]
-            stdoutdata, stderrdata = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE).communicate()
-            return float(stdoutdata)
+            try:
+                stdoutdata, stderrdata = subprocess.Popen(
+                    cmd, shell=True, stdout=subprocess.PIPE).communicate()
+                return float(stdoutdata)
+            except:
+                self.logger.debug("failed to get duration for %s" % file_info["decoded_name"])
+                return 0
 
     def _get_num_channels(self, file_info):
         if "decoded_name" in file_info:
