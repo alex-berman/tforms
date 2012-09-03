@@ -374,7 +374,7 @@ class Orchestra:
 
     def play_segment(self, segment, player_id, bearing):
         self.segments_by_id[segment["id"]] = segment
-        if self.playback_enabled:
+        if self.playback_enabled and not self.fast_forwarding:
             file_info = self.tr_log.files[segment["filenum"]]
             self.synth.play_segment(
                 segment["id"],
