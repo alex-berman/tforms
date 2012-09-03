@@ -38,6 +38,7 @@ class Segment(visualizer.Segment):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+        glLineWidth(2)
         glBegin(GL_LINE_STRIP)
         for x,y in self.curve():
             glVertex2f(x, y)

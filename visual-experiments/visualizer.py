@@ -26,6 +26,7 @@ logging.basicConfig(filename="visualizer.log",
 ESCAPE = '\033'
 MARGIN = 30
 BORDER_OPACITY = 0.7
+FAKE_CHUNK_DURATION = 0.1
 EXPORT_DIR = "export"
 
 class File:
@@ -55,6 +56,7 @@ class Chunk:
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
+        self.duration = FAKE_CHUNK_DURATION
         self.last_updated = visualizer.current_time()
 
     def append(self, other):
@@ -77,6 +79,12 @@ class Chunk:
     def age(self):
         return time.time() - self.arrival_time
 
+    def relative_age(self):
+        return self.age() / self.duration
+
+    def is_playing(self):
+        return self.relative_age() < 1
+
     def __str__(self):
         return "Chunk(id=%s, begin=%s, end=%s, filenum=%s)" % (
             self.id, self.begin, self.end, self.filenum)
@@ -91,14 +99,8 @@ class Segment(Chunk):
         self.duration = duration
         self.f = f
 
-    def relative_age(self):
-        return self.age() / self.duration
-
     def playback_byte_cursor(self):
         return self.begin + min(self.relative_age(), 1) * self.byte_size
-
-    def is_playing(self):
-        return self.relative_age() < 1
 
     def __str__(self):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
