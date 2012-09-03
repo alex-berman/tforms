@@ -7,13 +7,14 @@ import random
 import time
 from vector import Vector2d, Vector3d
 from bezier import make_bezier
+import colorsys
 
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
 PREPEND_MARGIN = 0.05
 ARRIVED_HEIGHT = 5
 ARRIVED_OPACITY = 0.5
-GREYSCALE = True
+GREYSCALE = False
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
@@ -109,7 +110,7 @@ class Segment(visualizer.Segment):
         x2 = int(self.f.byte_to_coord(target)) - 1
 
         source_color = Vector3d(1, 1, 1)
-        target_color = Vector3d(1, 0, 0)
+        target_color = self.peer.color
         target_color += (source_color - target_color) * (1-opacity)
 
         glBegin(GL_QUADS)
@@ -133,7 +134,8 @@ class Peer(visualizer.Peer):
         self.departure_position = None
         self.smoothed_branching_position = Smoother()
         self.segments = {}
-        self.hue = random.uniform(0, 1)
+        hue = random.uniform(0, 1)
+        self.color = Vector3d(*(colorsys.hsv_to_rgb(hue, 0.35, 1)))
 
     def add_segment(self, segment):
         if self.departure_position is None:
@@ -180,16 +182,7 @@ class Peer(visualizer.Peer):
                       1 - CURVE_OPACITY,
                       1 - CURVE_OPACITY)
         else:
-            color = colorsys.hsv_to_rgb(self.hue, 0.35, 1)
-            glColor3f(relative_age + color[0] * (1-relative_age),
-                      relative_age + color[1] * (1-relative_age),
-                      relative_age + color[2] * (1-relative_age))
-
-    def draw_line(self, p, q):
-        glBegin(GL_LINES)
-        glVertex2f(p.x, p.y)
-        glVertex2f(q.x, q.y)
-        glEnd()
+            self.visualizer.set_color(self.color)
 
 class Smoother:
     RESPONSE_FACTOR = 5
