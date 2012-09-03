@@ -52,8 +52,8 @@ class File(visualizer.File):
 
     def draw_background(self):
         height = 3
-        x1 = MARGIN
-        x2 = self.visualizer.width - MARGIN
+        x1 = self.byte_to_px(0)
+        x2 = self.byte_to_px(self.length)
         glColor3f(0.9, 0.9, 0.9)
         glBegin(GL_QUADS)
         glVertex2i(x1, self.y2)
@@ -99,11 +99,16 @@ class File(visualizer.File):
         return x1, x2
 
     def byte_to_px(self, byte):
-        return MARGIN + int(float(byte) / self.length * (self.visualizer.width - 2*MARGIN))
+        return MARGIN + int(
+            float((self.visualizer.max_file_length - self.length) / 2 + byte) / \
+            self.visualizer.max_file_length * (self.visualizer.width - 2*MARGIN))
 
 class Simple(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, file_class=File)
+
+    def added_file(self, _f):
+        self.max_file_length = max([f.length for f in self.files.values()])
 
     def render(self):
         for f in self.files.values():
