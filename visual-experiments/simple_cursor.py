@@ -35,7 +35,7 @@ class File(visualizer.File):
         self.gatherer = Gatherer()
 
     def add_segment(self, segment):
-        pan = (float(segment.begin) + float(segment.end))/2 / self.length
+        pan = self.byte_to_relative_x((segment.begin + segment.end) / 2)
         self.visualizer.playing_segment(segment, pan)
         self.playing_segments[segment.id] = segment
 
@@ -86,7 +86,7 @@ class File(visualizer.File):
         glEnd()
 
     def draw_playing_segment(self, segment):
-        trace_age = 0.5
+        trace_age = 0.1
         previous_byte_cursor = segment.begin + max(segment.age()-trace_age, 0) / \
                 segment.duration * segment.byte_size
         height = PLAYING_HEIGHT
@@ -131,9 +131,11 @@ class File(visualizer.File):
         return x1, x2
 
     def byte_to_px(self, byte):
-        return MARGIN + int(
-            float((self.visualizer.max_file_length - self.length) / 2 + byte) / \
-            self.visualizer.max_file_length * (self.visualizer.width - 2*MARGIN))
+        return MARGIN + int(self.byte_to_relative_x(byte) * (self.visualizer.width - 2*MARGIN))
+
+    def byte_to_relative_x(self, byte):
+        return float((self.visualizer.max_file_length - self.length) / 2 + byte) / \
+            self.visualizer.max_file_length
 
 class Simple(visualizer.Visualizer):
     def __init__(self, args):
