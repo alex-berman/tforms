@@ -92,7 +92,7 @@ class Orchestra:
         self._create_players()
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
-        self.chunks = self._filter_downloaded_audio_chunks(tr_log.chunks)
+        self.chunks = self._filter_playable_chunks(tr_log.chunks)
         self.score = Interpreter().interpret(self.chunks, tr_log.files)
         self._chunks_by_id = {}
         self.segments_by_id = {}
@@ -109,19 +109,14 @@ class Orchestra:
         else:
             self.visualizer = None
 
-    def _filter_downloaded_audio_chunks(self, chunks):
-        return filter(lambda chunk: (self._chunk_is_audio(chunk) and
-                                     self._chunk_was_downloaded(chunk)),
+    def _filter_playable_chunks(self, chunks):
+        return filter(lambda chunk: (self._chunk_is_playable(chunk)),
                       chunks)
 
 
-    def _chunk_is_audio(self, chunk):
+    def _chunk_is_playable(self, chunk):
         file_info = self.tr_log.files[chunk["filenum"]]
-        return file_info["is_audio"]
-
-    def _chunk_was_downloaded(self, chunk):
-        file_info = self.tr_log.files[chunk["filenum"]]
-        return "decoded_name" in file_info
+        return "playable_file_index" in file_info
 
     def _run_scheduler_thread(self):
         self._scheduler_thread = threading.Thread(target=self._process_scheduled_events)
@@ -189,7 +184,7 @@ class Orchestra:
     def _load_sounds(self):
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
-            if "decoded_name" in file_info:
+            if "playable_file_index" in file_info:
                 self.synth.load_sound(filenum, file_info["decoded_name"])
 
     def _get_wav_files_info(self):
@@ -198,11 +193,12 @@ class Orchestra:
             file_info = self.tr_log.files[filenum]
             if "decoded_name" in file_info:
                 file_info["duration"] = self._get_file_duration(file_info)
-                file_info["num_channels"] = self._get_num_channels(file_info)
-                file_info["playable_file_index"] = playable_file_index
-                self.logger.debug("duration for %r: %r\n" %
-                                  (file_info["name"], file_info["duration"]))
-                playable_file_index += 1
+                if file_info["duration"] > 0:
+                    file_info["num_channels"] = self._get_num_channels(file_info)
+                    file_info["playable_file_index"] = playable_file_index
+                    self.logger.debug("duration for %r: %r\n" %
+                                      (file_info["name"], file_info["duration"]))
+                    playable_file_index += 1
         self._num_playable_files = playable_file_index
 
     def _get_file_duration(self, file_info):
@@ -397,7 +393,7 @@ class Orchestra:
         self.visualizer.send("/torrent", self._num_playable_files)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
-            if "decoded_name" in file_info:
+            if "playable_file_index" in file_info:
                 self.visualizer.send("/file",
                                      file_info["playable_file_index"],
                                      file_info["offset"],
