@@ -15,6 +15,7 @@ class SSRSocket( asynchat.async_chat ):
 		self.set_terminator( '\0' )
 		self.data = ''
 		self.callback = callback
+		self._lock = Lock()
 
 	def collect_incoming_data( self, data ):
 		self.data = self.data + data
@@ -26,6 +27,9 @@ class SSRSocket( asynchat.async_chat ):
 	def handle_data( self, data ):
 		self.callback( data )
 
+	def initiate_send(self):
+		with self._lock:
+			asynchat.async_chat.initiate_send(self)
 
 class AIOThread( Thread ):
 	def __init__( self, host, port, callback ):
@@ -33,17 +37,14 @@ class AIOThread( Thread ):
 		self.daemon = True
 		self.ssrsock = SSRSocket( host, port, callback )
 		self.quit = False
-		self._lock = Lock()
 
 	def run( self ):
 		while( not self.quit ):
-			with self._lock:
-				asyncore.loop( 0.1, False, None, 1 )
+			asyncore.loop( 0.5, False, None, 1 )
 
 
 	def push( self, str ):
-		with self._lock:
-			self.ssrsock.push( str )
+		self.ssrsock.push( str )
 
 	def stop( self ):
 		self.quit = True
