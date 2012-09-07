@@ -1,4 +1,4 @@
-
+import time
 
 class Source:
 	def __init__( self, x, y ):
@@ -11,6 +11,20 @@ class Source:
 		self.volume = 0.0 # in dB
 		self.level = 0.0
 		self.allocated = False
+		self.movement_start_time = None
+
+	def start_movement(self, start_position, end_position, movement_duration):
+		self.movement_start_time = time.time()
+		self.start_position = start_position
+		self.end_position = end_position
+		self.movement_duration = movement_duration
+
+	def current_position(self):
+		if self.movement_start_time is None:
+			return None
+		relative_age = (time.time() - self.movement_start_time) / self.movement_duration
+		if relative_age <= 1:
+			return self.start_position + (self.end_position - self.start_position) * relative_age
 
 class Speaker:
 	def __init__( self, x, y, azimuth ):
