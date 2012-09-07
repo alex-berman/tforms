@@ -2,7 +2,7 @@ import liblo
 import threading
 
 class SynthController:
-    PORT = 57120
+    PORT = 57121
 
     def __init__(self):
         self.target = liblo.Address(self.PORT)
@@ -11,8 +11,8 @@ class SynthController:
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
 
-    def play_segment(self, segment_id, sound_id, begin, end, duration, pan):
-        self._send("/play", segment_id, sound_id, begin, end, duration, pan)
+    def play_segment(self, segment_id, sound_id, begin, end, duration, channel):
+        self._send("/play", segment_id, sound_id, begin, end, duration, channel)
 
     def pan(self, segment_id, pan):
         self._send("/pan", segment_id, pan)

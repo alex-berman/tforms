@@ -10,6 +10,7 @@ class Source:
 		self.name = "Unnamed"
 		self.volume = 0.0 # in dB
 		self.level = 0.0
+		self.allocated = False
 
 class Speaker:
 	def __init__( self, x, y, azimuth ):

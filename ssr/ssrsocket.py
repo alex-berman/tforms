@@ -1,7 +1,7 @@
 
 import asynchat
 import asyncore
-from threading import Thread
+from threading import Thread, Lock
 import socket
 import time
 
@@ -33,14 +33,17 @@ class AIOThread( Thread ):
 		self.daemon = True
 		self.ssrsock = SSRSocket( host, port, callback )
 		self.quit = False
+		self._lock = Lock()
 
 	def run( self ):
 		while( not self.quit ):
-			asyncore.loop( 0.5, False, None, 1 )
+			with self._lock:
+				asyncore.loop( 0.1, False, None, 1 )
 
 
 	def push( self, str ):
-		self.ssrsock.push( str )
+		with self._lock:
+			self.ssrsock.push( str )
 
 	def stop( self ):
 		self.quit = True
