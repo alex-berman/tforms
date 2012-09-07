@@ -13,6 +13,7 @@ PORT = 4711
 class SsrControl:
     LISTENER_POSITION = Vector2d(0, 0)
     ROOM_RADIUS = 3
+    NEAREST_DISTANCE_TO_LISTENER = 0.5
 
     def __init__(self, num_sources=16):
         self.num_sources = num_sources
@@ -49,7 +50,10 @@ class SsrControl:
             time.sleep(0.1)
         print "OK"
 
-    def start_source_movement(self, source_id, start_position, end_position, duration):
+    def start_source_movement(self, source_id, start_position, duration):
+        angle = (start_position - self.LISTENER_POSITION).angle().get()
+        end_position = self.LISTENER_POSITION + \
+            DirectionalVector(angle, self.NEAREST_DISTANCE_TO_LISTENER)
         self.scene.sources[source_id].start_movement(start_position, end_position, duration)
 
     def random_position(self):
@@ -61,7 +65,6 @@ class SsrControl:
             if not source.allocated:
                 source.allocated = True
                 return source_id
-        raise Exception("failed to allocate source")
 
     def free_source(self, source_id):
         self.scene.sources[source_id].allocated = False

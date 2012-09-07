@@ -401,23 +401,25 @@ class Orchestra:
         if self.playback_enabled and not self.fast_forwarding:
             file_info = self.tr_log.files[segment["filenum"]]
             source_id = self.ssr.allocate_source()
-            segment["source_id"] = source_id
-            self.ssr.start_source_movement(
-                source_id,
-                start_position=player.position,
-                end_position=self.ssr.LISTENER_POSITION,
-                duration=segment["duration"])
-            self.logger.debug("asking synth to play %s" % segment)
-            self.synth.play_segment(
-                segment["id"],
-                segment["filenum"],
-                segment["start_time_in_file"] / file_info["duration"],
-                segment["end_time_in_file"] / file_info["duration"],
-                segment["duration"],
-                source_id)
-            self.scheduler.enter(
-                segment["duration"], 1,
-                self.stopped_playing, [segment])
+            if source_id:
+                segment["source_id"] = source_id
+                self.ssr.start_source_movement(
+                    source_id,
+                    start_position=player.position,
+                    duration=segment["duration"])
+                self.logger.debug("asking synth to play %s" % segment)
+                self.synth.play_segment(
+                    segment["id"],
+                    segment["filenum"],
+                    segment["start_time_in_file"] / file_info["duration"],
+                    segment["end_time_in_file"] / file_info["duration"],
+                    segment["duration"],
+                    source_id)
+                self.scheduler.enter(
+                    segment["duration"], 1,
+                    self.stopped_playing, [segment])
+            else:
+                print "WARNING: failed to allocate source"
         self.visualize_segment(segment, player.id, player.position)
 
     def _send_torrent_info_to_visualizer(self):

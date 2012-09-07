@@ -133,7 +133,7 @@ class Vector:
             self[i] = other[i]
 
     def angle(self):
-        return Angle(math.atan2(self.y(), self.x()))
+        return Angle(math.atan2(self.y, self.x))
 
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.n, self.v)
