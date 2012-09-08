@@ -15,12 +15,13 @@ class SsrControl:
     ROOM_RADIUS = 30
     NEAREST_DISTANCE_TO_LISTENER = 0.1
 
-    def __init__(self, num_sources=16):
+    def __init__(self, num_sources=1):
         self.num_sources = num_sources
         self.scene = basicscene.BasicScene()
         self.updated = False
         pp = packetParser.PacketParser( self.scene, self.update )
         self.ssr_socket = ssrsocket.AIOThread( HOSTNAME, PORT, pp.parse_packet )
+        self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
         self._add_sources_if_needed()
         self._start_movement_thread()
@@ -51,12 +52,8 @@ class SsrControl:
 
     def _move_sources(self):
         while True:
-            for source_id, source in self.scene.sources.iteritems():
-                position = source.current_position()
-                if position:
-                    self.ssr_socket.push(
-                        '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
-                            source_id, position.x, position.y))
+            for source in self.scene.sources.values():
+                source.update()
             time.sleep(0.001)
 
     def start_source_movement(self, source_id, start_position, duration):

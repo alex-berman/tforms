@@ -392,7 +392,6 @@ class Orchestra:
 
     def stopped_playing(self, segment):
         self.logger.debug("stopped segment %s" % segment)
-        self.ssr.free_source(segment["source_id"])
         if self.gui:
             self.gui.unhighlight_segment(segment)
 
