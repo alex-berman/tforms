@@ -49,7 +49,7 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel;
 	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
-		[0.15*duration, 0.8*duration, 0.05*duration], 'exp'), doneAction: 2);
+		[0.005*duration, 0.99*duration, 0.005*duration], 'exp'), doneAction: 2);
 	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 	Out.ar(channel, env * out);
 }).send(s);

@@ -12,8 +12,8 @@ PORT = 4711
 
 class SsrControl:
     LISTENER_POSITION = Vector2d(0, 0)
-    ROOM_RADIUS = 3
-    NEAREST_DISTANCE_TO_LISTENER = 0.5
+    ROOM_RADIUS = 30
+    NEAREST_DISTANCE_TO_LISTENER = 0.1
 
     def __init__(self, num_sources=16):
         self.num_sources = num_sources
@@ -57,7 +57,7 @@ class SsrControl:
                     self.ssr_socket.push(
                         '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
                             source_id, position.x, position.y))
-            time.sleep(0.1)
+            time.sleep(0.001)
 
     def start_source_movement(self, source_id, start_position, duration):
         angle = (start_position - self.LISTENER_POSITION).angle().get()
