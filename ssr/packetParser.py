@@ -62,9 +62,9 @@ class PacketParser:
 		if "name" in node.attributes.keys():
 			self.scene.set_source_name( id, node.attributes["name"].value )
 		if "volume" in node.attributes.keys():
-			print node.attributes["volume"].value
+			#print node.attributes["volume"].value
 			#print linear2db( float(node.attributes["volume"].value) )
-			print float(node.attributes["volume"].value)
+			#print float(node.attributes["volume"].value)
 			#self.scene.set_source_volume( id, linear2db( float(node.attributes["volume"].value) ) )
 			self.scene.set_source_volume( id, float(node.attributes["volume"].value) )
 		if "level" in node.attributes.keys():

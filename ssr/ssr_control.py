@@ -18,12 +18,31 @@ class SsrControl:
     def __init__(self, num_sources=16):
         self.num_sources = num_sources
         self.scene = basicscene.BasicScene()
-        def update(): pass
-        pp = packetParser.PacketParser( self.scene, update )
+        self.updated = False
+        pp = packetParser.PacketParser( self.scene, self.update )
         self.ssr_socket = ssrsocket.AIOThread( HOSTNAME, PORT, pp.parse_packet )
         self.ssr_socket.start()
-        self._add_sources()
+        self._add_sources_if_needed()
         self._start_movement_thread()
+
+    def update(self):
+        self.updated = True
+
+    def _add_sources_if_needed(self):
+        while not self.updated:
+            time.sleep(0.1)
+        if self.num_sources > len(self.scene.sources):
+            self._add_sources()
+
+    def _add_sources(self):
+        print "requesting to add sources"
+        for i in range(self.num_sources - len(self.scene.sources)):
+            self.ssr_socket.push('<request><source new="true" name="source%d" port="SuperCollider:out_%d" volume="-6"><position fixed="false"/></source></request>\0' % (i, i+1))
+
+        print "waiting for sources to be added"
+        while len(self.scene.sources) < self.num_sources:
+            time.sleep(0.1)
+        print "OK"
 
     def _start_movement_thread(self):
         thread = threading.Thread(target=self._move_sources)
@@ -39,16 +58,6 @@ class SsrControl:
                         '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
                             source_id, position.x, position.y))
             time.sleep(0.1)
-
-    def _add_sources(self):
-        print "requesting to add sources"
-        for i in range(self.num_sources):
-            self.ssr_socket.push('<request><source new="true" name="source%d" port="SuperCollider:out_%d" volume="-6"><position fixed="false"/></source></request>\0' % (i, i+1))
-
-        print "waiting for sources to be added"
-        while len(self.scene.sources) < self.num_sources:
-            time.sleep(0.1)
-        print "OK"
 
     def start_source_movement(self, source_id, start_position, duration):
         angle = (start_position - self.LISTENER_POSITION).angle().get()
