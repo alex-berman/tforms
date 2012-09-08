@@ -13,11 +13,11 @@ class Source:
 		self.volume = 0.0 # in dB
 		self.level = 0.0
 		self.allocated = False
-		self.movement_started_callback = None
+		self.movement_started = False
 		self.movement_start_time = None
 
-	def start_movement(self, start_position, end_position, movement_duration, callback):
-		self.movement_started_callback = callback
+	def start_movement(self, start_position, end_position, movement_duration):
+		self.movement_started = False
 		self.movement_start_time = time.time()
 		self.start_position = start_position
 		self.end_position = end_position
@@ -41,11 +41,9 @@ class Source:
 				self.id, position.x, position.y))
 
 	def received_position(self):
-		if self.movement_started_callback:
-			print "received_position %s,%s" % (self.x, self.y)
+		if not self.movement_started:
 			self.request_mute("false")
-			self.movement_started_callback()
-			self.movement_started_callback = None
+			self.movement_started = True
 
 	def request_mute(self, value):
 		self.scene.ssr_socket.push(
