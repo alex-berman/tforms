@@ -402,6 +402,7 @@ class Orchestra:
             source_id = self.ssr.allocate_source()
             if source_id is not None:
                 segment["source_id"] = source_id
+                self.logger.debug("starting source movement")
                 self.ssr.start_source_movement(
                     source_id,
                     start_position=player.position,

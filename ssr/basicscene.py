@@ -13,9 +13,11 @@ class Source:
 		self.volume = 0.0 # in dB
 		self.level = 0.0
 		self.allocated = False
+		self.movement_started_callback = None
 		self.movement_start_time = None
 
-	def start_movement(self, start_position, end_position, movement_duration):
+	def start_movement(self, start_position, end_position, movement_duration, callback):
+		self.movement_started_callback = callback
 		self.movement_start_time = time.time()
 		self.start_position = start_position
 		self.end_position = end_position
@@ -29,7 +31,7 @@ class Source:
 				    (self.end_position - self.start_position) * relative_age
 				self.request_position(new_position)
 			elif self.allocated:
-#				self.request_mute()
+				self.request_mute("true")
 				self.movement_start_time = None
 				self.allocated = False
 
@@ -38,7 +40,17 @@ class Source:
                         '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
 				self.id, position.x, position.y))
 
-#	def request_mute(self, position):
+	def received_position(self):
+		if self.movement_started_callback:
+			print "received_position %s,%s" % (self.x, self.y)
+			self.request_mute("false")
+			self.movement_started_callback()
+			self.movement_started_callback = None
+
+	def request_mute(self, value):
+		self.scene.ssr_socket.push(
+                        '<request><source id="%d" mute="%s"/></request>\0' % (
+				self.id, value))
 
 class Speaker:
 	def __init__( self, x, y, azimuth ):
@@ -72,6 +84,7 @@ class BasicScene:
 		else:
 			self.sources[id].x = float(x)
 			self.sources[id].y = float(y)
+			self.sources[id].received_position()
 	
 	def set_source_model( self, id, type ):
 		if not( id in self.sources.keys() ):

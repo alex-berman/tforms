@@ -15,7 +15,7 @@ class SsrControl:
     ROOM_RADIUS = 30
     NEAREST_DISTANCE_TO_LISTENER = 0.1
 
-    def __init__(self, num_sources=1):
+    def __init__(self, num_sources=16):
         self.num_sources = num_sources
         self.scene = basicscene.BasicScene()
         self.updated = False
@@ -23,6 +23,7 @@ class SsrControl:
         self.ssr_socket = ssrsocket.AIOThread( HOSTNAME, PORT, pp.parse_packet )
         self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
+        self._lock = threading.Lock()
         self._add_sources_if_needed()
         self._start_movement_thread()
 
@@ -60,7 +61,14 @@ class SsrControl:
         angle = (start_position - self.LISTENER_POSITION).angle().get()
         end_position = self.LISTENER_POSITION + \
             DirectionalVector(angle, self.NEAREST_DISTANCE_TO_LISTENER)
-        self.scene.sources[source_id].start_movement(start_position, end_position, duration)
+        self._lock.acquire()
+        self.scene.sources[source_id].start_movement(start_position, end_position, duration,
+                                                     self._movement_started)
+        self._lock.acquire()
+        self._lock.release()
+
+    def _movement_started(self):
+        self._lock.release()
 
     def random_position(self):
         angle = random.uniform(0, 2*math.pi)
