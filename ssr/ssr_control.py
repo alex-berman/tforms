@@ -24,6 +24,7 @@ class SsrControl:
         self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
         self._add_sources_if_needed()
+        self._mute_all_sources()
         self._start_movement_thread()
 
     def update(self):
@@ -36,14 +37,19 @@ class SsrControl:
             self._add_sources()
 
     def _add_sources(self):
-        print "requesting to add sources"
-        for i in range(self.num_sources - len(self.scene.sources)):
+        num_sources_to_add = self.num_sources - len(self.scene.sources)
+        print "requesting to add %d sources" % num_sources_to_add
+        for i in range(num_sources_to_add):
             self.ssr_socket.push('<request><source new="true" name="source%d" port="SuperCollider:out_%d" volume="-6"><position fixed="false"/></source></request>\0' % (i, i+1))
 
         print "waiting for sources to be added"
         while len(self.scene.sources) < self.num_sources:
             time.sleep(0.1)
         print "OK"
+
+    def _mute_all_sources(self):
+        for source in self.scene.sources.values():
+            source.request_mute("true")
 
     def _start_movement_thread(self):
         thread = threading.Thread(target=self._move_sources)
