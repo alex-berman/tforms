@@ -19,16 +19,16 @@ MAX_MEM_SIZE_KB = 1100000
 BYTES_PER_SAMPLE = 4
 
 class Player:
-    def __init__(self, orchestra, _id, position):
+    def __init__(self, orchestra, _id):
         self.orchestra = orchestra
         self.logger = orchestra.logger
         self.id = _id
-        self.position = position
         self.enabled = True
         self._previous_chunk_time = None
+        self.trajectory = self.orchestra.ssr.random_trajectory_to_listener()
 
     def visualize(self, chunk):
-        self.orchestra.visualize_chunk(chunk, self.id, self.position)
+        self.orchestra.visualize_chunk(chunk, self.id)
 
     def play(self, segment, pan):
         segment["pan"] = pan
@@ -361,7 +361,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_segment(segment)
 
-    def visualize_chunk(self, chunk, player_id, bearing):
+    def visualize_chunk(self, chunk, player_id):
         if self.visualizer:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
@@ -375,7 +375,7 @@ class Orchestra:
                                  player_id,
                                  bearing)
 
-    def visualize_segment(self, segment, player_id, bearing):
+    def visualize_segment(self, segment, player_id):
         if self.visualizer:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
@@ -404,9 +404,7 @@ class Orchestra:
                 segment["source_id"] = source_id
                 self.logger.debug("starting source movement")
                 self.ssr.start_source_movement(
-                    source_id,
-                    start_position=player.position,
-                    duration=segment["duration"])
+                    source_id, player.trajectory, duration=segment["duration"])
                 self.logger.debug("asking synth to play %s" % segment)
                 channel = source_id - 1
                 self.synth.play_segment(
@@ -421,7 +419,7 @@ class Orchestra:
                     self.stopped_playing, [segment])
             else:
                 print "WARNING: failed to allocate source"
-        self.visualize_segment(segment, player.id, player.position)
+        self.visualize_segment(segment, player.id)
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
@@ -462,10 +460,8 @@ class Orchestra:
 
     def _create_player(self):
         count = len(self.players)
-        position = self.ssr.random_position()
-        self.logger.debug("creating player number %d with position %s" % (
-                count, position))
-        return self._player_class(self, count, position)
+        self.logger.debug("creating player number %d" % count)
+        return self._player_class(self, count)
 
     def set_time_cursor(self, log_time):
         assert not self.realtime

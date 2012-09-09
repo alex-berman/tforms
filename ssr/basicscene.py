@@ -21,29 +21,28 @@ class Source:
 		self.y = float(y)
 		self.received_position()
 
-	def start_movement(self, start_position, end_position, movement_duration):
+	def start_movement(self, trajectory, movement_duration):
 		self.movement_started = False
 		self.movement_start_time = time.time()
-		self.start_position = start_position
-		self.end_position = end_position
+		self.trajectory = trajectory
 		self.movement_duration = movement_duration
 
 	def update(self):
 		if self.movement_start_time is not None:
 			relative_age = (time.time() - self.movement_start_time) / self.movement_duration
 			if relative_age < 1:
-				new_position = self.start_position + \
-				    (self.end_position - self.start_position) * relative_age
-				self.request_position(new_position)
+				new_position = self.trajectory[
+					int(relative_age * len(self.trajectory))]
+				self.request_position(new_position[0], new_position[1])
 			elif self.allocated:
 				self.request_mute("true")
 				self.movement_start_time = None
 				self.allocated = False
 
-	def request_position(self, position):
+	def request_position(self, x, y):
 		self.scene.ssr_socket.push(
                         '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
-				self.id, position.x, position.y))
+				self.id, x, y))
 
 	def received_position(self):
 		if not self.movement_started:
