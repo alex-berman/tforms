@@ -1,7 +1,7 @@
 import time
 
 class Source:
-	def __init__( self, scene, id, x, y ):
+	def __init__( self, scene, id, x=0, y=0):
 		self.scene = scene
 		self.id = id
 		self.x = float(x)
@@ -15,6 +15,11 @@ class Source:
 		self.allocated = False
 		self.movement_started = False
 		self.movement_start_time = None
+
+	def set_position(self, x, y):
+		self.x = float(x)
+		self.y = float(y)
+		self.received_position()
 
 	def start_movement(self, start_position, end_position, movement_duration):
 		self.movement_started = False
@@ -67,7 +72,10 @@ class BasicScene:
 		self.sources = {}
 		self.speakers = []
 		self.reference = Reference()
-	
+
+	def ensure_source_exists(self, id):
+		if not id in self.sources:
+			self.sources[id] = Source(self, id)
 
 	def set_reference_position( self, x, y ):
 		self.reference.x = x
@@ -77,50 +85,25 @@ class BasicScene:
 		self.reference.azimuth = azimuth
 
 	def set_source_position( self, id, x, y ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, x, y )
-		else:
-			self.sources[id].x = float(x)
-			self.sources[id].y = float(y)
-			self.sources[id].received_position()
+		self.sources[id].set_position(x, y)
 	
 	def set_source_model( self, id, type ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].type = type
 
 	def set_source_orientation( self, id, azimuth ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].azimuth = azimuth
 
 	def set_source_name( self, id, name ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].name = name
 
 	def set_source_volume( self, id, vol ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].volume = vol
 
 	def set_source_level( self, id, level ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].level = level
 
 	def set_source_mute( self, id, mute ):
-		if not( id in self.sources.keys() ):
-			self.sources[id] = Source( self, id, 0, 0 )
-	
 		self.sources[id].mute = mute
 
 	def add_speaker( self, x, y, azimuth ):
-			self.speakers.append( Speaker( x, y, azimuth ) )
-
-
+		self.speakers.append( Speaker( x, y, azimuth ) )

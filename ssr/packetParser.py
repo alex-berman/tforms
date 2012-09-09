@@ -59,6 +59,7 @@ class PacketParser:
 
 	def parse_source( self, node ):
 		id = int(node.attributes["id"].value)
+		self.scene.ensure_source_exists(id)
 		if "name" in node.attributes.keys():
 			self.scene.set_source_name( id, node.attributes["name"].value )
 		if "volume" in node.attributes.keys():
