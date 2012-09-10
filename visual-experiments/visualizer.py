@@ -6,8 +6,9 @@ import liblo
 import time
 import argparse
 import collections
-from vector import Vector2d
+from vector import DirectionalVector, Vector2d
 import logging
+import math
 
 dirname = os.path.dirname(__file__)
 if dirname:
@@ -324,19 +325,10 @@ class Visualizer:
 
     @staticmethod
     def bearing_to_border_position(bearing, width, height):
-        total_border_size = width*2 + height*2
-        peer_border_position = bearing * total_border_size
-        if peer_border_position < width:
-            return Vector2d(peer_border_position, 0)
-        peer_border_position -= width
-        if peer_border_position < height:
-            return Vector2d(width, peer_border_position)
-        peer_border_position -= height
-        if peer_border_position < width:
-            return Vector2d(width - peer_border_position, height)
-        peer_border_position -= width
-        return Vector2d(0, height - peer_border_position)
-
+        radius = math.sqrt(width*width + height*height) / 2
+        midpoint = Vector2d(width/2, height/2)
+        circle_position = midpoint + DirectionalVector(bearing - 2*math.pi/4, radius)
+        return circle_position
 
 def run(visualizer_class):
     print "Hit ESC key to quit."

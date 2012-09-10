@@ -44,14 +44,15 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 //WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
-SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel;
+SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir;
 	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
 		[0.005*duration, 0.99*duration, 0.005*duration], 'exp'), doneAction: 2);
-	out = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	Out.ar(channel, env * out);
+	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
+	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
+	Out.ar(channel, out);
 }).send(s);
 
 OSCresponder.new(nil, "/load",
@@ -72,19 +73,20 @@ OSCresponder.new(nil, "/play",
 	  var end = msg[4];
 	  var duration = msg[5];
 	  var channel = msg[6];
+	  var pan = msg[7];
 	  //"numSynths=".post; s.numSynths.postln;
 	  ~synths[segment_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
 		  \begin, begin, \end, end, \duration, duration,
-		  \channel, channel]);
+		  \channel, channel, \pan, pan]);
   }).add;
 
-// OSCresponder.new(nil, "/pan",
-//   { arg t, r, msg;
-// 	  var segment_id = msg[1];
-// 	  var pan = msg[2] * 2 - 1;
-// 	  var synth = ~synths[segment_id];
-// 	  synth.set(\pan, pan);
-//   }).add;
+OSCresponder.new(nil, "/pan",
+  { arg t, r, msg;
+	  var segment_id = msg[1];
+	  var pan = msg[2] * 2 - 1;
+	  var synth = ~synths[segment_id];
+	  synth.set(\pan, pan);
+  }).add;
 
 
 SynthDef(\sync_beep, {

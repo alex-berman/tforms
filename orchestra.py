@@ -13,6 +13,7 @@ from synth_controller import SynthController
 from osc_sender import OscSender
 from interpret import Interpreter
 from ssr.ssr_control import SsrControl
+from space import Space
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -20,15 +21,15 @@ MAX_MEM_SIZE_KB = 1100000
 BYTES_PER_SAMPLE = 4
 
 class Player:
-    def __init__(self, orchestra, _id):
+    def __init__(self, orchestra, _id, peer):
         self.orchestra = orchestra
         self.id = _id
         self.enabled = True
         self._previous_chunk_time = None
-        self.trajectory = self.orchestra.ssr.random_trajectory_to_listener()
+        self.peer = peer
 
     def visualize(self, chunk):
-        self.orchestra.visualize_chunk(chunk, self.id)
+        self.orchestra.visualize_chunk(chunk, self)
 
     def play(self, segment, pan):
         segment["pan"] = pan
@@ -62,6 +63,8 @@ class WavPlayer(Player):
 class Orchestra:
     SAMPLE_RATE = 44100
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
+    PARABOLIC = "parabolic"
+    BY_VISUALIZER = "by_visualizer"
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -74,7 +77,9 @@ class Orchestra:
                  file_location=None,
                  visualizer_enabled=False,
                  loop=False,
-                 osc_log=None):
+                 osc_log=None,
+                 ssr_enabled=False,
+                 choreography=PARABOLIC):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -84,8 +89,9 @@ class Orchestra:
         self.file_location = file_location
         self._visualizer_enabled = visualizer_enabled
         self._loop = loop
+        self._choreography = choreography
 
-        self.ssr = SsrControl()
+        self._space = Space()
         self.playback_enabled = True
         self.fast_forwarding = False
         self._log_time_for_last_handled_event = 0
@@ -105,6 +111,11 @@ class Orchestra:
         self.set_time_cursor(start_time)
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
+
+        if ssr_enabled:
+            self.ssr = SsrControl()
+        else:
+            self.ssr = None
 
         if self._visualizer_enabled:
             self.visualizer = OscSender(VISUALIZER_PORT, osc_log)
@@ -138,7 +149,8 @@ class Orchestra:
 
     def _setup_osc(self):
         self.server = liblo.Server(PORT)
-        self.server.add_method("/visualizing", "if", self._handle_visualizing_message)
+        if self._choreography == self.BY_VISUALIZER:
+            self.server.add_method("/visualizing", "if", self._handle_visualizing_message)
         self.server.add_method("/register", "", self._handle_register)
         self._visualized_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
@@ -360,7 +372,7 @@ class Orchestra:
         if self.gui:
             self.gui.highlight_segment(segment)
 
-    def visualize_chunk(self, chunk, player_id):
+    def visualize_chunk(self, chunk, player):
         if self.visualizer:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
@@ -371,10 +383,10 @@ class Orchestra:
                                  chunk["begin"],
                                  chunk["end"] - chunk["begin"],
                                  file_info["playable_file_index"],
-                                 player_id,
-                                 bearing)
+                                 player.id,
+                                 player.peer.bearing)
 
-    def visualize_segment(self, segment, player_id):
+    def visualize_segment(self, segment, player):
         if self.visualizer:
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
@@ -385,8 +397,8 @@ class Orchestra:
                                  segment["begin"],
                                  segment["end"] - segment["begin"],
                                  file_info["playable_file_index"],
-                                 player_id,
-                                 bearing,
+                                 player.id,
+                                 player.peer.bearing,
                                  segment["duration"])
 
     def stopped_playing(self, segment):
@@ -398,27 +410,34 @@ class Orchestra:
         self.segments_by_id[segment["id"]] = segment
         if self.playback_enabled and not self.fast_forwarding:
             file_info = self.tr_log.files[segment["filenum"]]
-            source_id = self.ssr.allocate_source()
-            if source_id is not None:
-                segment["source_id"] = source_id
-                logger.debug("starting source movement")
-                self.ssr.start_source_movement(
-                    source_id, player.trajectory, duration=segment["duration"])
+            if self.ssr:
+                source_id = self.ssr.allocate_source()
+                if source_id:
+                    logger.debug("starting source movement")
+                    self.ssr.start_source_movement(
+                        source_id, player.trajectory, duration=segment["duration"])
+                    segment["source_id"] = source_id
+                    channel = source_id - 1
+                    pan = None
+                else:
+                    print "WARNING: max sources exceeded, skipping segment playback"
+            else:
+                channel = 0
+                pan = 0.5
+            if not (self.ssr and source_id is None):
                 logger.debug("asking synth to play %s" % segment)
-                channel = source_id - 1
                 self.synth.play_segment(
                     segment["id"],
                     segment["filenum"],
                     segment["start_time_in_file"] / file_info["duration"],
                     segment["end_time_in_file"] / file_info["duration"],
                     segment["duration"],
-                    channel)
+                    channel,
+                    pan)
                 self.scheduler.enter(
                     segment["duration"], 1,
                     self.stopped_playing, [segment])
-            else:
-                print "WARNING: failed to allocate source"
-        self.visualize_segment(segment, player.id)
+        self.visualize_segment(segment, player)
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
@@ -459,8 +478,13 @@ class Orchestra:
 
     def _create_player(self):
         count = len(self.players)
-        logger.debug("creating player number %d" % count)
-        return self._player_class(self, count)
+        peer = self._space.new_peer()
+        logger.debug("creating player number %d with bearing %f" % (
+                count, peer.bearing))
+        player = self._player_class(self, count, peer)
+        if self._choreography == self.PARABOLIC:
+            player.trajectory = self._space.parabolic_trajectory_to_listener(peer.bearing)
+        return player
 
     def set_time_cursor(self, log_time):
         assert not self.realtime
