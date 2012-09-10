@@ -8,6 +8,7 @@ import re
 import liblo
 import threading
 import sched
+from logger import logger
 from synth_controller import SynthController
 from osc_sender import OscSender
 from interpret import Interpreter
@@ -21,7 +22,6 @@ BYTES_PER_SAMPLE = 4
 class Player:
     def __init__(self, orchestra, _id):
         self.orchestra = orchestra
-        self.logger = orchestra.logger
         self.id = _id
         self.enabled = True
         self._previous_chunk_time = None
@@ -50,7 +50,7 @@ class WavPlayer(Player):
         start_time_in_file = self._bytecount_to_secs(segment["begin"]-file_info["offset"], file_info)
         end_time_in_file = self._bytecount_to_secs(segment["end"]-file_info["offset"], file_info)
 
-        self.logger.debug("playing %s at position %fs with duration %fs" % (
+        logger.debug("playing %s at position %fs with duration %fs" % (
                 filename, start_time_in_file, segment["duration"]))
 
         segment["start_time_in_file"] = start_time_in_file
@@ -65,7 +65,7 @@ class Orchestra:
 
     _extension_re = re.compile('\.(\w+)$')
 
-    def __init__(self, sessiondir, logger, tr_log,
+    def __init__(self, sessiondir, tr_log,
                  realtime=False,
                  timefactor=1,
                  start_time=0,
@@ -76,7 +76,6 @@ class Orchestra:
                  loop=False,
                  osc_log=None):
         self.sessiondir = sessiondir
-        self.logger = logger
         self.tr_log = tr_log
         self.realtime = realtime
         self.timefactor = timefactor
@@ -158,7 +157,7 @@ class Orchestra:
     def _handle_visualizing_message(self, path, args, types, src, data):
         (segment_id, pan) = args
         segment = self.segments_by_id[segment_id]
-        self.logger.debug("visualizing segment %s with pan %s" % (segment, pan))
+        logger.debug("visualizing segment %s with pan %s" % (segment, pan))
         self.synth.pan(segment_id, pan)
 
     def _handle_register(self, path, args, types, src, data):
@@ -206,7 +205,7 @@ class Orchestra:
                 if file_info["duration"] > 0:
                     file_info["num_channels"] = self._get_num_channels(file_info)
                     file_info["playable_file_index"] = playable_file_index
-                    self.logger.debug("duration for %r: %r\n" %
+                    logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
                     estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) \
                         * file_info["num_channels"] * BYTES_PER_SAMPLE
@@ -214,7 +213,7 @@ class Orchestra:
         self._num_playable_files = playable_file_index
 
         estimated_mem_size_kb = estimated_mem_size / 1024
-        self.logger.debug("estimated memory usage for sounds: %s kb" % estimated_mem_size_kb)
+        logger.debug("estimated memory usage for sounds: %s kb" % estimated_mem_size_kb)
         if estimated_mem_size_kb > MAX_MEM_SIZE_KB:
             print >>sys.stderr, "WARNING: estimated mem size of %s exceeds max (%s)" % (
                 estimated_mem_size_kb, MAX_MEM_SIZE_KB)
@@ -228,7 +227,7 @@ class Orchestra:
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
                 return float(stdoutdata)
             except:
-                self.logger.debug("failed to get duration for %s" % file_info["decoded_name"])
+                logger.debug("failed to get duration for %s" % file_info["decoded_name"])
                 return 0
 
     def _get_num_channels(self, file_info):
@@ -245,7 +244,7 @@ class Orchestra:
             return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
 
     def play_non_realtime(self, quit_on_end=False):
-        self.logger.debug("entering play_non_realtime")
+        logger.debug("entering play_non_realtime")
         if self._visualizer_enabled:
             self._wait_for_visualizer_to_register()
         if self._loop:
@@ -256,10 +255,10 @@ class Orchestra:
             self._play_until_end()
             if quit_on_end:
                 self._quitting = True
-        self.logger.debug("leaving play_non_realtime")
+        logger.debug("leaving play_non_realtime")
 
     def _play_until_end(self):
-        self.logger.debug("entering _play_until_end")
+        logger.debug("entering _play_until_end")
         self._playing = True
         self.stopwatch.start()
         no_more_events = False
@@ -269,15 +268,15 @@ class Orchestra:
                 self._handle_event(event)
             else:
                 no_more_events = True
-        self.logger.debug("leaving _play_until_end")
+        logger.debug("leaving _play_until_end")
 
     def _get_next_chunk_or_segment(self):
-        self.logger.debug("chunk index = %d, segment index = %d" % (
+        logger.debug("chunk index = %d, segment index = %d" % (
                 self.current_chunk_index, self.current_segment_index))
         chunk = self._get_next_chunk()
         segment = self._get_next_segment()
-        self.logger.debug("next chunk: %s" % chunk)
-        self.logger.debug("next segment: %s" % segment)
+        logger.debug("next chunk: %s" % chunk)
+        logger.debug("next segment: %s" % segment)
         if chunk and segment:
             return self._choose_nearest_chunk_or_segment(chunk, segment)
         elif chunk:
@@ -322,37 +321,37 @@ class Orchestra:
         self.stopwatch.stop()
 
     def handle_segment(self, segment):
-        self.logger.debug("handling segment %s" % segment)
+        logger.debug("handling segment %s" % segment)
         player = self.get_player_for_segment(segment)
-        self.logger.debug("get_player_for_segment returned %s" % player)
+        logger.debug("get_player_for_segment returned %s" % player)
         if not self.fast_forwarding:
             now = self.get_current_log_time()
             time_margin = segment["onset"] - now
-            self.logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
+            logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
             if not self.realtime and time_margin > 0:
                 sleep_time = time_margin
-                self.logger.debug("sleeping %f" % sleep_time)
+                logger.debug("sleeping %f" % sleep_time)
                 time.sleep(sleep_time)
         if player:
-            self.logger.debug("player.enabled=%s" % player.enabled)
+            logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
             player.play(segment, pan=0.5)
         self._log_time_for_last_handled_event = segment["onset"]
 
     def handle_chunk(self, chunk):
-        self.logger.debug("handling chunk %s" % chunk)
+        logger.debug("handling chunk %s" % chunk)
         player = self.get_player_for_chunk(chunk)
-        self.logger.debug("get_player_for_chunk returned %s" % player)
+        logger.debug("get_player_for_chunk returned %s" % player)
         if not self.fast_forwarding:
             now = self.get_current_log_time()
             time_margin = chunk["t"] - now
-            self.logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
+            logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
             if not self.realtime and time_margin > 0:
                 sleep_time = time_margin
-                self.logger.debug("sleeping %f" % sleep_time)
+                logger.debug("sleeping %f" % sleep_time)
                 time.sleep(sleep_time)
         if player:
-            self.logger.debug("player.enabled=%s" % player.enabled)
+            logger.debug("player.enabled=%s" % player.enabled)
         if player and player.enabled:
             player.visualize(chunk)
         self._log_time_for_last_handled_event = chunk["t"]
@@ -391,7 +390,7 @@ class Orchestra:
                                  segment["duration"])
 
     def stopped_playing(self, segment):
-        self.logger.debug("stopped segment %s" % segment)
+        logger.debug("stopped segment %s" % segment)
         if self.gui:
             self.gui.unhighlight_segment(segment)
 
@@ -402,10 +401,10 @@ class Orchestra:
             source_id = self.ssr.allocate_source()
             if source_id is not None:
                 segment["source_id"] = source_id
-                self.logger.debug("starting source movement")
+                logger.debug("starting source movement")
                 self.ssr.start_source_movement(
                     source_id, player.trajectory, duration=segment["duration"])
-                self.logger.debug("asking synth to play %s" % segment)
+                logger.debug("asking synth to play %s" % segment)
                 channel = source_id - 1
                 self.synth.play_segment(
                     segment["id"],
@@ -460,12 +459,12 @@ class Orchestra:
 
     def _create_player(self):
         count = len(self.players)
-        self.logger.debug("creating player number %d" % count)
+        logger.debug("creating player number %d" % count)
         return self._player_class(self, count)
 
     def set_time_cursor(self, log_time):
         assert not self.realtime
-        self.logger.debug("setting time cursor at %f" % log_time)
+        logger.debug("setting time cursor at %f" % log_time)
         self.log_time_played_from = log_time
         if self._playing:
             self.stopwatch.restart()

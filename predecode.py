@@ -1,6 +1,7 @@
 import os
 import subprocess
 import re
+from logger import logger
 
 class mp3_decoder:
     def command(self, source_filename, target_filename, sample_rate=None):
@@ -21,11 +22,10 @@ class flac_decoder:
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
-    def __init__(self, tr_log, location, logger, sample_rate=None):
+    def __init__(self, tr_log, location, sample_rate=None):
         self.tr_log = tr_log
         self.location = location
         self._sample_rate = sample_rate
-        self.logger = logger
         self._extension_re = re.compile('\.(\w+)$')
         self._decoders = dict([(extension, self._decoder_for_extension(extension))
                                for extension in self.DECODABLE_FORMATS])
@@ -43,11 +43,11 @@ class Predecoder:
         if self._extension(source_filename) == 'wav':
             file_info["decoded_name"] = source_filename
         elif self._decodable(source_filename):
-            self.logger.debug("decoding %s" % source_filename)
+            logger.debug("decoding %s" % source_filename)
             target_filename = self._target_filename(source_filename)
             file_info["decoded_name"] = target_filename
             if self._already_decoded(target_filename):
-                self.logger.debug("file already decoded")
+                logger.debug("file already decoded")
             else:
                 self._decode_file(source_filename,
                                   target_filename)
@@ -72,7 +72,7 @@ class Predecoder:
             extension = self._extension(source_filename)
             decoder = self._decoders[extension]
             cmd = decoder.command(source_filename, target_filename, self._sample_rate)
-            self.logger.debug("decode command: %s" % cmd)
+            logger.debug("decode command: %s" % cmd)
             subprocess.call(cmd, shell=True)
         else:
-            self.logger.debug("file not downloaded - not decoding")
+            logger.debug("file not downloaded - not decoding")

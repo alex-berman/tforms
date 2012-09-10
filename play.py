@@ -2,19 +2,13 @@
 
 from tr_log_reader import TrLogReader
 from argparse import ArgumentParser
-import logging
 import Queue
 import threading
 import time
 from orchestra import Orchestra
 from session import Session
 import subprocess
-
-logging.basicConfig(filename="play.log", 
-                    level=logging.DEBUG, 
-                    filemode="w",
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("play")
+from logger import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
@@ -47,17 +41,15 @@ else:
 print "session: %s" % sessiondir
 
 tr_log = TrLogReader(logfilename, options.torrentname,
-                     logger,
                      realtime=options.realtime,
                      pretend_sequential=options.pretend_sequential).get_log()
 
 if options.predecode:
     from predecode import Predecoder
-    predecoder = Predecoder(tr_log, options.download_location, logger, Orchestra.SAMPLE_RATE)
+    predecoder = Predecoder(tr_log, options.download_location, Orchestra.SAMPLE_RATE)
     predecoder.decode()
 
 orchestra = Orchestra(sessiondir,
-                      logger,
                       tr_log,
                       realtime=options.realtime,
                       timefactor=options.timefactor,
