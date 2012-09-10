@@ -17,7 +17,12 @@ class PacketParser:
 		self.scene = scene
 
 	def parse_packet( self, data ):
-		doc = parseString( data )
+		try:
+			doc = parseString( data )
+		except Exception as error:
+			print "WARNING: failed to parse:\n%s" % data
+			print "parse error: %s" % error
+			return
 		rootnode = doc.documentElement
 		if rootnode.tagName == "update":
 			self.parse_update( rootnode )
