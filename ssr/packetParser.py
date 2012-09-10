@@ -1,6 +1,7 @@
 
 from xml.dom.minidom import parseString
 from math import log
+from logger import logger
 
 fact=20/log(10)
 cap = -40
@@ -20,8 +21,8 @@ class PacketParser:
 		try:
 			doc = parseString( data )
 		except Exception as error:
-			print "WARNING: failed to parse:\n%s" % data
-			print "parse error: %s" % error
+			logger.debug("PacketParser failed to parse:\n%s" % data)
+			logger.debug("parse error: %s" % error)
 			return
 		rootnode = doc.documentElement
 		if rootnode.tagName == "update":
