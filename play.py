@@ -27,7 +27,7 @@ parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
 parser.add_argument("--loop", dest="loop", action="store_true")
 parser.add_argument("--osc-log", dest="osc_log")
-parser.add_argument("--ssr", dest="ssr", action="store_true")
+parser.add_argument("--no-ssr", dest="ssr", action="store_false", default=True)
 parser.add_argument("--choreography", dest="choreography",
                     choices=[Orchestra.PARABOLIC, Orchestra.BY_VISUALIZER],
                     default=Orchestra.PARABOLIC)

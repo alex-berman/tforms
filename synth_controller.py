@@ -2,7 +2,7 @@ import liblo
 import threading
 
 class SynthController:
-    PORT = 57121
+    PORT = 57120
 
     def __init__(self):
         self.target = liblo.Address(self.PORT)
