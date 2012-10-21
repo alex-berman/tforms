@@ -4,7 +4,6 @@ from OpenGL.GL import *
 from collections import OrderedDict
 from dynamic_scope import DynamicScope
 import random
-import time
 from vector import Vector2d, Vector3d
 from bezier import make_bezier
 import colorsys
