@@ -2,6 +2,10 @@ NUM_STEPS = 10
 STAIRS_WIDTH = 1.0
 STEP_HEIGHT = 0.1
 STEP_DEPTH = 0.3
+WALL_X = 0
+CAMERA_X = 0
+CAMERA_Y = -0.4
+CAMERA_Z = -6.5
 
 import visualizer
 from OpenGL.GL import *
@@ -10,22 +14,16 @@ from OpenGL.GLU import *
 class Stairs(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args)
-        self.inner_x = -STAIRS_WIDTH / 2
-        self.outer_x =  STAIRS_WIDTH / 2
+        self.inner_x = WALL_X - STAIRS_WIDTH / 2
+        self.outer_x = WALL_X + STAIRS_WIDTH / 2
 
     def render(self):
         self.draw_stairs_outline()
 
     def draw_stairs_outline(self):
         glLoadIdentity()
-        glTranslatef(-1.0, -0.4, -6.5)
+        glTranslatef(CAMERA_X, CAMERA_Y, CAMERA_Z)
         glColor3f(0,0,0)
-
-	# glBegin(GL_TRIANGLES)
-        # glVertex3f( 0.0, 1.0, 0.0)
-        # glVertex3f(-1.0,-1.0, 0.0)
-        # glVertex3f( 1.0,-1.0, 0.0)
-	# glEnd()
 
         for n in range(NUM_STEPS):
             y1 = - n    * STEP_HEIGHT

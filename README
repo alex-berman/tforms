@@ -5,6 +5,13 @@ cd transmission-2.61/
 cd ..
 
 
+REQUIREMENTS
+python
+sox
+wxpython
+PyOpenGL
+
+
 RECORDING A SESSION
 
 ./new_session.py 
