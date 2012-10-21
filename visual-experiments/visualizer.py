@@ -5,7 +5,6 @@ import sys, os
 import liblo
 import argparse
 import collections
-from vector import DirectionalVector, Vector2d
 import logging
 import math
 
@@ -14,6 +13,7 @@ if dirname:
     sys.path.append(dirname + "/..")
 else:
     sys.path.append("..")
+from vector import DirectionalVector, Vector2d
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
