@@ -73,12 +73,25 @@ class Segment(visualizer.Segment):
             self.draw_surface(surface)
 
     def gathered_surfaces(self):
-        step1 = self.f.byte_to_step(self.begin)
-        step2 = self.f.byte_to_step(self.end)
+        step_pos1 = self.f.byte_to_step_position(self.begin)
+        step_pos2 = self.f.byte_to_step_position(self.end)
+        step1 = int(step_pos1)
+        step2 = int(step_pos2)
+        fraction1 = step_pos1 % 1
+        fraction2 = step_pos2 % 1
         for step in range(step1, step2+1):
-            step_surfaces = list(self.visualizer.step_surfaces(step))
-            vertical_surface = step_surfaces[1]
-            yield vertical_surface
+            if step == step1:
+                relative_begin = fraction1
+            else:
+                relative_begin = 0
+
+            if step == step2:
+                relative_end = fraction2
+            else:
+                relative_end = 1
+
+            step_surfaces = list(self.visualizer.step_surfaces(step, relative_begin, relative_end))
+            yield step_surfaces[1]
         
     def draw_surface(self, surface):
         self.visualizer.set_color(self.peer.color)
@@ -228,8 +241,8 @@ class File(visualizer.File):
         for segment in self.gatherer.pieces():
             segment.draw_gathered()
 
-    def byte_to_step(self, byte):
-        return int(float(byte) / self.length * NUM_STEPS)
+    def byte_to_step_position(self, byte):
+        return float(byte) / self.length * NUM_STEPS
 
 class Stairs(visualizer.Visualizer):
     def __init__(self, args):
@@ -262,12 +275,12 @@ class Stairs(visualizer.Visualizer):
                     glVertex3f(*vertex)
                 glEnd()                
 
-    def step_surfaces(self, n):
+    def step_surfaces(self, n, relative_begin=0, relative_end=1):
         y1 = - n    * STEP_HEIGHT
         y2 = -(n+1) * STEP_HEIGHT
+        
         z1 =  n    * STEP_DEPTH
         z2 = (n+1) * STEP_DEPTH
-        
         horizontal_surface = [
             (self.inner_x, y1, z1),
             (self.inner_x, y2, z1),
@@ -275,6 +288,8 @@ class Stairs(visualizer.Visualizer):
             (self.outer_x, y1, z1)
             ]
 
+        z1 = (n + relative_begin) * STEP_DEPTH
+        z2 = (n + relative_end) * STEP_DEPTH
         vertical_surface = [
             (self.inner_x, y2, z1),
             (self.inner_x, y2, z2),
