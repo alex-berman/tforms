@@ -32,9 +32,7 @@ SEGMENT_DECAY_TIME = 1.0
 
 class Segment(visualizer.Segment):
     def target_position(self):
-        x = self.f.byte_to_coord(self.playback_byte_cursor())
-        y = self.visualizer.filenum_to_y_coord(self.filenum) + ARRIVED_HEIGHT/2
-        return Vector2d(x, y)
+        return Vector2d(0, 0) # TEMP
 
     def decay_time(self):
         return self.age() - self.duration
@@ -78,8 +76,17 @@ class Segment(visualizer.Segment):
         step1 = self.f.byte_to_step(self.begin)
         step2 = self.f.byte_to_step(self.end)
         for step in range(step1, step2+1):
-            yield self.visualizer.step_surfaces(step)[1]
+            step_surfaces = list(self.visualizer.step_surfaces(step))
+            vertical_surface = step_surfaces[1]
+            yield vertical_surface
         
+    def draw_surface(self, surface):
+        self.visualizer.set_color(self.peer.color)
+        glBegin(GL_QUADS)
+        for vertex in surface:
+            glVertex3f(*vertex)
+        glEnd()
+
     def draw_border(self, x1, x2):
         y = self.visualizer.filenum_to_y_coord(self.filenum)
         y1 = int(y)
@@ -236,15 +243,15 @@ class Stairs(visualizer.Visualizer):
         self.segments = {}
 
     def render(self):
-        # for peer in self.peers.values():
-        #     peer.update()
-        self.draw_stairs_outline()
-        # if len(self.files) > 0:
-        #     self.draw_gathered_segments()
-
-    def draw_stairs_outline(self):
         glLoadIdentity()
         glTranslatef(CAMERA_X, CAMERA_Y, CAMERA_Z)
+        for peer in self.peers.values():
+            peer.update()
+        if len(self.files) > 0:
+            self.draw_gathered_segments()
+        self.draw_stairs_outline()
+
+    def draw_stairs_outline(self):
         glColor3f(0,0,0)
 
         for n in range(NUM_STEPS):
