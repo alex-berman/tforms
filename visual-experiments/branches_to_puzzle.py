@@ -7,6 +7,7 @@ import random
 from vector import Vector2d, Vector3d
 from bezier import make_bezier
 import colorsys
+from smoother import Smoother
 
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
@@ -184,25 +185,6 @@ class Peer(visualizer.Peer):
         else:
             self.visualizer.set_color(self.color)
 
-class Smoother:
-    RESPONSE_FACTOR = 5
-
-    def __init__(self):
-        self._current_value = None
-
-    def smooth(self, new_value, time_increment):
-        if self._current_value:
-            self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
-        else:
-            self._current_value = new_value
-
-    def value(self):
-        return self._current_value
-
-    def reset(self):
-        self._current_value = None
-
 class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
@@ -241,6 +223,8 @@ class Puzzle(visualizer.Visualizer):
         self.y_scope = DynamicScope(padding=1)
 
     def render(self):
+        for peer in self.peers.values():
+            peer.update()
         if len(self.files) > 0:
             self.y_scope.update()
             self.draw_gathered_segments()
@@ -252,7 +236,6 @@ class Puzzle(visualizer.Visualizer):
 
     def draw_branches(self):
         for peer in self.peers.values():
-            peer.update()
             peer.draw()
 
     def added_file(self, f):

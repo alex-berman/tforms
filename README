@@ -6,6 +6,8 @@ cd ..
 
 
 REQUIREMENTS
+
+Some of the requirements (but there are more):
 python
 sox
 wxpython
