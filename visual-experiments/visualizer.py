@@ -3,7 +3,6 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import sys, os
 import liblo
-import time
 import argparse
 import collections
 from vector import DirectionalVector, Vector2d
@@ -19,6 +18,7 @@ from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 from osc_receiver import OscReceiver
+from stopwatch import Stopwatch
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -78,7 +78,7 @@ class Chunk:
             self.bearing, self.visualizer.width, self.visualizer.height)
 
     def age(self):
-        return time.time() - self.arrival_time
+        return self.visualizer.current_time() - self.arrival_time
 
     def relative_age(self):
         return self.age() / self.duration
@@ -129,6 +129,7 @@ class Visualizer:
         self.height = args.height
         self.show_fps = args.show_fps
         self.export = args.export
+        self.osc_log = args.osc_log
         self.logger = logging.getLogger("visualizer")
         self.files = {}
         self.peers = {}
@@ -136,10 +137,11 @@ class Visualizer:
         self.synth = SynthController()
         self.exiting = False
         self.time_increment = 0
+        self.stopwatch = Stopwatch()
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
-        self.setup_osc(args.osc_log)
+        self.setup_osc(self.osc_log)
         self.orchestra.register()
         if self.export:
             self.export_fps = args.export_fps
@@ -252,6 +254,7 @@ class Visualizer:
 
         self.now = self.current_time()
         if self.first_frame:
+            self.stopwatch.start()
             if self.sync:
                 self.synth.sync_beep()
             self.first_frame = False
@@ -271,7 +274,7 @@ class Visualizer:
             self.exporter.export_frame()
 
     def handle_incoming_messages(self):
-        if self.export:
+        if self.osc_log:
             self.server.serve_from_log_until(self.now)
         else:
             self.server.serve()
@@ -316,7 +319,7 @@ class Visualizer:
         if self.export:
             return self.current_export_time
         else:
-            return time.time()
+            return self.stopwatch.get_elapsed_time()
 
     def set_color(self, color_vector):
         glColor3f(color_vector[0],

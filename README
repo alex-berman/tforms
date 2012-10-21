@@ -18,11 +18,15 @@ In a separate terminal, launch the SuperCollider engine:
 
 sclang synth.sc 
 
-Depending on your local settings, you may also need to start and configure Jack and route output from SuperCollider to where you want it.
+In a separate terminal, launch SoundScape Renderer:
+
+ssr --no-gui
+
+You also need to start and configure Jack to route output from SSR to your system output.
 
 Replay the session:
 
-./play.py sessions/120715-101708/ --predecoded
+./play.py --predecode --gui sessions/120715-101708/
 
 Wait until SC has displayed that it has loaded all wav files. Then press Play (or space) in the GUI.
 
