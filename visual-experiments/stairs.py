@@ -242,8 +242,8 @@ class File(visualizer.File):
 
     def byte_to_wall_position(self, byte):
         step_position = self.byte_to_step_position(byte)
-        step = int(step_position)
-        return Vector2d(self.visualizer.step_z(step),
+        step = int(step_position)+1
+        return Vector2d(self.visualizer.step_z(step_position),
                         self.visualizer.step_y(step))
 
 
