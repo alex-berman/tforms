@@ -10,8 +10,11 @@ REQUIREMENTS
 Some of the requirements (but there are more):
 python
 sox
+
+For visualizations:
 wxpython
 PyOpenGL
+matplotlib
 
 
 RECORDING A SESSION

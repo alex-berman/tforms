@@ -265,6 +265,10 @@ class Stairs(visualizer.Visualizer):
         self.draw_stairs_outline()
 
     def draw_stairs_outline(self):
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(0,0,0)
 
         for n in range(NUM_STEPS):
