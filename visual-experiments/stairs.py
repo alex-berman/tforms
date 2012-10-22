@@ -9,12 +9,14 @@ from vector import Vector2d, Vector3d
 from bezier import make_bezier
 import colorsys
 from smoother import Smoother
+import math
 
 NUM_STEPS = 10
 STAIRS_WIDTH = 1.0
 STEP_HEIGHT = 0.1
 STEP_DEPTH = 0.3
 WALL_X = -0.5
+PEER_Y = 2
 
 # CAMERA_X = 0
 # CAMERA_Y = -0.4
@@ -109,24 +111,6 @@ class Segment(visualizer.Segment):
             glVertex3f(*vertex)
         glEnd()
 
-    def draw_border(self, x1, x2):
-        y = self.visualizer.filenum_to_y_coord(self.filenum)
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT)
-        opacity = ARRIVED_OPACITY
-        glColor3f(1-opacity, 1-opacity, 1-opacity)
-        if x2 == x1:
-            x2 = x1 + 1
-
-        glDisable(GL_LINE_SMOOTH)
-        glDisable(GL_BLEND)
-        glBegin(GL_LINE_LOOP)
-        glVertex2i(x1, y2)
-        glVertex2i(x2, y2)
-        glVertex2i(x2, y1)
-        glVertex2i(x1, y1)
-        glEnd()
-
     def draw_playing(self):
         if self.is_playing():
             trace_age = min(self.duration, 0.2)
@@ -172,6 +156,8 @@ class Segment(visualizer.Segment):
             self._appending_to = self.f.gatherer.would_append(self)
         return self._appending_to
 
+    def peer_position(self):
+        return Vector2d(NUM_STEPS * STEP_DEPTH * self.bearing / (2*math.pi), PEER_Y)
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
