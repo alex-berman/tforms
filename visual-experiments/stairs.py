@@ -1,6 +1,7 @@
 import visualizer
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *
 from gatherer import Gatherer
 from collections import OrderedDict
 from dynamic_scope import DynamicScope
@@ -21,14 +22,17 @@ PEER_Y = 2
 # CAMERA_X = 0
 # CAMERA_Y = -0.4
 # CAMERA_Z = -6.5
+# CAMERA_ROTATION = 0
 
 CAMERA_X = -5
 CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
 CAMERA_Z = -3
+CAMERA_ROTATION = -65.0
 
 # CAMERA_X = -1
 # CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
 # CAMERA_Z = NUM_STEPS * STEP_DEPTH / 2
+# CAMERA_ROTATION = -90.0
 
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
@@ -256,10 +260,12 @@ class Stairs(visualizer.Visualizer):
         self.outer_x = WALL_X + STAIRS_WIDTH
         self.files = {}
         self.segments = {}
+        self._dragging = False
+        self._camera_rotation = CAMERA_ROTATION
 
     def render(self):
         glLoadIdentity()
-        glRotatef(-65.0, 0.0, 1.0, 0.0)
+        glRotatef(self._camera_rotation, 0.0, 1.0, 0.0)
         glTranslatef(CAMERA_X, CAMERA_Y, CAMERA_Z)
         for peer in self.peers.values():
             peer.update()
@@ -331,6 +337,25 @@ class Stairs(visualizer.Visualizer):
         glLoadIdentity()
         gluPerspective(45, float(_width) / _height, 0.1, 100)
         glMatrixMode(GL_MODELVIEW)
+
+    def InitGL(self):
+        visualizer.Visualizer.InitGL(self)
+        glutMouseFunc(self._mouse_clicked)
+        glutMotionFunc(self._mouse_moved)
+
+    def _mouse_clicked(self, button, state, x, y):
+        if button == GLUT_LEFT_BUTTON:
+            if state == GLUT_DOWN:
+                self._dragging = True
+                self._drag_x_previous = x
+            elif state == GLUT_UP:
+                self._dragging = False
+
+    def _mouse_moved(self, x, y):
+        if self._dragging:
+            movement = x - self._drag_x_previous
+            self._camera_rotation += movement
+            self._drag_x_previous = x
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
