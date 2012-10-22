@@ -40,6 +40,7 @@ CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
+GATHERED_COLOR = (.5, .5, .5)
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -80,32 +81,14 @@ class Segment(visualizer.Segment):
         return bezier(CURVE_PRECISION)
 
     def draw_gathered(self):
+        self.visualizer.set_color(GATHERED_COLOR)
         for surface in self.gathered_surfaces():
             self.draw_surface(surface)
 
     def gathered_surfaces(self):
-        step_pos1 = self.f.byte_to_step_position(self.begin)
-        step_pos2 = self.f.byte_to_step_position(self.end)
-        step1 = int(step_pos1)
-        step2 = int(step_pos2)
-        fraction1 = step_pos1 % 1
-        fraction2 = step_pos2 % 1
-        for step in range(step1, step2+1):
-            if step == step1:
-                relative_begin = fraction1
-            else:
-                relative_begin = 0
-
-            if step == step2:
-                relative_end = fraction2
-            else:
-                relative_end = 1
-
-            step_surfaces = list(self.visualizer.step_surfaces(step, relative_begin, relative_end))
-            yield step_surfaces[1]
+        return self.f.byte_surfaces(self.begin, self.end)
         
     def draw_surface(self, surface):
-        self.visualizer.set_color(self.peer.color)
         glBegin(GL_QUADS)
         for vertex in surface:
             glVertex3f(*vertex)
@@ -120,7 +103,7 @@ class Segment(visualizer.Segment):
                 opacity = 1
             else:
                 opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
-            self.draw_playback_border()
+            #self.draw_playback_border()
             self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
 
     def draw_playback_border(self):
@@ -128,28 +111,24 @@ class Segment(visualizer.Segment):
         x2 = int(self.f.byte_to_coord(self.playback_byte_cursor()))
         self.draw_border(x1, x2)
 
-    def draw_gradient(self, source, target, opacity):
-        y = self.visualizer.filenum_to_y_coord(self.filenum)
-        y1 = int(y)
-        y2 = int(y + ARRIVED_HEIGHT) - 1
+    def draw_gradient(self, begin, end, opacity):
         if self.appending_to():
-            x1 = int(self.f.byte_to_coord(self.appending_to().end)) - 1
-        else:
-            x1 = int(self.f.byte_to_coord(source)) + 1
-        x2 = int(self.f.byte_to_coord(target)) - 1
+            begin = self.appending_to().end
+        surfaces = self.f.byte_surfaces(begin, end)
 
         source_color = Vector3d(1, 1, 1)
         target_color = self.peer.color
         target_color += (source_color - target_color) * (1-opacity)
 
-        glBegin(GL_QUADS)
-        self.visualizer.set_color(source_color)
-        glVertex2i(x1, y2)
-        glVertex2i(x1, y1)
-        self.visualizer.set_color(target_color)
-        glVertex2i(x2, y1)
-        glVertex2i(x2, y2)
-        glEnd()
+        for surface in surfaces:
+            glBegin(GL_QUADS)
+            self.visualizer.set_color(source_color)
+            glVertex3f(*(surface[0]))
+            glVertex3f(*(surface[1]))
+            self.visualizer.set_color(target_color)
+            glVertex3f(*(surface[2]))
+            glVertex3f(*(surface[3]))
+            glEnd()
 
     def appending_to(self):
         if not hasattr(self, "_appending_to"):
@@ -201,9 +180,8 @@ class Peer(visualizer.Peer):
 
     def draw(self):
         if len(self.segments) > 0:
-            #TODO:
-            # for segment in self.segments.values():
-            #     segment.draw_playing()
+            for segment in self.segments.values():
+                segment.draw_playing()
             for segment in self.segments.values():
                 self.set_color(0)
                 segment.draw_curve()
@@ -245,6 +223,27 @@ class File(visualizer.File):
         step = int(step_position)+1
         return Vector2d(self.visualizer.step_z(step_position),
                         self.visualizer.step_y(step))
+
+    def byte_surfaces(self, begin, end):
+        step_pos1 = self.byte_to_step_position(begin)
+        step_pos2 = self.byte_to_step_position(end)
+        step1 = int(step_pos1)
+        step2 = int(step_pos2)
+        fraction1 = step_pos1 % 1
+        fraction2 = step_pos2 % 1
+        for step in range(step1, step2+1):
+            if step == step1:
+                relative_begin = fraction1
+            else:
+                relative_begin = 0
+
+            if step == step2:
+                relative_end = fraction2
+            else:
+                relative_end = 1
+
+            step_surfaces = list(self.visualizer.step_surfaces(step, relative_begin, relative_end))
+            yield step_surfaces[1]
 
 
 class Stairs(visualizer.Visualizer):
@@ -295,7 +294,7 @@ class Stairs(visualizer.Visualizer):
         
         z1 = self.step_z(n)
         z2 = self.step_z(n+1)
-        horizontal_surface = [
+        vertical_surface = [
             (self.inner_x, y1, z1),
             (self.inner_x, y2, z1),
             (self.outer_x, y2, z1),
@@ -304,15 +303,15 @@ class Stairs(visualizer.Visualizer):
 
         z1 = (n + relative_begin) * STEP_DEPTH
         z2 = (n + relative_end) * STEP_DEPTH
-        vertical_surface = [
+        horizontal_surface = [
             (self.inner_x, y2, z1),
             (self.inner_x, y2, z2),
             (self.outer_x, y2, z2),
             (self.outer_x, y2, z1)
             ]
 
-        yield horizontal_surface
         yield vertical_surface
+        yield horizontal_surface
 
     def step_y(self, step):
         return -step * STEP_HEIGHT
