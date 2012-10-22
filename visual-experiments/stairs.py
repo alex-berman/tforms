@@ -371,6 +371,12 @@ class Stairs(visualizer.Visualizer):
         elif key == GLUT_KEY_RIGHT:
             self._camera_x -= CAMERA_KEY_SPEED * math.cos(r)
             self._camera_z -= CAMERA_KEY_SPEED * math.sin(r)
+        elif key == GLUT_KEY_UP:
+            self._camera_x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            self._camera_z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+        elif key == GLUT_KEY_DOWN:
+            self._camera_x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            self._camera_z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
