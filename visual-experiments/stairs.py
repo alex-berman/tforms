@@ -31,6 +31,7 @@ CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR = (.5, .5, .5)
+CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -93,37 +94,16 @@ class Segment(visualizer.Segment):
                 opacity = 1
             else:
                 opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
-            #self.draw_playback_border()
-            self.draw_gradient(previous_byte_cursor, self.playback_byte_cursor(), opacity)
+            self.draw_cursor(opacity)
 
-    def draw_playback_border(self):
-        x1 = int(self.f.byte_to_coord(self.begin))
-        x2 = int(self.f.byte_to_coord(self.playback_byte_cursor()))
-        self.draw_border(x1, x2)
-
-    def draw_gradient(self, begin, end, opacity):
-        if self.appending_to():
-            begin = self.appending_to().end
-        surfaces = self.f.byte_surfaces(begin, end)
-
-        source_color = Vector3d(1, 1, 1)
-        target_color = self.peer.color
-        target_color += (source_color - target_color) * (1-opacity)
-
-        for surface in surfaces:
-            glBegin(GL_QUADS)
-            self.visualizer.set_color(source_color)
-            glVertex3f(*(surface[0]))
-            glVertex3f(*(surface[1]))
-            self.visualizer.set_color(target_color)
-            glVertex3f(*(surface[2]))
-            glVertex3f(*(surface[3]))
-            glEnd()
-
-    def appending_to(self):
-        if not hasattr(self, "_appending_to"):
-            self._appending_to = self.f.gatherer.would_append(self)
-        return self._appending_to
+    def draw_cursor(self, opacity):
+        wall_position = self.f.byte_to_wall_position(self.playback_byte_cursor())
+        self.visualizer.set_color(self.peer.color)
+        glLineWidth(CURSOR_THICKNESS)
+        glBegin(GL_LINES)
+        glVertex3f(WALL_X, wall_position[1], wall_position[0])
+        glVertex3f(WALL_X + STAIRS_WIDTH, wall_position[1], wall_position[0])
+        glEnd()
 
     def peer_position(self):
         return Vector2d(NUM_STEPS * STEP_DEPTH * self.bearing / (2*math.pi), PEER_Y)
