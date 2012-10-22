@@ -18,6 +18,7 @@ STEP_HEIGHT = 0.1
 STEP_DEPTH = 0.3
 WALL_X = -0.5
 PEER_Y = 2
+CAMERA_KEY_SPEED = 0.5
 
 # CAMERA_X = 0
 # CAMERA_Y = -0.4
@@ -262,11 +263,15 @@ class Stairs(visualizer.Visualizer):
         self.segments = {}
         self._dragging = False
         self._camera_rotation = CAMERA_ROTATION
+        self._camera_x = CAMERA_X
+        self._camera_y = CAMERA_Y
+        self._camera_z = CAMERA_Z
 
     def render(self):
         glLoadIdentity()
         glRotatef(self._camera_rotation, 0.0, 1.0, 0.0)
-        glTranslatef(CAMERA_X, CAMERA_Y, CAMERA_Z)
+        glTranslatef(self._camera_x, self._camera_y, self._camera_z)
+
         for peer in self.peers.values():
             peer.update()
         if len(self.files) > 0:
@@ -342,6 +347,7 @@ class Stairs(visualizer.Visualizer):
         visualizer.Visualizer.InitGL(self)
         glutMouseFunc(self._mouse_clicked)
         glutMotionFunc(self._mouse_moved)
+        glutSpecialFunc(self._special_key_pressed)
 
     def _mouse_clicked(self, button, state, x, y):
         if button == GLUT_LEFT_BUTTON:
@@ -356,6 +362,15 @@ class Stairs(visualizer.Visualizer):
             movement = x - self._drag_x_previous
             self._camera_rotation += movement
             self._drag_x_previous = x
+
+    def _special_key_pressed(self, key, x, y):
+        r = math.radians(self._camera_rotation)
+        if key == GLUT_KEY_LEFT:
+            self._camera_x += CAMERA_KEY_SPEED * math.cos(r)
+            self._camera_z += CAMERA_KEY_SPEED * math.sin(r)
+        elif key == GLUT_KEY_RIGHT:
+            self._camera_x -= CAMERA_KEY_SPEED * math.cos(r)
+            self._camera_z -= CAMERA_KEY_SPEED * math.sin(r)
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
