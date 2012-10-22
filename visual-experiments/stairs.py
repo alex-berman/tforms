@@ -14,7 +14,7 @@ NUM_STEPS = 10
 STAIRS_WIDTH = 1.0
 STEP_HEIGHT = 0.1
 STEP_DEPTH = 0.3
-WALL_X = 0
+WALL_X = -0.5
 CAMERA_X = 0
 CAMERA_Y = -0.4
 CAMERA_Z = -6.5
@@ -32,7 +32,7 @@ SEGMENT_DECAY_TIME = 1.0
 
 class Segment(visualizer.Segment):
     def target_position(self):
-        return Vector2d(0, 0) # TEMP
+        return self.f.byte_to_wall_position(self.playback_byte_cursor())
 
     def decay_time(self):
         return self.age() - self.duration
@@ -48,8 +48,8 @@ class Segment(visualizer.Segment):
 
         glLineWidth(2)
         glBegin(GL_LINE_STRIP)
-        for x,y in self.curve():
-            glVertex2f(x, y)
+        for z,y in self.curve():
+            glVertex3f(WALL_X, y, z)
         glEnd()
 
     def curve(self):
@@ -206,8 +206,9 @@ class Peer(visualizer.Peer):
 
     def draw(self):
         if len(self.segments) > 0:
-            for segment in self.segments.values():
-                segment.draw_playing()
+            #TODO:
+            # for segment in self.segments.values():
+            #     segment.draw_playing()
             for segment in self.segments.values():
                 self.set_color(0)
                 segment.draw_curve()
@@ -244,14 +245,21 @@ class File(visualizer.File):
     def byte_to_step_position(self, byte):
         return float(byte) / self.length * NUM_STEPS
 
+    def byte_to_wall_position(self, byte):
+        step_position = self.byte_to_step_position(byte)
+        step = int(step_position)
+        return Vector2d(self.visualizer.step_z(step),
+                        self.visualizer.step_y(step))
+
+
 class Stairs(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
                                        peer_class=Peer,
                                        segment_class=Segment)
-        self.inner_x = WALL_X - STAIRS_WIDTH / 2
-        self.outer_x = WALL_X + STAIRS_WIDTH / 2
+        self.inner_x = WALL_X
+        self.outer_x = WALL_X + STAIRS_WIDTH
         self.files = {}
         self.segments = {}
 
@@ -262,7 +270,12 @@ class Stairs(visualizer.Visualizer):
             peer.update()
         if len(self.files) > 0:
             self.draw_gathered_segments()
+            self.draw_branches()
         self.draw_stairs_outline()
+
+    def draw_branches(self):
+        for peer in self.peers.values():
+            peer.draw()
 
     def draw_stairs_outline(self):
         glEnable(GL_LINE_SMOOTH)
@@ -270,6 +283,7 @@ class Stairs(visualizer.Visualizer):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(0,0,0)
+        glLineWidth(1)
 
         for n in range(NUM_STEPS):
             surfaces = self.step_surfaces(n)
@@ -280,11 +294,11 @@ class Stairs(visualizer.Visualizer):
                 glEnd()                
 
     def step_surfaces(self, n, relative_begin=0, relative_end=1):
-        y1 = - n    * STEP_HEIGHT
-        y2 = -(n+1) * STEP_HEIGHT
+        y1 = self.step_y(n)
+        y2 = self.step_y(n+1)
         
-        z1 =  n    * STEP_DEPTH
-        z2 = (n+1) * STEP_DEPTH
+        z1 = self.step_z(n)
+        z2 = self.step_z(n+1)
         horizontal_surface = [
             (self.inner_x, y1, z1),
             (self.inner_x, y2, z1),
@@ -303,6 +317,12 @@ class Stairs(visualizer.Visualizer):
 
         yield horizontal_surface
         yield vertical_surface
+
+    def step_y(self, step):
+        return -step * STEP_HEIGHT
+
+    def step_z(self, step):
+        return step * STEP_DEPTH
 
     def draw_gathered_segments(self):
         for f in self.files.values():
