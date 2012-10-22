@@ -15,9 +15,18 @@ STAIRS_WIDTH = 1.0
 STEP_HEIGHT = 0.1
 STEP_DEPTH = 0.3
 WALL_X = -0.5
-CAMERA_X = 0
-CAMERA_Y = -0.4
-CAMERA_Z = -6.5
+
+# CAMERA_X = 0
+# CAMERA_Y = -0.4
+# CAMERA_Z = -6.5
+
+CAMERA_X = -5
+CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
+CAMERA_Z = -3
+
+# CAMERA_X = -1
+# CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
+# CAMERA_Z = NUM_STEPS * STEP_DEPTH / 2
 
 ARRIVAL_SIZE = 10
 APPEND_MARGIN = 0.15
@@ -265,6 +274,7 @@ class Stairs(visualizer.Visualizer):
 
     def render(self):
         glLoadIdentity()
+        glRotatef(-65.0, 0.0, 1.0, 0.0)
         glTranslatef(CAMERA_X, CAMERA_Y, CAMERA_Z)
         for peer in self.peers.values():
             peer.update()
