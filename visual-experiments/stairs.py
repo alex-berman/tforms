@@ -19,6 +19,7 @@ STEP_DEPTH = 0.3
 WALL_X = -0.5
 PEER_Y = 2
 CAMERA_KEY_SPEED = 0.5
+MIN_GATHERED_SIZE = 0.5
 
 CAMERA_X = -5
 CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
@@ -72,18 +73,54 @@ class Segment(visualizer.Segment):
         return bezier(CURVE_PRECISION)
 
     def draw_gathered(self):
-        self.visualizer.set_color(GATHERED_COLOR)
-        for surface in self.gathered_surfaces():
-            self.draw_surface(surface)
+        surfaces = list(self.gathered_surfaces())
+        size = surfaces[-1][1].z - surfaces[0][0].z
+        if size > MIN_GATHERED_SIZE:
+            self.draw_solid_surfaces(surfaces)
+        else:
+            self.draw_gradient_surfaces(surfaces)
 
     def gathered_surfaces(self):
-        return self.f.byte_surfaces(self.begin, self.end)
-        
-    def draw_surface(self, surface):
+        return self.f.byte_surfaces(self.begin, self.end, MIN_GATHERED_SIZE)
+
+    def draw_solid_surfaces(self, surfaces):
+        for surface in surfaces:
+            self.draw_solid_surface(surface)
+
+    def draw_solid_surface(self, surface):
+        self.visualizer.set_color(GATHERED_COLOR)
         glBegin(GL_QUADS)
         for vertex in surface:
             glVertex3f(*vertex)
         glEnd()
+
+    def draw_gradient_surfaces(self, surfaces):
+        low = surfaces[0][0].z
+        high = surfaces[-1][1].z
+        mid = (low + high) / 2
+        for surface in surfaces:
+            self.draw_gradient_surface(surface, low, mid, high)
+
+    def draw_gradient_surface(self, surface, low, mid, high):
+        alpha1 = self.z_to_alpha(surface[0].z, low, mid, high)
+        alpha2 = self.z_to_alpha(surface[1].z, low, mid, high)
+        glBegin(GL_QUADS)
+        self.visualizer.set_color(GATHERED_COLOR, alpha1)
+        glVertex3f(surface[0].x, surface[0].y, surface[0].z)
+        self.visualizer.set_color(GATHERED_COLOR, alpha2)
+        glVertex3f(surface[1].x, surface[1].y, surface[1].z)
+        glVertex3f(surface[2].x, surface[2].y, surface[2].z)
+        self.visualizer.set_color(GATHERED_COLOR, alpha1)
+        glVertex3f(surface[3].x, surface[3].y, surface[3].z)
+        glEnd()
+
+    def z_to_alpha(self, z, low, mid, high):
+        if z < mid:
+            alpha = (z - low) / (mid - low)
+        else:
+            alpha = 1.0 - (z - mid) / (high - mid)
+        #print "%s=z_to_alpha(%s, %s, %s, %s)" % (alpha, z, low, mid, high)
+        return alpha
 
     def draw_playing(self):
         if self.is_playing():
@@ -194,9 +231,11 @@ class File(visualizer.File):
         return Vector2d(self.visualizer.step_z(step_position),
                         self.visualizer.step_y(step))
 
-    def byte_surfaces(self, begin, end):
+    def byte_surfaces(self, begin, end, min_size=None):
         step_pos1 = self.byte_to_step_position(begin)
         step_pos2 = self.byte_to_step_position(end)
+        if (step_pos2 - step_pos1) < min_size:
+            step_pos1, step_pos2 = self.resize(step_pos1, step_pos2, min_size)
         step1 = int(step_pos1)
         step2 = int(step_pos2)
         fraction1 = step_pos1 % 1
@@ -214,6 +253,11 @@ class File(visualizer.File):
 
             step_surfaces = list(self.visualizer.step_surfaces(step, relative_begin, relative_end))
             yield step_surfaces[1]
+
+    def resize(self, pos1, pos2, new_size):
+        new_pos1 = max(pos1 - new_size/2, 0)
+        new_pos2 = min(pos2 + new_size/2, NUM_STEPS)
+        return new_pos1, new_pos2
 
 
 class Stairs(visualizer.Visualizer):
@@ -271,19 +315,19 @@ class Stairs(visualizer.Visualizer):
         z1 = self.step_z(n)
         z2 = self.step_z(n+1)
         vertical_surface = [
-            (self.inner_x, y1, z1),
-            (self.inner_x, y2, z1),
-            (self.outer_x, y2, z1),
-            (self.outer_x, y1, z1)
+            Vector3d(self.inner_x, y1, z1),
+            Vector3d(self.inner_x, y2, z1),
+            Vector3d(self.outer_x, y2, z1),
+            Vector3d(self.outer_x, y1, z1)
             ]
 
         z1 = (n + relative_begin) * STEP_DEPTH
         z2 = (n + relative_end) * STEP_DEPTH
         horizontal_surface = [
-            (self.inner_x, y2, z1),
-            (self.inner_x, y2, z2),
-            (self.outer_x, y2, z2),
-            (self.outer_x, y2, z1)
+            Vector3d(self.inner_x, y2, z1),
+            Vector3d(self.inner_x, y2, z2),
+            Vector3d(self.outer_x, y2, z2),
+            Vector3d(self.outer_x, y2, z1)
             ]
 
         yield vertical_surface
@@ -310,6 +354,7 @@ class Stairs(visualizer.Visualizer):
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
+        glShadeModel(GL_SMOOTH)
         glutMouseFunc(self._mouse_clicked)
         glutMotionFunc(self._mouse_moved)
         glutSpecialFunc(self._special_key_pressed)
