@@ -80,7 +80,8 @@ class Orchestra:
                  loop=False,
                  osc_log=None,
                  ssr_enabled=False,
-                 choreography=PARABOLIC):
+                 choreography=PARABOLIC,
+                 max_passivity=None):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -91,6 +92,7 @@ class Orchestra:
         self._visualizer_enabled = visualizer_enabled
         self._loop = loop
         self._choreography = choreography
+        self._max_passivity = max_passivity
 
         self._space = Space()
         self.playback_enabled = True
@@ -126,8 +128,20 @@ class Orchestra:
 
     def _interpret_chunks_to_score(self):
         self.score = Interpreter().interpret(self.chunks, self.tr_log.files)
+        if self._max_passivity:
+            self._reduce_max_passivity_in_score()
         for segment in self.score:
             segment["duration"] /= self.timefactor
+
+    def _reduce_max_passivity_in_score(self):
+        previous_onset = None
+        reduced_time = 0
+        for i in range(len(self.score)):
+            if previous_onset is not None:
+                if (self.score[i]["onset"] - reduced_time - previous_onset) > self._max_passivity:
+                    reduced_time += self.score[i]["onset"] - reduced_time - previous_onset - self._max_passivity
+            self.score[i]["onset"] -= reduced_time
+            previous_onset = self.score[i]["onset"]
 
     def _filter_playable_chunks(self, chunks):
         return filter(lambda chunk: (self._chunk_is_playable(chunk)),

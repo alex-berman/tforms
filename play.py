@@ -31,9 +31,12 @@ parser.add_argument("--no-ssr", dest="ssr", action="store_false", default=True)
 parser.add_argument("--choreography", dest="choreography",
                     choices=[Orchestra.PARABOLIC, Orchestra.BY_VISUALIZER],
                     default=Orchestra.PARABOLIC)
+parser.add_argument("--max-passivity", dest="max_passivity", type=float)
 options = parser.parse_args()
 
 if options.realtime:
+    if options.max_passivity:
+        raise Exception("cannot enforce max passivity in real time")
     session = Session(realtime=True)
     sessiondir = session.dir
     logfile = session.get_log_reader()
@@ -64,7 +67,8 @@ orchestra = Orchestra(sessiondir,
                       visualizer_enabled=(options.visualizer_enabled or options.visualizer),
                       loop=options.loop,
                       osc_log=options.osc_log,
-                      ssr_enabled=options.ssr)
+                      ssr_enabled=options.ssr,
+                      max_passivity=options.max_passivity)
 
 if not options.realtime and len(orchestra.chunks) == 0:
     raise Exception("No chunks to play. Unsupported file format?")
