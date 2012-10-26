@@ -71,54 +71,15 @@ class Segment(visualizer.Segment):
         return bezier(CURVE_PRECISION)
 
     def draw_gathered(self):
-        surfaces = list(self.gathered_surfaces())
-        size = surfaces[-1][1].z - surfaces[0][0].z
-        if size > MIN_GATHERED_SIZE:
-            self.draw_solid_surfaces(surfaces)
-        else:
-            self.draw_gradient_surfaces(surfaces)
-
-    def gathered_surfaces(self):
-        return self.f.byte_surfaces(self.begin, self.end, MIN_GATHERED_SIZE)
-
-    def draw_solid_surfaces(self, surfaces):
-        for surface in surfaces:
-            self.draw_solid_surface(surface)
-
-    def draw_solid_surface(self, surface):
+        x1 = self.f.byte_to_x(self.begin)
+        x2 = self.f.byte_to_x(self.end)
         self.visualizer.set_color(GATHERED_COLOR)
         glBegin(GL_QUADS)
-        for vertex in surface:
-            glVertex3f(*vertex)
+        glVertex3f(x1, self.f.y, self.f.z1)
+        glVertex3f(x1, self.f.y, self.f.z2)
+        glVertex3f(x2, self.f.y, self.f.z2)
+        glVertex3f(x2, self.f.y, self.f.z1)
         glEnd()
-
-    def draw_gradient_surfaces(self, surfaces):
-        low = surfaces[0][0].z
-        high = surfaces[-1][1].z
-        mid = (low + high) / 2
-        for surface in surfaces:
-            self.draw_gradient_surface(surface, low, mid, high)
-
-    def draw_gradient_surface(self, surface, low, mid, high):
-        alpha1 = self.z_to_alpha(surface[0].z, low, mid, high)
-        alpha2 = self.z_to_alpha(surface[1].z, low, mid, high)
-        glBegin(GL_QUADS)
-        self.visualizer.set_color(GATHERED_COLOR, alpha1)
-        glVertex3f(surface[0].x, surface[0].y, surface[0].z)
-        self.visualizer.set_color(GATHERED_COLOR, alpha2)
-        glVertex3f(surface[1].x, surface[1].y, surface[1].z)
-        glVertex3f(surface[2].x, surface[2].y, surface[2].z)
-        self.visualizer.set_color(GATHERED_COLOR, alpha1)
-        glVertex3f(surface[3].x, surface[3].y, surface[3].z)
-        glEnd()
-
-    def z_to_alpha(self, z, low, mid, high):
-        if z < mid:
-            alpha = (z - low) / (mid - low)
-        else:
-            alpha = 1.0 - (z - mid) / (high - mid)
-        #print "%s=z_to_alpha(%s, %s, %s, %s)" % (alpha, z, low, mid, high)
-        return alpha
 
     def draw_playing(self):
         if self.is_playing():
@@ -217,7 +178,7 @@ class File(visualizer.File):
 
     def render(self):
         self.x_scope.update()
-        #self.draw_gathered_segments()
+        self.draw_gathered_segments()
 
     def draw_gathered_segments(self):
         for segment in self.gatherer.pieces():
