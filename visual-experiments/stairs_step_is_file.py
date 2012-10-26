@@ -21,8 +21,8 @@ PEER_Y = 2
 CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
 
-CAMERA_POSITION = Vector3d(-5.5, -0.6, -4.3)
-CAMERA_ROTATION = -65.0
+CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
+CAMERA_ROTATION = -37
 
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
@@ -317,7 +317,7 @@ class Stairs(visualizer.Visualizer):
         elif key == GLUT_KEY_DOWN:
             self._camera_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
             self._camera_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        print self._camera_position
+        print self._camera_rotation, self._camera_position
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
