@@ -29,7 +29,7 @@ CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-GATHERED_COLOR = (.1, .1, .1)
+GATHERED_COLOR = (.7, 0, 0)
 CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
@@ -94,7 +94,7 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self, opacity):
         x = self.f.byte_to_x(self.playback_byte_cursor())
-        self.visualizer.set_color(self.peer.color)
+        self.peer.set_color(0)
         glLineWidth(CURSOR_THICKNESS)
         glBegin(GL_LINES)
         glVertex3f(x, self.f.y, self.f.z1)
