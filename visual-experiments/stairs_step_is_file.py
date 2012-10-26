@@ -26,7 +26,8 @@ CAMERA_ROTATION = -37
 
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
-CURVE_PRECISION = 50
+CURVE_PRECISION_ON_WALL = 50
+CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR = (.7, 0, 0)
@@ -42,14 +43,6 @@ class Segment(visualizer.Segment):
         else:
             z = self.f.z2 - STEP_DEPTH * self.playback_byte_cursor() / self.f.length
         return Vector2d(z, self.f.y)
-
-    def curve_on_step(self):
-        x = self.f.byte_to_x(self.playback_byte_cursor())
-        if self.peer.departure_position[0] > self.f.z1:
-            z = self.f.z1
-        else:
-            z = self.f.z2
-        yield (x, self.f.y, z)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -68,8 +61,8 @@ class Segment(visualizer.Segment):
         for z,y in self.curve_on_wall():
             glVertex3f(WALL_X, y, z)
         if self.is_playing():
-            for vertex in self.curve_on_step():
-                glVertex3f(*vertex)
+            for x,z in self.curve_on_step():
+                glVertex3f(x, self.f.y, z)
         glEnd()
 
     def curve_on_wall(self):
@@ -80,13 +73,28 @@ class Segment(visualizer.Segment):
             control_points.append(self.peer.departure_position * (1-r) +
                                  branching_position * r)
         if self.is_playing():
-            target = self.target_position()
+            target = self.wall_step_crossing()
         else:
-            target = branching_position + (self.target_position() - branching_position) * \
+            target = branching_position + (self.wall_step_crossing() - branching_position) * \
                 (1 - pow(self.decay_time(), 0.3))
         control_points.append(target)
         bezier = make_bezier([(p.x, p.y) for p in control_points])
-        return bezier(CURVE_PRECISION)
+        return bezier(CURVE_PRECISION_ON_WALL)
+
+    def curve_on_step(self):
+        wall_step_crossing_zy = self.wall_step_crossing()
+        wall_step_crossing = Vector2d(WALL_X, wall_step_crossing_zy[0])
+        control_points = []
+        control_points.append(wall_step_crossing)
+        x = self.f.byte_to_x(self.playback_byte_cursor())
+        if self.peer.departure_position[0] > self.f.z1:
+            z = self.f.z1
+        else:
+            z = self.f.z2
+        control_points.append(Vector2d((WALL_X + x) / 2, z))
+        control_points.append(Vector2d(x, z))
+        bezier = make_bezier([(p.x, p.y) for p in control_points])
+        return bezier(CURVE_PRECISION_ON_STEPS)
 
     def draw_gathered(self):
         x1 = self.f.byte_to_x(self.begin)
