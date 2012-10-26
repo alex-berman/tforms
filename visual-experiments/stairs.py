@@ -19,19 +19,19 @@ STEP_DEPTH = 0.3
 WALL_X = -0.5
 PEER_Y = 2
 CAMERA_KEY_SPEED = 0.5
-MIN_GATHERED_SIZE = 0.5
+MIN_GATHERED_SIZE = 0
 
 CAMERA_X = -5
 CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
 CAMERA_Z = -3
 CAMERA_ROTATION = -65.0
 
-GREYSCALE = False
+GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION = 50
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-GATHERED_COLOR = (.5, .5, .5)
+GATHERED_COLOR = (.1, .1, .1)
 CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
@@ -354,7 +354,6 @@ class Stairs(visualizer.Visualizer):
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
-        glShadeModel(GL_SMOOTH)
         glutMouseFunc(self._mouse_clicked)
         glutMotionFunc(self._mouse_moved)
         glutSpecialFunc(self._special_key_pressed)
