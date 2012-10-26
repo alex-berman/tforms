@@ -34,7 +34,22 @@ CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
     def target_position(self):
-        return Vector2d(self.f.z1, self.f.y)
+        return self.wall_step_crossing()
+
+    def wall_step_crossing(self):
+        if self.peer.departure_position[0] > self.f.z1:
+            z = self.f.z1 + STEP_DEPTH * self.playback_byte_cursor() / self.f.length
+        else:
+            z = self.f.z2 - STEP_DEPTH * self.playback_byte_cursor() / self.f.length
+        return Vector2d(z, self.f.y)
+
+    def curve_on_step(self):
+        x = self.f.byte_to_x(self.playback_byte_cursor())
+        if self.peer.departure_position[0] > self.f.z1:
+            z = self.f.z1
+        else:
+            z = self.f.z2
+        yield (x, self.f.y, z)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -50,11 +65,14 @@ class Segment(visualizer.Segment):
 
         glLineWidth(2)
         glBegin(GL_LINE_STRIP)
-        for z,y in self.curve():
+        for z,y in self.curve_on_wall():
             glVertex3f(WALL_X, y, z)
+        if self.is_playing():
+            for vertex in self.curve_on_step():
+                glVertex3f(*vertex)
         glEnd()
 
-    def curve(self):
+    def curve_on_wall(self):
         control_points = []
         branching_position = self.peer.smoothed_branching_position.value()
         for i in range(CONTROL_POINTS_BEFORE_BRANCH):
