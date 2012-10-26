@@ -239,7 +239,7 @@ class Visualizer:
         glViewport(0, 0, _width, _height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0.0, _width, _height, 0.0, -1.0, 1.0);
+        glOrtho(0.0, _width, _height, 0.0, -1.0, 1.0)
         glMatrixMode(GL_MODELVIEW)
 
     def DrawGLScene(self):
@@ -321,10 +321,11 @@ class Visualizer:
         else:
             return self.stopwatch.get_elapsed_time()
 
-    def set_color(self, color_vector):
-        glColor3f(color_vector[0],
+    def set_color(self, color_vector, alpha=1.0):
+        glColor4f(color_vector[0],
                   color_vector[1],
-                  color_vector[2])
+                  color_vector[2],
+                  alpha)
 
     @staticmethod
     def bearing_to_border_position(bearing, width, height):
