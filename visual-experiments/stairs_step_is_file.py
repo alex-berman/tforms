@@ -21,9 +21,7 @@ PEER_Y = 2
 CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
 
-CAMERA_X = -5
-CAMERA_Y = -NUM_STEPS * STEP_HEIGHT / 2
-CAMERA_Z = -3
+CAMERA_POSITION = Vector3d(-5.5, -0.6, -4.3)
 CAMERA_ROTATION = -65.0
 
 GREYSCALE = True
@@ -246,14 +244,12 @@ class Stairs(visualizer.Visualizer):
         self.segments = {}
         self._dragging = False
         self._camera_rotation = CAMERA_ROTATION
-        self._camera_x = CAMERA_X
-        self._camera_y = CAMERA_Y
-        self._camera_z = CAMERA_Z
+        self._camera_position = CAMERA_POSITION
 
     def render(self):
         glLoadIdentity()
         glRotatef(self._camera_rotation, 0.0, 1.0, 0.0)
-        glTranslatef(self._camera_x, self._camera_y, self._camera_z)
+        glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
         for peer in self.peers.values():
             peer.update()
@@ -349,17 +345,18 @@ class Stairs(visualizer.Visualizer):
     def _special_key_pressed(self, key, x, y):
         r = math.radians(self._camera_rotation)
         if key == GLUT_KEY_LEFT:
-            self._camera_x += CAMERA_KEY_SPEED * math.cos(r)
-            self._camera_z += CAMERA_KEY_SPEED * math.sin(r)
+            self._camera_position.x += CAMERA_KEY_SPEED * math.cos(r)
+            self._camera_position.z += CAMERA_KEY_SPEED * math.sin(r)
         elif key == GLUT_KEY_RIGHT:
-            self._camera_x -= CAMERA_KEY_SPEED * math.cos(r)
-            self._camera_z -= CAMERA_KEY_SPEED * math.sin(r)
+            self._camera_position.x -= CAMERA_KEY_SPEED * math.cos(r)
+            self._camera_position.z -= CAMERA_KEY_SPEED * math.sin(r)
         elif key == GLUT_KEY_UP:
-            self._camera_x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            self._camera_z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            self._camera_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            self._camera_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
         elif key == GLUT_KEY_DOWN:
-            self._camera_x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            self._camera_z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            self._camera_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            self._camera_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+        print self._camera_position
 
 if __name__ == '__main__':
     visualizer.run(Stairs)

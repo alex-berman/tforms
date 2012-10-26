@@ -1,3 +1,5 @@
+# TODO: fix byte-to-step-position conversion for multi-file torrents (now they overlap (?))
+
 import visualizer
 from OpenGL.GL import *
 from OpenGL.GLU import *
