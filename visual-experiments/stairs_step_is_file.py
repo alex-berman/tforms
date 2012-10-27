@@ -32,6 +32,7 @@ CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR = (.7, 0, 0)
+CURSOR_COLOR = (.85, 0, 0)
 STAIRS_OUTLINE_COLOR = (.7, .7, .7)
 CURSOR_THICKNESS = 3.0
 
@@ -133,7 +134,7 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self, opacity):
         x = self.f.byte_to_x(self.playback_byte_cursor())
-        self.peer.set_color(0)
+        self.visualizer.set_color(CURSOR_COLOR)
         glLineWidth(CURSOR_THICKNESS)
         glBegin(GL_LINES)
         glVertex3f(x, self.f.y, self.f.z1)
