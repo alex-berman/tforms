@@ -20,6 +20,7 @@ WALL_X = -0.5
 PEER_Y = 2
 CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
+MIN_POLYGON_WIDTH = 0.02
 
 CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
 CAMERA_ROTATION = -37
@@ -31,6 +32,7 @@ CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR = (.7, 0, 0)
+STAIRS_OUTLINE_COLOR = (.7, .7, .7)
 CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
@@ -100,12 +102,23 @@ class Segment(visualizer.Segment):
         x1 = self.f.byte_to_x(self.begin)
         x2 = self.f.byte_to_x(self.end)
         self.visualizer.set_color(GATHERED_COLOR)
-        glBegin(GL_QUADS)
-        glVertex3f(x1, self.f.y, self.f.z1)
-        glVertex3f(x1, self.f.y, self.f.z2)
-        glVertex3f(x2, self.f.y, self.f.z2)
-        glVertex3f(x2, self.f.y, self.f.z1)
-        glEnd()
+        self.draw_xz_polygon(self.f.y,
+                             x1, self.f.z1,
+                             x2, self.f.z2)
+
+    def draw_xz_polygon(self, y, x1, z1, x2, z2):
+        if abs(x1 - x2) > MIN_POLYGON_WIDTH:
+            glBegin(GL_QUADS)
+            glVertex3f(x1, self.f.y, self.f.z1)
+            glVertex3f(x1, self.f.y, self.f.z2)
+            glVertex3f(x2, self.f.y, self.f.z2)
+            glVertex3f(x2, self.f.y, self.f.z1)
+            glEnd()
+        else:
+            glBegin(GL_LINES)
+            glVertex3f(x1, self.f.y, self.f.z1)
+            glVertex3f(x1, self.f.y, self.f.z2)
+            glEnd()
 
     def draw_playing(self):
         if self.is_playing():
@@ -254,7 +267,7 @@ class Stairs(visualizer.Visualizer):
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor3f(0,0,0)
+        glColor3f(*STAIRS_OUTLINE_COLOR)
         glLineWidth(1)
 
         for n in range(NUM_STEPS):
