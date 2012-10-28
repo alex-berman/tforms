@@ -15,7 +15,6 @@ class Source:
 		self.allocated = False
 		self.movement_started = False
 		self.movement_start_time = None
-		self.placed_at_time = None
 
 	def set_position(self, x, y):
 		self.x = float(x)
@@ -38,16 +37,9 @@ class Source:
 			elif self.allocated:
 				self.request_mute("true")
 				self.movement_start_time = None
-				self.allocated = False
 
 	def place_at(self, x, y, duration):
-		self.placement_duration = duration
-		self.placed_at_time = time.time()
 		self.request_position(x, y)
-
-	def free_if_completed_placement(self):
-            if self.placed_at_time and (time.time() - self.placed_at_time) > self.placement_duration:
-		    self.allocated = False
 
 	def request_position(self, x, y):
 		self.scene.ssr_socket.push(

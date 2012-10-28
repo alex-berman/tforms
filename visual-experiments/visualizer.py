@@ -134,6 +134,7 @@ class Visualizer:
         self.time_increment = 0
         self.stopwatch = Stopwatch()
         self.space = Space()
+        self._segments_by_id = {}
 
         if self.ssr_enabled:
             self.ssr = SsrControl()
@@ -201,10 +202,16 @@ class Visualizer:
             segment = self.segment_class(
                 segment_id, begin, end, byte_size, filenum, f,
                 peer_id, duration, self.current_time(), self)
+            self._segments_by_id[segment_id] = segment
 
             self.add_segment(segment)
         else:
             print "ignoring segment from undeclared file %s" % filenum
+
+    def handle_stopped_playing_segment_message(self, path, args, types, src, data):
+        segment_id = args[0]
+        segment = self._segments_by_id[segment_id]
+        self.stopped_playing_segment(segment)
 
     def add_segment(self, segment):
         if not segment.peer_id in self.peers:
@@ -231,6 +238,10 @@ class Visualizer:
     def added_file(self, f):
         pass
 
+    def stopped_playing_segment(self, segment):
+        if self.ssr_enabled and segment.sound_source_id:
+            self.ssr.free_source(segment.sound_source_id)
+
     def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
 
@@ -241,6 +252,7 @@ class Visualizer:
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
+        self.server.add_method("/stopped_playing_segment", "i", self.handle_stopped_playing_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
 
     def InitGL(self):

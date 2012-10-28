@@ -420,6 +420,8 @@ class Orchestra:
         logger.debug("stopped segment %s" % segment)
         if self.gui:
             self.gui.unhighlight_segment(segment)
+        if self.visualizer:
+            self.visualizer.send("/stopped_playing_segment", segment["id"])
 
     def play_segment(self, segment, player):
         self.segments_by_id[segment["id"]] = segment

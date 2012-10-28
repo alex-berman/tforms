@@ -72,9 +72,4 @@ class SsrControl:
         self.scene.sources[source_id].allocated = False
 
     def place_source(self, source_id, x, y, duration):
-        self.free_completed_placed_sources()
         self.scene.sources[source_id].place_at(x, y, duration)
-
-    def free_completed_placed_sources(self):
-        for source_id, source in self.scene.sources.iteritems():
-            source.free_if_completed_placement()
