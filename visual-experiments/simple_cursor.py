@@ -35,8 +35,7 @@ class File(visualizer.File):
         self.gatherer = Gatherer()
 
     def add_segment(self, segment):
-        pan = self.byte_to_relative_x((segment.begin + segment.end) / 2)
-        self.visualizer.playing_segment(segment, pan)
+        self.visualizer.playing_segment(segment)
         self.playing_segments[segment.id] = segment
 
     def update(self):
@@ -148,5 +147,11 @@ class Simple(visualizer.Visualizer):
         for f in self.files.values():
             f.update()
             f.render()
+
+    def pan_segment(self, segment):
+        relative_x = segment.f.byte_to_relative_x((segment.begin + segment.end) / 2)
+        space_y = 0
+        space_x = (relative_x - 0.5) * self.space.ROOM_RADIUS * 2
+        self.ssr.place_source(segment.sound_source_id, space_x, space_y, segment.duration)
 
 visualizer.run(Simple)

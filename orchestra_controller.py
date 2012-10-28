@@ -8,8 +8,8 @@ class OrchestraController:
     def register(self):
         self._send("/register")
 
-    def visualizing_segment(self, segment_id, pan):
-        self._send("/visualizing", segment_id, pan)
+    def visualizing_segment(self, segment_id, channel):
+        self._send("/visualizing", segment_id, channel)
 
     def _send(self, command, *args):
         liblo.send(self.target, command, *args)

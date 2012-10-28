@@ -27,10 +27,6 @@ parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
 parser.add_argument("--loop", dest="loop", action="store_true")
 parser.add_argument("--osc-log", dest="osc_log")
-parser.add_argument("--no-ssr", dest="ssr", action="store_false", default=True)
-parser.add_argument("--choreography", dest="choreography",
-                    choices=[Orchestra.PARABOLIC, Orchestra.BY_VISUALIZER],
-                    default=Orchestra.PARABOLIC)
 parser.add_argument("--max-passivity", dest="max_passivity", type=float)
 options = parser.parse_args()
 
@@ -67,7 +63,6 @@ orchestra = Orchestra(sessiondir,
                       visualizer_enabled=(options.visualizer_enabled or options.visualizer),
                       loop=options.loop,
                       osc_log=options.osc_log,
-                      ssr_enabled=options.ssr,
                       max_passivity=options.max_passivity)
 
 if not options.realtime and len(orchestra.chunks) == 0:

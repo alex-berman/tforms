@@ -2,23 +2,22 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import sys, os
-import liblo
 import argparse
 import collections
 import logging
-import math
 
 dirname = os.path.dirname(__file__)
 if dirname:
     sys.path.append(dirname + "/..")
 else:
     sys.path.append("..")
-from vector import DirectionalVector, Vector2d
 from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 from osc_receiver import OscReceiver
 from stopwatch import Stopwatch
+from ssr.ssr_control import SsrControl
+from space import Space
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -45,7 +44,7 @@ class File:
 
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, peer_id, bearing,
+                 filenum, peer_id,
                  arrival_time, visualizer):
         self.id = chunk_id
         self.begin = begin
@@ -53,7 +52,6 @@ class Chunk:
         self.byte_size = byte_size
         self.filenum = filenum
         self.peer_id = peer_id
-        self.bearing = bearing
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
@@ -73,10 +71,6 @@ class Chunk:
     def joinable_with(self, other):
         return True
 
-    def peer_position(self):
-        return Visualizer.bearing_to_border_position(
-            self.bearing, self.visualizer.width, self.visualizer.height)
-
     def age(self):
         return self.visualizer.current_time() - self.arrival_time
 
@@ -92,10 +86,10 @@ class Chunk:
 
 class Segment(Chunk):
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id, bearing, duration,
+                 filenum, f, peer_id, duration,
                  arrival_time, visualizer):
         Chunk.__init__(self, chunk_id, begin, end, byte_size,
-                 filenum, peer_id, bearing,
+                 filenum, peer_id,
                  arrival_time, visualizer)
         self.duration = duration
         self.f = f
@@ -130,6 +124,7 @@ class Visualizer:
         self.show_fps = args.show_fps
         self.export = args.export
         self.osc_log = args.osc_log
+        self.ssr_enabled = args.ssr_enabled
         self.logger = logging.getLogger("visualizer")
         self.files = {}
         self.peers = {}
@@ -138,11 +133,20 @@ class Visualizer:
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
+        self.space = Space()
+
+        if self.ssr_enabled:
+            self.ssr = SsrControl()
+        else:
+            self.ssr = None
+
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
+
         self.setup_osc(self.osc_log)
         self.orchestra.register()
+
         if self.export:
             self.export_fps = args.export_fps
             from exporter import Exporter
@@ -176,42 +180,53 @@ class Visualizer:
         self.added_file(f)
 
     def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum,
-         peer_id, bearing) = args
+        (chunk_id, torrent_position, byte_size, filenum, peer_id) = args
         if filenum in self.files:
             begin = torrent_position - self.files[filenum].offset
             end = begin + byte_size
             chunk = self.chunk_class(
                 chunk_id, begin, end, byte_size, filenum,
-                peer_id, bearing, self.current_time(), self)
+                peer_id, self.current_time(), self)
             self.files[filenum].add_chunk(chunk)
         else:
             print "ignoring chunk from undeclared file %s" % filenum
 
     def handle_segment_message(self, path, args, types, src, data):
         (segment_id, torrent_position, byte_size, filenum,
-         peer_id, bearing, duration) = args
+         peer_id, duration) = args
         if filenum in self.files:
             f = self.files[filenum]
             begin = torrent_position - f.offset
             end = begin + byte_size
             segment = self.segment_class(
                 segment_id, begin, end, byte_size, filenum, f,
-                peer_id, bearing, duration, self.current_time(), self)
+                peer_id, duration, self.current_time(), self)
+
             self.add_segment(segment)
         else:
             print "ignoring segment from undeclared file %s" % filenum
 
     def add_segment(self, segment):
+        if not segment.peer_id in self.peers:
+            self.peers[segment.peer_id] = self.peer_class(self)
+        peer = self.peers[segment.peer_id]
+        segment.peer = peer
+
+        if self.ssr_enabled:
+            segment.sound_source_id = self.ssr.allocate_source()
+            if not segment.sound_source_id:
+                print "WARNING: max sources exceeded, skipping segment playback"
+        else:
+            segment.sound_source_id = None
+            
         f = self.files[segment.filenum]
         segment.f = f
         f.add_segment(segment)
 
-        if not segment.peer_id in self.peers:
-            self.peers[segment.peer_id] = self.peer_class(self)
-        peer = self.peers[segment.peer_id]
+        if segment.sound_source_id:
+            self.pan_segment(segment)
+
         peer.add_segment(segment)
-        segment.peer = peer
 
     def added_file(self, f):
         pass
@@ -224,8 +239,8 @@ class Visualizer:
         self.server = OscReceiver(VISUALIZER_PORT, log_filename)
         self.server.add_method("/torrent", "i", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
-        self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
-        self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
+        self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
+        self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
 
     def InitGL(self):
@@ -311,8 +326,10 @@ class Visualizer:
         if args[0] == ESCAPE:
             self.exiting = True
 
-    def playing_segment(self, segment, pan):
-        self.orchestra.visualizing_segment(segment.id, pan)
+    def playing_segment(self, segment):
+        if segment.sound_source_id:
+            channel = segment.sound_source_id - 1
+            self.orchestra.visualizing_segment(segment.id, channel)
         segment.playing = True
 
     def current_time(self):
@@ -327,13 +344,6 @@ class Visualizer:
                   color_vector[2],
                   alpha)
 
-    @staticmethod
-    def bearing_to_border_position(bearing, width, height):
-        radius = math.sqrt(width*width + height*height) / 2
-        midpoint = Vector2d(width/2, height/2)
-        circle_position = midpoint + DirectionalVector(bearing - 2*math.pi/4, radius)
-        return circle_position
-
 def run(visualizer_class):
     print "Hit ESC key to quit."
 
@@ -345,6 +355,7 @@ def run(visualizer_class):
     parser.add_argument('-osc-log', dest='osc_log')
     parser.add_argument('-export', dest='export', action='store_true')
     parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
+    parser.add_argument("-no-ssr", dest="ssr_enabled", action="store_false", default=True)
     args = parser.parse_args()
 
     visualizer_class(args).run()

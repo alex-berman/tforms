@@ -1,4 +1,4 @@
-import visualizer
+import circular_visualizer as visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
@@ -196,8 +196,9 @@ class File(visualizer.File):
         self.velocity = Vector2d(0,0)
 
     def add_segment(self, segment):
-        pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
-        self.visualizer.playing_segment(segment, pan)
+        #I suppose this is non-SSR panning?
+        #pan = self.completion_position(segment.begin, self.radius).x / self.visualizer.width
+        self.visualizer.playing_segment(segment)
         segment.departure_position = segment.peer_position()
 
     def draw(self):
@@ -273,6 +274,8 @@ class Puzzle(visualizer.Visualizer):
         if FORCE_DIRECTED_PLACEMENT:
             self.force_directed_placer = ForceDirectedPlacer(self)
             self.centralizer = Centralizer(self)
+        if self.ssr_enabled:
+            self.ssr.enable_smooth_movement()
 
     def render(self):
         glEnable(GL_LINE_SMOOTH)
@@ -308,6 +311,10 @@ class Puzzle(visualizer.Visualizer):
 
     def scale(self, unscaled):
         return float(unscaled) / 640 * self.width
+
+    def pan_segment(self, segment):
+        self.ssr.start_source_movement(
+            segment.sound_source_id, segment.peer.trajectory, duration=segment.duration)
 
 class ForceDirectedPlacer:
     def __init__(self, visualizer):

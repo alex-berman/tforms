@@ -11,12 +11,16 @@ class SsrControl:
     def __init__(self, num_sources=16):
         self.num_sources = num_sources
         self.scene = basicscene.BasicScene()
+        self.scene.smooth_movement_enabled = False
         self.updated = False
         pp = packetParser.PacketParser( self.scene, self.update )
         self.ssr_socket = ssrsocket.AIOThread( HOSTNAME, PORT, pp.parse_packet )
         self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
         self._add_sources_if_needed()
+
+    def enable_smooth_movement(self):
+        self.scene.smooth_movement_enabled = True
         self._mute_all_sources()
         self._start_movement_thread()
 
@@ -53,7 +57,7 @@ class SsrControl:
         while True:
             for source in self.scene.sources.values():
                 source.update()
-            time.sleep(0.001)
+            time.sleep(0.01)
 
     def start_source_movement(self, source_id, trajectory, duration):
         self.scene.sources[source_id].start_movement(trajectory, duration)
@@ -66,3 +70,11 @@ class SsrControl:
 
     def free_source(self, source_id):
         self.scene.sources[source_id].allocated = False
+
+    def place_source(self, source_id, x, y, duration):
+        self.free_completed_placed_sources()
+        self.scene.sources[source_id].place_at(x, y, duration)
+
+    def free_completed_placed_sources(self):
+        for source_id, source in self.scene.sources.iteritems():
+            source.free_if_completed_placement()

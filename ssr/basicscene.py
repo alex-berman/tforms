@@ -15,6 +15,7 @@ class Source:
 		self.allocated = False
 		self.movement_started = False
 		self.movement_start_time = None
+		self.placed_at_time = None
 
 	def set_position(self, x, y):
 		self.x = float(x)
@@ -39,13 +40,22 @@ class Source:
 				self.movement_start_time = None
 				self.allocated = False
 
+	def place_at(self, x, y, duration):
+		self.placement_duration = duration
+		self.placed_at_time = time.time()
+		self.request_position(x, y)
+
+	def free_if_completed_placement(self):
+            if self.placed_at_time and (time.time() - self.placed_at_time) > self.placement_duration:
+		    self.allocated = False
+
 	def request_position(self, x, y):
 		self.scene.ssr_socket.push(
                         '<request><source id="%d"><position x="%f" y="%f"/></source></request>\0' % (
 				self.id, x, y))
 
 	def received_position(self):
-		if not self.movement_started:
+		if self.scene.smooth_movement_enabled and not self.movement_started:
 			self.request_mute("false")
 			self.movement_started = True
 
