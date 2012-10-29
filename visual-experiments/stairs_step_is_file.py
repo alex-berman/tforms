@@ -11,6 +11,7 @@ from bezier import make_bezier
 import colorsys
 from smoother import Smoother
 import math
+import copy
 
 NUM_STEPS = 12
 STAIRS_WIDTH = 1.0
@@ -22,8 +23,10 @@ CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
-CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
-CAMERA_ROTATION = -37
+# CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
+# CAMERA_ORIENTATION = -37
+CAMERA_POSITION = Vector3d(-5.2, -0.6, -1.9)
+CAMERA_ORIENTATION = -90
 
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
@@ -141,9 +144,6 @@ class Segment(visualizer.Segment):
         glVertex3f(x, self.f.y, self.f.z2)
         glEnd()
 
-    def peer_position(self):
-        return Vector2d(NUM_STEPS * STEP_DEPTH * self.bearing / (2*math.pi), PEER_Y)
-
 class Peer(visualizer.Peer):
     def __init__(self, *args):
         visualizer.Peer.__init__(self, *args)
@@ -152,6 +152,7 @@ class Peer(visualizer.Peer):
         self.segments = {}
         hue = random.uniform(0, 1)
         self.color = Vector3d(*(colorsys.hsv_to_rgb(hue, 0.35, 1)))
+        self.position = Vector2d(random.uniform(0, NUM_STEPS * STEP_DEPTH), PEER_Y)
 
     def add_segment(self, segment):
         if self.departure_position is None:
@@ -208,13 +209,13 @@ class File(visualizer.File):
         self.y = self.visualizer.step_y(self.filenum+1)
         self.z1 = self.visualizer.step_z(self.filenum)
         self.z2 = self.visualizer.step_z(self.filenum+1)
+        self.z = (self.z1 + self.z2) / 2
 
     def add_segment(self, segment):
         self.x_scope.put(segment.begin)
         self.x_scope.put(segment.end)
-        segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
-        segment.departure_position = segment.peer_position()
-        self.visualizer.playing_segment(segment, segment.pan)
+        segment.departure_position = segment.peer.position
+        self.visualizer.playing_segment(segment)
 
     def render(self):
         self.x_scope.update()
@@ -244,12 +245,28 @@ class Stairs(visualizer.Visualizer):
         self.files = {}
         self.segments = {}
         self._dragging = False
-        self._camera_rotation = CAMERA_ROTATION
-        self._camera_position = CAMERA_POSITION
+        self._set_camera_position(CAMERA_POSITION)
+        self._set_camera_orientation(CAMERA_ORIENTATION)
+
+    def pan_segment(self, segment):
+        x = WALL_X + STAIRS_WIDTH/2
+        #z = segment.f.z
+        z = segment.f.z - 4 # I don't understand why this offset is required! But without it, positions of reference/listener and sound source do not match visuals.
+        self.ssr.place_source(segment.sound_source_id,
+                              z, x,
+                              segment.duration)
+
+    def _set_camera_position(self, position):
+        self._camera_position = position
+        self.ssr.set_listener_position(position.z, position.x)
+
+    def _set_camera_orientation(self, orientation):
+        self._camera_orientation = orientation
+        self.ssr.set_listener_orientation(orientation)
 
     def render(self):
         glLoadIdentity()
-        glRotatef(self._camera_rotation, 0.0, 1.0, 0.0)
+        glRotatef(self._camera_orientation, 0.0, 1.0, 0.0)
         glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
         for peer in self.peers.values():
@@ -340,24 +357,26 @@ class Stairs(visualizer.Visualizer):
     def _mouse_moved(self, x, y):
         if self._dragging:
             movement = x - self._drag_x_previous
-            self._camera_rotation += movement
+            self._set_camera_orientation(self._camera_orientation + movement)
             self._drag_x_previous = x
 
     def _special_key_pressed(self, key, x, y):
-        r = math.radians(self._camera_rotation)
+        r = math.radians(self._camera_orientation)
+        new_position = copy.copy(self._camera_position)
         if key == GLUT_KEY_LEFT:
-            self._camera_position.x += CAMERA_KEY_SPEED * math.cos(r)
-            self._camera_position.z += CAMERA_KEY_SPEED * math.sin(r)
+            new_position.x += CAMERA_KEY_SPEED * math.cos(r)
+            new_position.z += CAMERA_KEY_SPEED * math.sin(r)
         elif key == GLUT_KEY_RIGHT:
-            self._camera_position.x -= CAMERA_KEY_SPEED * math.cos(r)
-            self._camera_position.z -= CAMERA_KEY_SPEED * math.sin(r)
+            new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
+            new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
         elif key == GLUT_KEY_UP:
-            self._camera_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            self._camera_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
         elif key == GLUT_KEY_DOWN:
-            self._camera_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            self._camera_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        print self._camera_rotation, self._camera_position
+            new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+            new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+        self._set_camera_position(new_position)
+        print self._camera_orientation, self._camera_position
 
 if __name__ == '__main__':
     visualizer.run(Stairs)

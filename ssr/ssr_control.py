@@ -73,3 +73,9 @@ class SsrControl:
 
     def place_source(self, source_id, x, y, duration):
         self.scene.sources[source_id].place_at(x, y, duration)
+
+    def set_listener_position(self, x, y):
+        self.scene.request_reference_position(x, y)
+
+    def set_listener_orientation(self, orientation):
+        self.scene.request_reference_orientation(-orientation)

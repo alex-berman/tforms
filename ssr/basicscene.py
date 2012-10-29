@@ -78,9 +78,18 @@ class BasicScene:
 		if not id in self.sources:
 			self.sources[id] = Source(self, id)
 
+	def request_reference_position(self, x, y):
+		self.ssr_socket.push(
+			'<request><reference><position x="%f" y="%f"/></reference></request>\0' % (
+				x, y))
+
 	def set_reference_position( self, x, y ):
 		self.reference.x = x
 		self.reference.y = y
+
+	def request_reference_orientation(self, azimuth):
+		self.ssr_socket.push(
+			'<request><reference><orientation azimuth="%f"/></reference></request>\0' % azimuth)
 
 	def set_reference_orientation( self, azimuth ):
 		self.reference.azimuth = azimuth

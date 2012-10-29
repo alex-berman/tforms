@@ -135,6 +135,7 @@ class Visualizer:
         self.stopwatch = Stopwatch()
         self.space = Space()
         self._segments_by_id = {}
+        self._warned_about_missing_pan_segment = False
 
         if self.ssr_enabled:
             self.ssr = SsrControl()
@@ -237,6 +238,11 @@ class Visualizer:
 
     def added_file(self, f):
         pass
+
+    def pan_segment(self, segment):
+        if not self._warned_about_missing_pan_segment:
+            print "WARNING: pan_segment undefined. All sounds will be centered."
+            self._warned_about_missing_pan_segment = True
 
     def stopped_playing_segment(self, segment):
         if self.ssr_enabled and segment.sound_source_id:
