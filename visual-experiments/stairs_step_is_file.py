@@ -23,10 +23,10 @@ CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
-# CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
-# CAMERA_ORIENTATION = -37
-CAMERA_POSITION = Vector3d(-5.2, -0.6, -1.9)
-CAMERA_ORIENTATION = -90
+CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
+CAMERA_ORIENTATION = -37
+# CAMERA_POSITION = Vector3d(-5.2, -0.6, -1.9)
+# CAMERA_ORIENTATION = -90
 
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
@@ -36,17 +36,24 @@ CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR_V = (.7, 0, 0)
 GATHERED_COLOR_H = (.8, 0, 0)
-CURSOR_COLOR_V = (.85, 0, 0)
-CURSOR_COLOR_H = (.95, 0, 0)
+CURSOR_COLOR_V = (.9, 0, 0)
+CURSOR_COLOR_H = (1, 0, 0)
 STAIRS_OUTLINE_COLOR = (.7, .7, .7)
 CURSOR_THICKNESS = 3.0
 
 class Segment(visualizer.Segment):
+    def __init__(self, *args):
+        visualizer.Segment.__init__(self, *args)
+        if (self.filenum + 1) < self.visualizer.num_files:
+            self.f2 = self.visualizer.files[self.filenum + 1]
+        else:
+            self.f2 = None
+
     def target_position(self):
         return self.wall_step_crossing()
 
     def wall_step_crossing(self):
-        return Vector2d(self.f.z1, self.f.y)
+        return Vector2d(self.f.z2, self.f.y)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -64,9 +71,9 @@ class Segment(visualizer.Segment):
         glBegin(GL_LINE_STRIP)
         for z,y in self.curve_on_wall():
             glVertex3f(WALL_X, y, z)
-        if self.is_playing():
-            for x,z in self.curve_on_step():
-                glVertex3f(x, self.f.y, z)
+        # if self.is_playing():
+        #     for x,z in self.curve_on_step():
+        #         glVertex3f(x, self.f.y, z)
         glEnd()
 
     def curve_on_wall(self):
@@ -85,20 +92,20 @@ class Segment(visualizer.Segment):
         bezier = make_bezier([(p.x, p.y) for p in control_points])
         return bezier(CURVE_PRECISION_ON_WALL)
 
-    def curve_on_step(self):
-        wall_step_crossing_zy = self.wall_step_crossing()
-        wall_step_crossing = Vector2d(WALL_X, wall_step_crossing_zy[0])
-        control_points = []
-        control_points.append(wall_step_crossing)
-        x = self.f.byte_to_x(self.playback_byte_cursor())
-        if self.peer.departure_position[0] > self.f.z1:
-            z = self.f.z1
-        else:
-            z = self.f.z2
-        control_points.append(Vector2d((WALL_X + x) / 2, z))
-        control_points.append(Vector2d(x, z))
-        bezier = make_bezier([(p.x, p.y) for p in control_points])
-        return bezier(CURVE_PRECISION_ON_STEPS)
+    # def curve_on_step(self):
+    #     wall_step_crossing_zy = self.wall_step_crossing()
+    #     wall_step_crossing = Vector2d(WALL_X, wall_step_crossing_zy[0])
+    #     control_points = []
+    #     control_points.append(wall_step_crossing)
+    #     x = self.f.byte_to_x(self.playback_byte_cursor())
+    #     if self.peer.departure_position[0] > self.f.z1:
+    #         z = self.f.z1
+    #     else:
+    #         z = self.f.z2
+    #     control_points.append(Vector2d((WALL_X + x) / 2, z))
+    #     control_points.append(Vector2d(x, z))
+    #     bezier = make_bezier([(p.x, p.y) for p in control_points])
+    #     return bezier(CURVE_PRECISION_ON_STEPS)
 
     def draw_gathered(self):
         x1 = self.f.byte_to_x(self.begin)
@@ -107,6 +114,12 @@ class Segment(visualizer.Segment):
         self.draw_xz_polygon(self.f.y,
                              x1, self.f.z1,
                              x2, self.f.z2)
+
+        if self.f2:
+            self.visualizer.set_color(GATHERED_COLOR_V)
+            self.draw_xy_polygon(self.f.z2,
+                                 x1, self.f.y,
+                                 x2, self.f2.y)
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
         if abs(x1 - x2) > MIN_POLYGON_WIDTH:
@@ -122,6 +135,20 @@ class Segment(visualizer.Segment):
             glVertex3f(x1, self.f.y, self.f.z2)
             glEnd()
 
+    def draw_xy_polygon(self, z, x1, y1, x2, y2):
+        if abs(x1 - x2) > MIN_POLYGON_WIDTH:
+            glBegin(GL_QUADS)
+            glVertex3f(x1, y1, z)
+            glVertex3f(x1, y2, z)
+            glVertex3f(x2, y2, z)
+            glVertex3f(x2, y1, z)
+            glEnd()
+        else:
+            glBegin(GL_LINES)
+            glVertex3f(x1, y1, z)
+            glVertex3f(x1, y2, z)
+            glEnd()
+
     def draw_playing(self):
         if self.is_playing():
             trace_age = min(self.duration, 0.2)
@@ -135,12 +162,19 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self, opacity):
         x = self.f.byte_to_x(self.playback_byte_cursor())
-        self.visualizer.set_color(CURSOR_COLOR_H)
         glLineWidth(CURSOR_THICKNESS)
+        self.visualizer.set_color(CURSOR_COLOR_H)
         glBegin(GL_LINES)
         glVertex3f(x, self.f.y, self.f.z1)
         glVertex3f(x, self.f.y, self.f.z2)
         glEnd()
+
+        if self.f2:
+            glBegin(GL_LINES)
+            self.visualizer.set_color(CURSOR_COLOR_V)
+            glVertex3f(x, self.f.y, self.f.z2)
+            glVertex3f(x, self.f2.y, self.f2.z1)
+            glEnd()
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
@@ -269,10 +303,10 @@ class Stairs(visualizer.Visualizer):
 
         for peer in self.peers.values():
             peer.update()
+        self.draw_stairs_outline()
         if len(self.files) > 0:
             self.draw_gathered_segments()
             self.draw_branches()
-        self.draw_stairs_outline()
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -316,7 +350,8 @@ class Stairs(visualizer.Visualizer):
             Vector3d(self.outer_x, y2, z1)
             ]
 
-        yield vertical_surface
+        if n > 0:
+            yield vertical_surface
         yield horizontal_surface
 
     def step_y(self, step):
