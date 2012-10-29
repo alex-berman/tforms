@@ -362,13 +362,17 @@ class Visualizer:
                   color_vector[2],
                   alpha)
 
-    def set_listener_position(self, *args):
+    def set_listener_position(self, x, y):
         if self.ssr_enabled:
-            self.ssr.set_listener_position(*args)
+            self.ssr.set_listener_position(x, y)
 
-    def set_listener_orientation(self, *args):
+    def set_listener_orientation(self, orientation):
         if self.ssr_enabled:
-            self.ssr.set_listener_orientation(*args)
+            self.ssr.set_listener_orientation(-orientation)
+
+    def place_source(self, source_id, x, y, duration):
+        if self.ssr_enabled:
+            self.ssr.place_source(source_id, -x, y, duration)
 
 
 def run(visualizer_class):

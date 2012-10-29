@@ -78,4 +78,4 @@ class SsrControl:
         self.scene.request_reference_position(x, y)
 
     def set_listener_orientation(self, orientation):
-        self.scene.request_reference_orientation(-orientation)
+        self.scene.request_reference_orientation(orientation)

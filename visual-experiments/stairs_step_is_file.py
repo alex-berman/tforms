@@ -23,10 +23,15 @@ CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
-CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
-CAMERA_ORIENTATION = -37
+# CAMERA_POSITION = Vector3d(-3.4, -0.6, -7)
+# CAMERA_ORIENTATION = -37
+
 # CAMERA_POSITION = Vector3d(-5.2, -0.6, -1.9)
 # CAMERA_ORIENTATION = -90
+
+# 5 steps:
+CAMERA_POSITION = Vector3d(-3.4, -0.6, -0.46)
+CAMERA_ORIENTATION = -90
 
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
@@ -279,11 +284,9 @@ class Stairs(visualizer.Visualizer):
 
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
-        #z = segment.f.z
-        z = segment.f.z - 4 # I don't understand why this offset is required! But without it, positions of reference/listener and sound source do not match visuals.
-        self.ssr.place_source(segment.sound_source_id,
-                              z, x,
-                              segment.duration)
+        self.place_source(segment.sound_source_id,
+                          segment.f.z, x,
+                          segment.duration)
 
     def _set_camera_position(self, position):
         self._camera_position = position
