@@ -362,6 +362,15 @@ class Visualizer:
                   color_vector[2],
                   alpha)
 
+    def set_listener_position(self, *args):
+        if self.ssr_enabled:
+            self.ssr.set_listener_position(*args)
+
+    def set_listener_orientation(self, *args):
+        if self.ssr_enabled:
+            self.ssr.set_listener_orientation(*args)
+
+
 def run(visualizer_class):
     print "Hit ESC key to quit."
 

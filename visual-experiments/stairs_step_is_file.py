@@ -34,8 +34,10 @@ CURVE_PRECISION_ON_WALL = 50
 CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-GATHERED_COLOR = (.7, 0, 0)
-CURSOR_COLOR = (.85, 0, 0)
+GATHERED_COLOR_V = (.7, 0, 0)
+GATHERED_COLOR_H = (.8, 0, 0)
+CURSOR_COLOR_V = (.85, 0, 0)
+CURSOR_COLOR_H = (.95, 0, 0)
 STAIRS_OUTLINE_COLOR = (.7, .7, .7)
 CURSOR_THICKNESS = 3.0
 
@@ -44,11 +46,7 @@ class Segment(visualizer.Segment):
         return self.wall_step_crossing()
 
     def wall_step_crossing(self):
-        if self.peer.departure_position[0] > self.f.z1:
-            z = self.f.z1 + STEP_DEPTH * self.playback_byte_cursor() / self.f.length
-        else:
-            z = self.f.z2 - STEP_DEPTH * self.playback_byte_cursor() / self.f.length
-        return Vector2d(z, self.f.y)
+        return Vector2d(self.f.z1, self.f.y)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -105,7 +103,7 @@ class Segment(visualizer.Segment):
     def draw_gathered(self):
         x1 = self.f.byte_to_x(self.begin)
         x2 = self.f.byte_to_x(self.end)
-        self.visualizer.set_color(GATHERED_COLOR)
+        self.visualizer.set_color(GATHERED_COLOR_H)
         self.draw_xz_polygon(self.f.y,
                              x1, self.f.z1,
                              x2, self.f.z2)
@@ -137,7 +135,7 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self, opacity):
         x = self.f.byte_to_x(self.playback_byte_cursor())
-        self.visualizer.set_color(CURSOR_COLOR)
+        self.visualizer.set_color(CURSOR_COLOR_H)
         glLineWidth(CURSOR_THICKNESS)
         glBegin(GL_LINES)
         glVertex3f(x, self.f.y, self.f.z1)
@@ -258,11 +256,11 @@ class Stairs(visualizer.Visualizer):
 
     def _set_camera_position(self, position):
         self._camera_position = position
-        self.ssr.set_listener_position(position.z, position.x)
+        self.set_listener_position(position.z, position.x)
 
     def _set_camera_orientation(self, orientation):
         self._camera_orientation = orientation
-        self.ssr.set_listener_orientation(orientation)
+        self.set_listener_orientation(orientation)
 
     def render(self):
         glLoadIdentity()
