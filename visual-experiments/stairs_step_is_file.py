@@ -39,7 +39,7 @@ GATHERED_COLOR_H = (.8, 0, 0)
 CURSOR_COLOR_V = (.9, 0, 0)
 CURSOR_COLOR_H = (1, 0, 0)
 STAIRS_OUTLINE_COLOR = (.7, .7, .7)
-CURSOR_THICKNESS = 3.0
+CURSOR_THICKNESS = 2.0
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -108,8 +108,11 @@ class Segment(visualizer.Segment):
     #     return bezier(CURVE_PRECISION_ON_STEPS)
 
     def draw_gathered(self):
-        x1 = self.f.byte_to_x(self.begin)
-        x2 = self.f.byte_to_x(self.end)
+        self.draw_as_gathered(self.begin, self.end)
+
+    def draw_as_gathered(self, begin, end):
+        x1 = self.f.byte_to_x(begin)
+        x2 = self.f.byte_to_x(end)
         self.visualizer.set_color(GATHERED_COLOR_H)
         self.draw_xz_polygon(self.f.y,
                              x1, self.f.z1,
@@ -120,6 +123,27 @@ class Segment(visualizer.Segment):
             self.draw_xy_polygon(self.f.z2,
                                  x1, self.f.y,
                                  x2, self.f2.y)
+
+    def draw_playing(self):
+        if self.is_playing():
+            self.draw_as_gathered(self.begin, self.playback_byte_cursor())
+            self.draw_cursor()
+
+    def draw_cursor(self):
+        x = self.f.byte_to_x(self.playback_byte_cursor())
+        glLineWidth(CURSOR_THICKNESS)
+        self.visualizer.set_color(CURSOR_COLOR_H)
+        glBegin(GL_LINES)
+        glVertex3f(x, self.f.y, self.f.z1)
+        glVertex3f(x, self.f.y, self.f.z2)
+        glEnd()
+
+        if self.f2:
+            glBegin(GL_LINES)
+            self.visualizer.set_color(CURSOR_COLOR_V)
+            glVertex3f(x, self.f.y, self.f.z2)
+            glVertex3f(x, self.f2.y, self.f2.z1)
+            glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
         if abs(x1 - x2) > MIN_POLYGON_WIDTH:
@@ -147,33 +171,6 @@ class Segment(visualizer.Segment):
             glBegin(GL_LINES)
             glVertex3f(x1, y1, z)
             glVertex3f(x1, y2, z)
-            glEnd()
-
-    def draw_playing(self):
-        if self.is_playing():
-            trace_age = min(self.duration, 0.2)
-            previous_byte_cursor = self.begin + min(self.age()-trace_age, 0) / \
-                self.duration * self.byte_size
-            if self.relative_age() < 1:
-                opacity = 1
-            else:
-                opacity = 1 - pow((self.age() - self.duration) / SEGMENT_DECAY_TIME, .2)
-            self.draw_cursor(opacity)
-
-    def draw_cursor(self, opacity):
-        x = self.f.byte_to_x(self.playback_byte_cursor())
-        glLineWidth(CURSOR_THICKNESS)
-        self.visualizer.set_color(CURSOR_COLOR_H)
-        glBegin(GL_LINES)
-        glVertex3f(x, self.f.y, self.f.z1)
-        glVertex3f(x, self.f.y, self.f.z2)
-        glEnd()
-
-        if self.f2:
-            glBegin(GL_LINES)
-            self.visualizer.set_color(CURSOR_COLOR_V)
-            glVertex3f(x, self.f.y, self.f.z2)
-            glVertex3f(x, self.f2.y, self.f2.z1)
             glEnd()
 
 class Peer(visualizer.Peer):
