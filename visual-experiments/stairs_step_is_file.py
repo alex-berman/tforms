@@ -14,7 +14,7 @@ import math
 import copy
 
 NUM_STEPS = 12
-STAIRS_WIDTH = 1.0
+STAIRS_WIDTH = 1.5
 STEP_HEIGHT = 0.15
 STEP_DEPTH = 0.3
 WALL_X = -0.5
@@ -26,13 +26,6 @@ MIN_POLYGON_WIDTH = 0.02
 CAMERA_POSITION = Vector3d(-4.3, -0.6, -8.2)
 CAMERA_ORIENTATION = -37
 
-# CAMERA_POSITION = Vector3d(-5.2, -0.6, -1.9)
-# CAMERA_ORIENTATION = -90
-
-# 5 steps:
-# CAMERA_POSITION = Vector3d(-3.4, -0.6, -0.46)
-# CAMERA_ORIENTATION = -90
-
 GREYSCALE = True
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -43,7 +36,8 @@ GATHERED_COLOR_V = (.7, 0, 0)
 GATHERED_COLOR_H = (.8, 0, 0)
 CURSOR_COLOR_V = (.9, 0, 0)
 CURSOR_COLOR_H = (1, 0, 0)
-STAIRS_OUTLINE_COLOR = (.7, .7, .7)
+STEPS_COLOR_V = (.75, .75, .75)
+STEPS_COLOR_H = (.95, .95, .95)
 CURSOR_THICKNESS = 2.0
 
 class Segment(visualizer.Segment):
@@ -303,7 +297,7 @@ class Stairs(visualizer.Visualizer):
 
         for peer in self.peers.values():
             peer.update()
-        self.draw_stairs_outline()
+        self.draw_steps_surface()
         if len(self.files) > 0:
             self.draw_gathered_segments()
             self.draw_branches()
@@ -312,47 +306,55 @@ class Stairs(visualizer.Visualizer):
         for peer in self.peers.values():
             peer.draw()
 
-    def draw_stairs_outline(self):
-        glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor3f(*STAIRS_OUTLINE_COLOR)
-        glLineWidth(1)
+    def draw_steps_surface(self):
+        self.draw_steps_horizontal_surface()
+        self.draw_steps_vertical_surface()
 
+    def draw_steps_horizontal_surface(self):
+        glColor3f(*STEPS_COLOR_H)
+        glBegin(GL_QUADS)
         for n in range(NUM_STEPS):
-            surfaces = self.step_surfaces(n)
-            for surface in surfaces:
-                glBegin(GL_LINE_LOOP)
-                for vertex in surface:
-                    glVertex3f(*vertex)
-                glEnd()                
+            surface = self.step_h_surface(n)
+            for vertex in surface:
+                glVertex3f(*vertex)
+        glEnd()                
 
-    def step_surfaces(self, n, relative_begin=0, relative_end=1):
+    def draw_steps_vertical_surface(self):
+        glColor3f(*STEPS_COLOR_V)
+        glBegin(GL_QUADS)
+        for n in range(NUM_STEPS):
+            surface = self.step_v_surface(n)
+            for vertex in surface:
+                glVertex3f(*vertex)
+        glEnd()                
+
+    def step_h_surface(self, n):
         y1 = self.step_y(n)
         y2 = self.step_y(n+1)
         
         z1 = self.step_z(n)
         z2 = self.step_z(n+1)
-        vertical_surface = [
-            Vector3d(self.inner_x, y1, z1),
-            Vector3d(self.inner_x, y2, z1),
-            Vector3d(self.outer_x, y2, z1),
-            Vector3d(self.outer_x, y1, z1)
-            ]
 
-        z1 = (n + relative_begin) * STEP_DEPTH
-        z2 = (n + relative_end) * STEP_DEPTH
-        horizontal_surface = [
+        return [
             Vector3d(self.inner_x, y2, z1),
             Vector3d(self.inner_x, y2, z2),
             Vector3d(self.outer_x, y2, z2),
             Vector3d(self.outer_x, y2, z1)
             ]
 
-        if n > 0:
-            yield vertical_surface
-        yield horizontal_surface
+    def step_v_surface(self, n):
+        y1 = self.step_y(n)
+        y2 = self.step_y(n+1)
+        
+        z1 = self.step_z(n)
+        z2 = self.step_z(n+1)
+
+        return [
+            Vector3d(self.inner_x, y1, z1),
+            Vector3d(self.inner_x, y2, z1),
+            Vector3d(self.outer_x, y2, z1),
+            Vector3d(self.outer_x, y1, z1)
+            ]
 
     def step_y(self, step):
         return -step * STEP_HEIGHT
