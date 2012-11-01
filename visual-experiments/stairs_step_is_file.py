@@ -27,14 +27,14 @@ CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR_V = (.62, .17, .20)
-GATHERED_COLOR_H = (.82, .3, .4)
+GATHERED_COLOR_H = (.9, .3, .35)
 CURSOR_COLOR_V = (.9, 0, 0)
 CURSOR_COLOR_H = (1, 0, 0)
 STEPS_COLOR_V = WALL_COLOR_V = (.58, .58, .58)
 STEPS_COLOR_H = WALL_COLOR_H = (.9, .9, .9)
 CURSOR_THICKNESS = 2.0
 
-CAMERA_POSITION = Vector3d(-4.3, -0.6, -8.2)
+CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
 CAMERA_ORIENTATION = -37
 
 CAMERA_KEY_SPEED = 0.5
@@ -42,13 +42,6 @@ MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
 class Segment(visualizer.Segment):
-    def __init__(self, *args):
-        visualizer.Segment.__init__(self, *args)
-        if (self.filenum + 1) < self.visualizer.num_files:
-            self.f2 = self.visualizer.files[self.filenum + 1]
-        else:
-            self.f2 = None
-
     def target_position(self):
         return self.wall_step_crossing()
 
@@ -118,11 +111,10 @@ class Segment(visualizer.Segment):
                              x1, self.f.z1,
                              x2, self.f.z2)
 
-        if self.f2:
-            self.visualizer.set_color(GATHERED_COLOR_V)
-            self.draw_xy_polygon(self.f.z2,
-                                 x1, self.f.y,
-                                 x2, self.f2.y)
+        self.visualizer.set_color(GATHERED_COLOR_V)
+        self.draw_xy_polygon(self.f.z2,
+                             x1, self.f.y,
+                             x2, self.f.neighbour_y)
 
     def draw_playing(self):
         if self.is_playing():
@@ -138,12 +130,11 @@ class Segment(visualizer.Segment):
         glVertex3f(x, self.f.y, self.f.z2)
         glEnd()
 
-        if self.f2:
-            glBegin(GL_LINES)
-            self.visualizer.set_color(CURSOR_COLOR_V)
-            glVertex3f(x, self.f.y, self.f.z2)
-            glVertex3f(x, self.f2.y, self.f2.z1)
-            glEnd()
+        glBegin(GL_LINES)
+        self.visualizer.set_color(CURSOR_COLOR_V)
+        glVertex3f(x, self.f.y, self.f.z2)
+        glVertex3f(x, self.f.neighbour_y, self.f.neighbour_z1)
+        glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
         if abs(x1 - x2) > MIN_POLYGON_WIDTH:
@@ -236,6 +227,8 @@ class File(visualizer.File):
         self.z1 = self.visualizer.step_z(self.filenum)
         self.z2 = self.visualizer.step_z(self.filenum+1)
         self.z = (self.z1 + self.z2) / 2
+        self.neighbour_y = self.visualizer.step_y(self.filenum+2)
+        self.neighbour_z1 = self.visualizer.step_z(self.filenum+1)
 
     def add_segment(self, segment):
         self.x_scope.put(segment.begin)
@@ -269,7 +262,7 @@ class Stairs(visualizer.Visualizer):
         self.inner_x = WALL_X
         self.outer_x = WALL_X + STAIRS_WIDTH
         self.wall_rear_x = WALL_X - WALL_WIDTH
-        self.wall_bottom = self.step_y(NUM_STEPS)
+        self.wall_bottom = self.step_y(NUM_STEPS) - STEP_HEIGHT
         self.stairs_depth = self.step_z(NUM_STEPS)
         self.files = {}
         self.segments = {}
@@ -298,7 +291,7 @@ class Stairs(visualizer.Visualizer):
 
         for peer in self.peers.values():
             peer.update()
-        self.draw_steps_surfaces()
+        self.draw_step_surfaces()
         self.draw_wall_surfaces()
         if len(self.files) > 0:
             self.draw_gathered_segments()
@@ -308,23 +301,23 @@ class Stairs(visualizer.Visualizer):
         for peer in self.peers.values():
             peer.draw()
 
-    def draw_steps_surfaces(self):
-        self.draw_steps_horizontal_surfaces()
-        self.draw_steps_vertical_surfaces()
+    def draw_step_surfaces(self):
+        self.draw_step_horizontal_surfaces()
+        self.draw_step_vertical_surfaces()
 
-    def draw_steps_horizontal_surfaces(self):
+    def draw_step_horizontal_surfaces(self):
         glColor3f(*STEPS_COLOR_H)
         glBegin(GL_QUADS)
-        for n in range(NUM_STEPS):
+        for n in range(0, NUM_STEPS):
             surface = self.step_h_surface(n)
             for vertex in surface:
                 glVertex3f(*vertex)
         glEnd()
 
-    def draw_steps_vertical_surfaces(self):
+    def draw_step_vertical_surfaces(self):
         glColor3f(*STEPS_COLOR_V)
         glBegin(GL_QUADS)
-        for n in range(NUM_STEPS):
+        for n in range(1, NUM_STEPS+1):
             surface = self.step_v_surface(n)
             for vertex in surface:
                 glVertex3f(*vertex)
