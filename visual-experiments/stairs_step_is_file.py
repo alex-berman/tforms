@@ -211,7 +211,6 @@ class File(visualizer.File):
     def __init__(self, *args):
         visualizer.File.__init__(self, *args)
         self.gatherer = Gatherer()
-        self.x_scope = DynamicScope()
         self.y = self.visualizer.step_y(self.filenum+1)
         self.z1 = self.visualizer.step_z(self.filenum)
         self.z2 = self.visualizer.step_z(self.filenum+1)
@@ -220,13 +219,10 @@ class File(visualizer.File):
         self.neighbour_z1 = self.visualizer.step_z(self.filenum+1)
 
     def add_segment(self, segment):
-        self.x_scope.put(segment.begin)
-        self.x_scope.put(segment.end)
         segment.departure_position = segment.peer.position
         self.visualizer.playing_segment(segment)
 
     def render(self):
-        self.x_scope.update()
         self.draw_gathered_segments()
 
     def draw_gathered_segments(self):
