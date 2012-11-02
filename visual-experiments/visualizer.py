@@ -280,7 +280,11 @@ class Visualizer:
         self.exiting = True
 
     def handle_amp_message(self, path, args, types, src, data):
-        print "handle_amp_message(%s)" % args
+        (segment_id, amp) = args
+        self.handle_segment_amplitude(segment_id, amp)
+
+    def handle_segment_amplitude(self, segment_id, amp):
+        pass
 
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()

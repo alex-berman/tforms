@@ -54,14 +54,16 @@ OSCresponder.new(nil, "/amp_subscribe",
 
 (
 o = OSCresponderNode(nil,"/amp_private",{|t,r,msg|
-	var channel = msg[2];
+	var segment_id = msg[2];
 	var amp = msg[3];
+	segment_id.postln;
+	amp.postln;
+	~amp_subscriber.postln;
 	if(~amp_subscriber != nil,
-		{ ~amp_subscriber.sendMsg("/amp", channel, amp) }, {});
-	//        ~pro.sendMsg("/amp",msg[3])
+		{ ~amp_subscriber.sendMsg("/amp", segment_id, amp) }, {});
 })).add; 
 
-SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel, pan;
+SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir;
 	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
@@ -70,7 +72,7 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel, pan;
 	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
 	Out.ar(channel, out);
-	SendReply.kr(Impulse.kr(24), "/amp_private", Amplitude.kr(out), channel);
+	SendReply.kr(Impulse.kr(24), "/amp_private", Amplitude.kr(out), segment_id);
 }).send(s);
 
 OSCresponder.new(nil, "/load",
@@ -94,6 +96,7 @@ OSCresponder.new(nil, "/play",
 	  var pan = msg[7];
 	  //"numSynths=".post; s.numSynths.postln;
 	  ~synths[segment_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
+		  \segment_id, segment_id,
 		  \begin, begin, \end, end, \duration, duration,
 		  \channel, channel, \pan, pan]);
   }).add;

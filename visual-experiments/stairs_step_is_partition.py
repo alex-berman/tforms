@@ -391,5 +391,8 @@ class Stairs(visualizer.Visualizer):
                 return step
         raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
 
+    def handle_segment_amplitude(self, segment_id, amp):
+        print segment_id, amp
+
 if __name__ == '__main__':
     visualizer.run(Stairs)
