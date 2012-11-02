@@ -6,7 +6,7 @@ from gatherer import Gatherer
 from collections import OrderedDict
 from dynamic_scope import DynamicScope
 import random
-from vector import Vector2d, Vector3d
+from vector import Vector2d, Vector3d, Vector
 from bezier import make_bezier
 import colorsys
 from smoother import Smoother
@@ -34,11 +34,16 @@ STEPS_COLOR_V = WALL_COLOR_V = (.58, .58, .58)
 STEPS_COLOR_H = WALL_COLOR_H = (.9, .9, .9)
 CURSOR_THICKNESS = 2.0
 
-CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
-CAMERA_Y_ORIENTATION = -37
-CAMERA_X_ORIENTATION = 0
+# CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
+# CAMERA_Y_ORIENTATION = -37
+# CAMERA_X_ORIENTATION = 0
+
+CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.497856691748922])
+CAMERA_Y_ORIENTATION = -42
+CAMERA_X_ORIENTATION = 25
 
 CAMERA_KEY_SPEED = 0.5
+CAMERA_Y_SPEED = .1
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
@@ -267,7 +272,8 @@ class Stairs(visualizer.Visualizer):
         self.stairs_depth = self.step_z(NUM_STEPS)
         self.files = {}
         self.segments = {}
-        self._dragging = False
+        self._dragging_orientation = False
+        self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
 
@@ -288,8 +294,8 @@ class Stairs(visualizer.Visualizer):
 
     def render(self):
         glLoadIdentity()
-        glRotatef(self._camera_y_orientation, 0.0, 1.0, 0.0)
         glRotatef(self._camera_x_orientation, 1.0, 0.0, 0.0)
+        glRotatef(self._camera_y_orientation, 0.0, 1.0, 0.0)
         glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
         for peer in self.peers.values():
@@ -398,20 +404,24 @@ class Stairs(visualizer.Visualizer):
 
     def _mouse_clicked(self, button, state, x, y):
         if button == GLUT_LEFT_BUTTON:
-            if state == GLUT_DOWN:
-                self._dragging = True
-                self._drag_x_previous = x
-                self._drag_y_previous = y
-            elif state == GLUT_UP:
-                self._dragging = False
+            self._dragging_orientation = (state == GLUT_DOWN)
+        elif button == GLUT_RIGHT_BUTTON:
+            self._dragging_y_position = (state == GLUT_DOWN)
+        if state == GLUT_DOWN:
+            self._drag_x_previous = x
+            self._drag_y_previous = y
 
     def _mouse_moved(self, x, y):
-        if self._dragging:
+        if self._dragging_orientation:
             self._set_camera_orientation(
                 self._camera_y_orientation + x - self._drag_x_previous,
                 self._camera_x_orientation - y + self._drag_y_previous)
-            self._drag_x_previous = x
-            self._drag_y_previous = y
+            self._print_camera_settings()
+        elif self._dragging_y_position:
+            self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
+            self._print_camera_settings()
+        self._drag_x_previous = x
+        self._drag_y_previous = y
 
     def _special_key_pressed(self, key, x, y):
         r = math.radians(self._camera_y_orientation)
@@ -429,7 +439,13 @@ class Stairs(visualizer.Visualizer):
             new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
             new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
         self._set_camera_position(new_position)
-        print self._camera_y_orientation, self._camera_position
+        self._print_camera_settings()
+
+    def _print_camera_settings(self):
+        print
+        print "CAMERA_POSITION = %s" % self._camera_position
+        print "CAMERA_Y_ORIENTATION = %s" % self._camera_y_orientation
+        print "CAMERA_X_ORIENTATION = %s" % self._camera_x_orientation
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
