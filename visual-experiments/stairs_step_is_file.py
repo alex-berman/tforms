@@ -10,7 +10,6 @@ from vector import Vector2d, Vector3d, Vector
 from bezier import make_bezier
 import colorsys
 from smoother import Smoother
-import copy
 
 NUM_STEPS = 12
 STAIRS_WIDTH = 1.5

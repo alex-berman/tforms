@@ -426,7 +426,7 @@ class Visualizer:
 
     def _special_key_pressed(self, key, x, y):
         r = math.radians(self._camera_y_orientation)
-        new_position = copy.copy(self._camera_position)
+        new_position = self._camera_position
         if key == GLUT_KEY_LEFT:
             new_position.x += CAMERA_KEY_SPEED * math.cos(r)
             new_position.z += CAMERA_KEY_SPEED * math.sin(r)
