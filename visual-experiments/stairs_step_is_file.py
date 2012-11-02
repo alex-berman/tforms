@@ -41,7 +41,6 @@ CAMERA_Y_ORIENTATION = -42
 CAMERA_X_ORIENTATION = 25
 
 MIN_GATHERED_SIZE = 0
-MIN_POLYGON_WIDTH = 0.02
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -139,32 +138,20 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
-        if abs(x1 - x2) > MIN_POLYGON_WIDTH:
-            glBegin(GL_QUADS)
-            glVertex3f(x1, self.f.y, self.f.z1)
-            glVertex3f(x1, self.f.y, self.f.z2)
-            glVertex3f(x2, self.f.y, self.f.z2)
-            glVertex3f(x2, self.f.y, self.f.z1)
-            glEnd()
-        else:
-            glBegin(GL_LINES)
-            glVertex3f(x1, self.f.y, self.f.z1)
-            glVertex3f(x1, self.f.y, self.f.z2)
-            glEnd()
+        glBegin(GL_QUADS)
+        glVertex3f(x1, self.f.y, self.f.z1)
+        glVertex3f(x1, self.f.y, self.f.z2)
+        glVertex3f(x2, self.f.y, self.f.z2)
+        glVertex3f(x2, self.f.y, self.f.z1)
+        glEnd()
 
     def draw_xy_polygon(self, z, x1, y1, x2, y2):
-        if abs(x1 - x2) > MIN_POLYGON_WIDTH:
-            glBegin(GL_QUADS)
-            glVertex3f(x1, y1, z)
-            glVertex3f(x1, y2, z)
-            glVertex3f(x2, y2, z)
-            glVertex3f(x2, y1, z)
-            glEnd()
-        else:
-            glBegin(GL_LINES)
-            glVertex3f(x1, y1, z)
-            glVertex3f(x1, y2, z)
-            glEnd()
+        glBegin(GL_QUADS)
+        glVertex3f(x1, y1, z)
+        glVertex3f(x1, y2, z)
+        glVertex3f(x2, y2, z)
+        glVertex3f(x2, y1, z)
+        glEnd()
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
