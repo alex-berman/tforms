@@ -152,7 +152,7 @@ class Orchestra:
         self.server = OscReceiver(PORT)
         self.server.add_method("/visualizing", "ii", self._handle_visualizing_message)
         self.server.add_method("/register", "", self._handle_register)
-        self._visualized_registered = False
+        self._visualizer_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -163,8 +163,10 @@ class Orchestra:
             time.sleep(0.01)
 
     def _wait_for_visualizer_to_register(self):
-        while not self._visualized_registered:
+        print "waiting for visualizer to register"
+        while not self._visualizer_registered:
             time.sleep(0.1)
+        print "OK"
 
     def _handle_visualizing_message(self, path, args, types, src, data):
         (segment_id, channel) = args
@@ -188,7 +190,7 @@ class Orchestra:
             self.stopped_playing, [segment])
 
     def _handle_register(self, path, args, types, src, data):
-        self._visualized_registered = True
+        self._visualizer_registered = True
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
