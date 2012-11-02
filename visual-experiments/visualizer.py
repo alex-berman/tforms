@@ -279,6 +279,9 @@ class Visualizer:
     def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
 
+    def handle_amp_message(self, path, args, types, src, data):
+        print "handle_amp_message(%s)" % args
+
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()
         self.server = OscReceiver(VISUALIZER_PORT, log_filename)
@@ -288,6 +291,7 @@ class Visualizer:
         self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
         self.server.add_method("/stopped_playing_segment", "i", self.handle_stopped_playing_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
+        self.server.add_method("/amp", "if", self.handle_amp_message)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -508,6 +512,9 @@ class Visualizer:
             glAccum(GL_ACCUM, 1.0/NUM_ACCUM_SAMPLES)
 
         glAccum(GL_RETURN, 1.0)
+
+    def subscribe_to_amp(self):
+        self.synth.subscribe_to_amp(VISUALIZER_PORT)
 
 
 def run(visualizer_class):

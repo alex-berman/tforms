@@ -44,6 +44,23 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 //WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
+~amp_subscriber = nil;
+
+OSCresponder.new(nil, "/amp_subscribe",
+  { arg t, r, msg;
+	  var port = msg[1];
+	  ~amp_subscriber = NetAddr.new("127.0.0.1", port);
+  }).add;
+
+(
+o = OSCresponderNode(nil,"/amp_private",{|t,r,msg|
+	var channel = msg[2];
+	var amp = msg[3];
+	if(~amp_subscriber != nil,
+		{ ~amp_subscriber.sendMsg("/amp", channel, amp) }, {});
+	//        ~pro.sendMsg("/amp",msg[3])
+})).add; 
+
 SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir;
 	pointer = Line.kr(begin, end, duration);
@@ -53,6 +70,7 @@ SynthDef(\warp, {arg buffer = 0, begin, end, duration, channel, pan;
 	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
 	Out.ar(channel, out);
+	SendReply.kr(Impulse.kr(24), "/amp_private", Amplitude.kr(out), channel);
 }).send(s);
 
 OSCresponder.new(nil, "/load",

@@ -268,6 +268,7 @@ class Stairs(visualizer.Visualizer):
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
         self.enable_accum()
         self.enable_3d()
+        self.subscribe_to_amp()
 
     def added_all_files(self):
         self._create_steps()

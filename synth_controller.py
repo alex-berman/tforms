@@ -23,6 +23,9 @@ class SynthController:
     def sync_beep(self):
         self._send("/sync_beep")
 
+    def subscribe_to_amp(self, port):
+        self._send("/amp_subscribe", port)
+
     def _send(self, command, *args):
         with self._lock:
             liblo.send(self.target, command, *args)
