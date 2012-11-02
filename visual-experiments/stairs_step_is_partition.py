@@ -25,10 +25,10 @@ CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 GATHERED_COLOR_V = (.62, .17, .20)
 GATHERED_COLOR_H = (.9, .3, .35)
-CURSOR_COLOR_V = (.9, 0, 0)
-CURSOR_COLOR_H = (1, 0, 0)
-STEPS_COLOR_V = WALL_COLOR_V = (.58, .58, .58)
-STEPS_COLOR_H = WALL_COLOR_H = (.9, .9, .9)
+CURSOR_COLOR_V = Vector3d(.9, 0, 0)
+CURSOR_COLOR_H = Vector3d(1, 0, 0)
+STEPS_COLOR_V = WALL_COLOR_V = Vector3d(.58, .58, .58)
+STEPS_COLOR_H = WALL_COLOR_H = Vector3d(.9, .9, .9)
 CURSOR_THICKNESS = 2.0
 
 # CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
@@ -49,6 +49,7 @@ class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
         self.step = self.visualizer._byte_to_step(self.begin)
+        self.amp = 0
 
     def target_position(self):
         return self.wall_step_crossing()
@@ -132,14 +133,16 @@ class Segment(visualizer.Segment):
     def draw_cursor(self):
         x = self.step.byte_to_x(self.playback_byte_cursor())
         glLineWidth(CURSOR_THICKNESS)
-        self.visualizer.set_color(CURSOR_COLOR_H)
+        self.visualizer.set_color(
+            self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H))
         glBegin(GL_LINES)
         glVertex3f(x, self.step.y, self.step.z1)
         glVertex3f(x, self.step.y, self.step.z2)
         glEnd()
 
         glBegin(GL_LINES)
-        self.visualizer.set_color(CURSOR_COLOR_V)
+        self.visualizer.set_color(
+            self.amp_controlled_color(STEPS_COLOR_V, CURSOR_COLOR_V))
         glVertex3f(x, self.step.y, self.step.z2)
         glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
@@ -159,6 +162,9 @@ class Segment(visualizer.Segment):
         glVertex3f(x2, y2, z)
         glVertex3f(x2, y1, z)
         glEnd()
+
+    def amp_controlled_color(self, weak_color, strong_color):
+        return weak_color + (strong_color - weak_color) * self.amp
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
@@ -391,8 +397,8 @@ class Stairs(visualizer.Visualizer):
                 return step
         raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
 
-    def handle_segment_amplitude(self, segment_id, amp):
-        print segment_id, amp
+    def handle_segment_amplitude(self, segment, amp):
+        segment.amp = amp
 
 if __name__ == '__main__':
     visualizer.run(Stairs)

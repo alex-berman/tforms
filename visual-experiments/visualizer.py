@@ -281,9 +281,10 @@ class Visualizer:
 
     def handle_amp_message(self, path, args, types, src, data):
         (segment_id, amp) = args
-        self.handle_segment_amplitude(segment_id, amp)
+        segment = self._segments_by_id[segment_id]
+        self.handle_segment_amplitude(segment, amp)
 
-    def handle_segment_amplitude(self, segment_id, amp):
+    def handle_segment_amplitude(self, segment, amp):
         pass
 
     def setup_osc(self, log_filename):

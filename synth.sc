@@ -56,9 +56,6 @@ OSCresponder.new(nil, "/amp_subscribe",
 o = OSCresponderNode(nil,"/amp_private",{|t,r,msg|
 	var segment_id = msg[2];
 	var amp = msg[3];
-	segment_id.postln;
-	amp.postln;
-	~amp_subscriber.postln;
 	if(~amp_subscriber != nil,
 		{ ~amp_subscriber.sendMsg("/amp", segment_id, amp) }, {});
 })).add; 
