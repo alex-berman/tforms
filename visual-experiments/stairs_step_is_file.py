@@ -10,7 +10,6 @@ from vector import Vector2d, Vector3d, Vector
 from bezier import make_bezier
 import colorsys
 from smoother import Smoother
-import math
 import copy
 
 NUM_STEPS = 12
@@ -42,22 +41,8 @@ CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.4978566
 CAMERA_Y_ORIENTATION = -42
 CAMERA_X_ORIENTATION = 25
 
-CAMERA_KEY_SPEED = 0.5
-CAMERA_Y_SPEED = .1
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
-
-NUM_ACCUM_SAMPLES = 8
-ACCUM_JITTER = [
-	(-0.334818,  0.435331),
-	( 0.286438, -0.393495),
-	( 0.459462,  0.141540),
-	(-0.414498, -0.192829),
-	(-0.183790,  0.082102),
-	(-0.079263, -0.317383),
-	( 0.102254,  0.299133),
-	( 0.164216, -0.054399)
-]
 
 class Segment(visualizer.Segment):
     def target_position(self):
@@ -288,10 +273,8 @@ class Stairs(visualizer.Visualizer):
         self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
-        self.fovy = 45
-        self.near = 0.1
-        self.far = 100.0
-        self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ACCUM
+        self.enable_accum()
+        self.enable_3d()
 
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
@@ -299,55 +282,10 @@ class Stairs(visualizer.Visualizer):
                           segment.f.z, x,
                           segment.duration)
 
-    def _set_camera_position(self, position):
-        self._camera_position = position
-        self.set_listener_position(position.z, position.x)
-
-    def _set_camera_orientation(self, y_orientation, x_orientation):
-        self._camera_y_orientation = y_orientation
-        self._camera_x_orientation = x_orientation
-        self.set_listener_orientation(y_orientation)
-
-    def set_perspective(self,
-                       pixdx, pixdy,
-                       eyedx, eyedy, eyedz):
-        fov2 = ((self.fovy*math.pi) / 180.0) / 2.0
-        top = self.near / (math.cos(fov2) / math.sin(fov2))
-        bottom = -top
-        right = top * self._aspect_ratio
-        left = -right
-        xwsize = right - left
-        ywsize = top - bottom
-        # dx = -(pixdx*xwsize/self._window_width + eyedx*self.near/focus)
-        # dy = -(pixdy*ywsize/self._window_height + eyedy*self.near/focus)
-        # I don't understand why this modification solved the problem (focus was 1.0)
-        dx = -(pixdx*xwsize/self._window_width)
-        dy = -(pixdy*ywsize/self._window_height)
-
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glFrustum (left + dx, right + dx, bottom + dy, top + dy, self.near, self.far)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-
-        glRotatef(self._camera_x_orientation, 1.0, 0.0, 0.0)
-        glRotatef(self._camera_y_orientation, 0.0, 1.0, 0.0)
-        glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
-
     def render(self):
         for peer in self.peers.values():
             peer.update()
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_ACCUM_BUFFER_BIT)
-        for jitter in range(NUM_ACCUM_SAMPLES):
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-            self.set_perspective(ACCUM_JITTER[jitter][0], ACCUM_JITTER[jitter][1],
-                                 -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
-            self.render_accum_objects()
-            glAccum(GL_ACCUM, 1.0/NUM_ACCUM_SAMPLES)
-
-        glAccum(GL_RETURN, 1.0)
-
+        self.accum(self.render_accum_objects)
         if len(self.files) > 0:
             self.draw_branches()
 
@@ -437,66 +375,6 @@ class Stairs(visualizer.Visualizer):
     def draw_gathered_segments(self):
         for f in self.files.values():
             f.render()
-
-    def ReSizeGLScene(self, _width, _height):
-        if _height == 0:
-            _height = 1
-        glViewport(0, 0, _width, _height)
-        self._window_width = _width
-        self._window_height = _height
-        self._aspect_ratio = float(_width) / _height
-
-    def InitGL(self):
-        visualizer.Visualizer.InitGL(self)
-        glClearAccum(0.0, 0.0, 0.0, 0.0)
-        glutMouseFunc(self._mouse_clicked)
-        glutMotionFunc(self._mouse_moved)
-        glutSpecialFunc(self._special_key_pressed)
-
-    def _mouse_clicked(self, button, state, x, y):
-        if button == GLUT_LEFT_BUTTON:
-            self._dragging_orientation = (state == GLUT_DOWN)
-        elif button == GLUT_RIGHT_BUTTON:
-            self._dragging_y_position = (state == GLUT_DOWN)
-        if state == GLUT_DOWN:
-            self._drag_x_previous = x
-            self._drag_y_previous = y
-
-    def _mouse_moved(self, x, y):
-        if self._dragging_orientation:
-            self._set_camera_orientation(
-                self._camera_y_orientation + x - self._drag_x_previous,
-                self._camera_x_orientation - y + self._drag_y_previous)
-            self._print_camera_settings()
-        elif self._dragging_y_position:
-            self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
-            self._print_camera_settings()
-        self._drag_x_previous = x
-        self._drag_y_previous = y
-
-    def _special_key_pressed(self, key, x, y):
-        r = math.radians(self._camera_y_orientation)
-        new_position = copy.copy(self._camera_position)
-        if key == GLUT_KEY_LEFT:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_RIGHT:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_UP:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        elif key == GLUT_KEY_DOWN:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        self._set_camera_position(new_position)
-        self._print_camera_settings()
-
-    def _print_camera_settings(self):
-        print
-        print "CAMERA_POSITION = %s" % self._camera_position
-        print "CAMERA_Y_ORIENTATION = %s" % self._camera_y_orientation
-        print "CAMERA_X_ORIENTATION = %s" % self._camera_x_orientation
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
