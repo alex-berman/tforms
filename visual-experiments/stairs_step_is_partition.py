@@ -35,18 +35,26 @@ CURSOR_THICKNESS = 2.0
 # CAMERA_Y_ORIENTATION = -37
 # CAMERA_X_ORIENTATION = 0
 
-CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.497856691748922])
-CAMERA_Y_ORIENTATION = -42
-CAMERA_X_ORIENTATION = 25
+# CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.497856691748922])
+# CAMERA_Y_ORIENTATION = -42
+# CAMERA_X_ORIENTATION = 25
+
+CAMERA_POSITION = Vector(3, [-4.209222067879907, -3.8999999999999995, -1.6080925456044803])
+CAMERA_Y_ORIENTATION = -90
+CAMERA_X_ORIENTATION = 35
 
 MIN_GATHERED_SIZE = 0
 
 class Segment(visualizer.Segment):
+    def __init__(self, *args):
+        visualizer.Segment.__init__(self, *args)
+        self.step = self.visualizer._byte_to_step(self.begin)
+
     def target_position(self):
         return self.wall_step_crossing()
 
     def wall_step_crossing(self):
-        return Vector2d(self.f.z2, self.f.y)
+        return Vector2d(self.step.z2, self.step.y)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -66,7 +74,7 @@ class Segment(visualizer.Segment):
             glVertex3f(WALL_X, y, z)
         # if self.is_playing():
         #     for x,z in self.curve_on_step():
-        #         glVertex3f(x, self.f.y, z)
+        #         glVertex3f(x, self.step.y, z)
         glEnd()
 
     def curve_on_wall(self):
@@ -90,11 +98,11 @@ class Segment(visualizer.Segment):
     #     wall_step_crossing = Vector2d(WALL_X, wall_step_crossing_zy[0])
     #     control_points = []
     #     control_points.append(wall_step_crossing)
-    #     x = self.f.byte_to_x(self.playback_byte_cursor())
-    #     if self.peer.departure_position[0] > self.f.z1:
-    #         z = self.f.z1
+    #     x = self.step.byte_to_x(self.playback_byte_cursor())
+    #     if self.peer.departure_position[0] > self.step.z1:
+    #         z = self.step.z1
     #     else:
-    #         z = self.f.z2
+    #         z = self.step.z2
     #     control_points.append(Vector2d((WALL_X + x) / 2, z))
     #     control_points.append(Vector2d(x, z))
     #     bezier = make_bezier([(p.x, p.y) for p in control_points])
@@ -104,17 +112,17 @@ class Segment(visualizer.Segment):
         self.draw_as_gathered(self.begin, self.end)
 
     def draw_as_gathered(self, begin, end):
-        x1 = self.f.byte_to_x(begin)
-        x2 = self.f.byte_to_x(end)
+        x1 = self.step.byte_to_x(begin)
+        x2 = self.step.byte_to_x(end)
         self.visualizer.set_color(GATHERED_COLOR_H)
-        self.draw_xz_polygon(self.f.y,
-                             x1, self.f.z1,
-                             x2, self.f.z2)
+        self.draw_xz_polygon(self.step.y,
+                             x1, self.step.z1,
+                             x2, self.step.z2)
 
         self.visualizer.set_color(GATHERED_COLOR_V)
-        self.draw_xy_polygon(self.f.z2,
-                             x1, self.f.y,
-                             x2, self.f.neighbour_y)
+        self.draw_xy_polygon(self.step.z2,
+                             x1, self.step.y,
+                             x2, self.step.neighbour_y)
 
     def draw_playing(self):
         if self.is_playing():
@@ -122,26 +130,26 @@ class Segment(visualizer.Segment):
             self.draw_cursor()
 
     def draw_cursor(self):
-        x = self.f.byte_to_x(self.playback_byte_cursor())
+        x = self.step.byte_to_x(self.playback_byte_cursor())
         glLineWidth(CURSOR_THICKNESS)
         self.visualizer.set_color(CURSOR_COLOR_H)
         glBegin(GL_LINES)
-        glVertex3f(x, self.f.y, self.f.z1)
-        glVertex3f(x, self.f.y, self.f.z2)
+        glVertex3f(x, self.step.y, self.step.z1)
+        glVertex3f(x, self.step.y, self.step.z2)
         glEnd()
 
         glBegin(GL_LINES)
         self.visualizer.set_color(CURSOR_COLOR_V)
-        glVertex3f(x, self.f.y, self.f.z2)
-        glVertex3f(x, self.f.neighbour_y, self.f.neighbour_z1)
+        glVertex3f(x, self.step.y, self.step.z2)
+        glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
         glBegin(GL_QUADS)
-        glVertex3f(x1, self.f.y, self.f.z1)
-        glVertex3f(x1, self.f.y, self.f.z2)
-        glVertex3f(x2, self.f.y, self.f.z2)
-        glVertex3f(x2, self.f.y, self.f.z1)
+        glVertex3f(x1, self.step.y, self.step.z1)
+        glVertex3f(x1, self.step.y, self.step.z2)
+        glVertex3f(x2, self.step.y, self.step.z2)
+        glVertex3f(x2, self.step.y, self.step.z1)
         glEnd()
 
     def draw_xy_polygon(self, z, x1, y1, x2, y2):
@@ -172,7 +180,7 @@ class Peer(visualizer.Peer):
     def update(self):
         for segment in self.segments.values():
             if not segment.gathered and not segment.is_playing():
-                segment.f.gatherer.add(segment)
+                segment.step.gatherer.add(segment)
                 segment.gathered = True
 
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
@@ -206,20 +214,23 @@ class Peer(visualizer.Peer):
                   1 - CURVE_OPACITY,
                   1 - CURVE_OPACITY)
 
-class File(visualizer.File):
-    def __init__(self, *args):
-        visualizer.File.__init__(self, *args)
+class Step:
+    def __init__(self, visualizer, n, byte_offset, byte_size):
+        self.visualizer = visualizer
+        self.n = n
+        self.byte_offset = byte_offset
+        self.byte_size = byte_size
+        self.byte_end = byte_offset + byte_size
         self.gatherer = Gatherer()
-        self.y = self.visualizer.step_y(self.filenum+1)
-        self.z1 = self.visualizer.step_z(self.filenum)
-        self.z2 = self.visualizer.step_z(self.filenum+1)
+        self.y = visualizer.step_y(n+1)
+        self.z1 = visualizer.step_z(n)
+        self.z2 = visualizer.step_z(n+1)
         self.z = (self.z1 + self.z2) / 2
-        self.neighbour_y = self.visualizer.step_y(self.filenum+2)
-        self.neighbour_z1 = self.visualizer.step_z(self.filenum+1)
+        self.neighbour_y = visualizer.step_y(n+2)
+        self.neighbour_z1 = visualizer.step_z(n+1)
 
-    def add_segment(self, segment):
-        segment.departure_position = segment.peer.position
-        self.visualizer.playing_segment(segment)
+    def __repr__(self):
+        return "Step(%s, %s, %s)" % (self.n, self.byte_offset, self.byte_size)
 
     def render(self):
         self.draw_gathered_segments()
@@ -229,7 +240,13 @@ class File(visualizer.File):
             segment.draw_gathered()
 
     def byte_to_x(self, byte):
-        return WALL_X + float(byte) / self.length * STAIRS_WIDTH
+        return WALL_X + float(byte - self.byte_offset) / self.byte_size * STAIRS_WIDTH
+
+
+class File(visualizer.File):
+    def add_segment(self, segment):
+        segment.departure_position = segment.peer.position
+        self.visualizer.playing_segment(segment)
 
 
 class Stairs(visualizer.Visualizer):
@@ -252,10 +269,25 @@ class Stairs(visualizer.Visualizer):
         self.enable_accum()
         self.enable_3d()
 
+    def added_all_files(self):
+        self._create_steps()
+
+    def _create_steps(self):
+        self._steps = []
+        remaining_bytes = self.torrent_length
+        remaining_num_steps = NUM_STEPS
+        byte_offset = 0
+        for n in range(NUM_STEPS):
+            byte_size = int(remaining_bytes / remaining_num_steps)
+            self._steps.append(Step(self, n, byte_offset, byte_size))
+            byte_offset += byte_size
+            remaining_bytes -= byte_size
+            remaining_num_steps -= 1
+
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
         self.place_source(segment.sound_source_id,
-                          segment.f.z, x,
+                          segment.step.z, x,
                           segment.duration)
 
     def render(self):
@@ -349,8 +381,14 @@ class Stairs(visualizer.Visualizer):
         return step * STEP_DEPTH
 
     def draw_gathered_segments(self):
-        for f in self.files.values():
-            f.render()
+        for step in self._steps:
+            step.render()
+
+    def _byte_to_step(self, byte):
+        for step in self._steps:
+            if step.byte_offset <= byte and byte < step.byte_end:
+                return step
+        raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
 
 if __name__ == '__main__':
     visualizer.run(Stairs)

@@ -154,6 +154,7 @@ class Visualizer:
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._3d_enabled = False
+        self.torrent_length = 0
 
         if self.ssr_enabled:
             self.ssr = SsrControl()
@@ -200,7 +201,10 @@ class Visualizer:
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
         f = self.files[filenum] = self.file_class(self, filenum, offset, length)
+        self.torrent_length += length
         self.added_file(f)
+        if len(self.files) == self.num_files:
+            self.added_all_files()
 
     def handle_chunk_message(self, path, args, types, src, data):
         (chunk_id, torrent_position, byte_size, filenum, peer_id) = args
@@ -258,6 +262,9 @@ class Visualizer:
         peer.add_segment(segment)
 
     def added_file(self, f):
+        pass
+
+    def added_all_files(self):
         pass
 
     def pan_segment(self, segment):
