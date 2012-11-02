@@ -35,7 +35,8 @@ STEPS_COLOR_H = WALL_COLOR_H = (.9, .9, .9)
 CURSOR_THICKNESS = 2.0
 
 CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
-CAMERA_ORIENTATION = -37
+CAMERA_Y_ORIENTATION = -37
+CAMERA_X_ORIENTATION = 0
 
 CAMERA_KEY_SPEED = 0.5
 MIN_GATHERED_SIZE = 0
@@ -268,7 +269,7 @@ class Stairs(visualizer.Visualizer):
         self.segments = {}
         self._dragging = False
         self._set_camera_position(CAMERA_POSITION)
-        self._set_camera_orientation(CAMERA_ORIENTATION)
+        self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
 
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
@@ -280,13 +281,15 @@ class Stairs(visualizer.Visualizer):
         self._camera_position = position
         self.set_listener_position(position.z, position.x)
 
-    def _set_camera_orientation(self, orientation):
-        self._camera_orientation = orientation
-        self.set_listener_orientation(orientation)
+    def _set_camera_orientation(self, y_orientation, x_orientation):
+        self._camera_y_orientation = y_orientation
+        self._camera_x_orientation = x_orientation
+        self.set_listener_orientation(y_orientation)
 
     def render(self):
         glLoadIdentity()
-        glRotatef(self._camera_orientation, 0.0, 1.0, 0.0)
+        glRotatef(self._camera_y_orientation, 0.0, 1.0, 0.0)
+        glRotatef(self._camera_x_orientation, 1.0, 0.0, 0.0)
         glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
         for peer in self.peers.values():
@@ -398,17 +401,20 @@ class Stairs(visualizer.Visualizer):
             if state == GLUT_DOWN:
                 self._dragging = True
                 self._drag_x_previous = x
+                self._drag_y_previous = y
             elif state == GLUT_UP:
                 self._dragging = False
 
     def _mouse_moved(self, x, y):
         if self._dragging:
-            movement = x - self._drag_x_previous
-            self._set_camera_orientation(self._camera_orientation + movement)
+            self._set_camera_orientation(
+                self._camera_y_orientation + x - self._drag_x_previous,
+                self._camera_x_orientation - y + self._drag_y_previous)
             self._drag_x_previous = x
+            self._drag_y_previous = y
 
     def _special_key_pressed(self, key, x, y):
-        r = math.radians(self._camera_orientation)
+        r = math.radians(self._camera_y_orientation)
         new_position = copy.copy(self._camera_position)
         if key == GLUT_KEY_LEFT:
             new_position.x += CAMERA_KEY_SPEED * math.cos(r)
@@ -423,7 +429,7 @@ class Stairs(visualizer.Visualizer):
             new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
             new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
         self._set_camera_position(new_position)
-        print self._camera_orientation, self._camera_position
+        print self._camera_y_orientation, self._camera_position
 
 if __name__ == '__main__':
     visualizer.run(Stairs)
