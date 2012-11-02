@@ -136,6 +136,7 @@ class Visualizer:
         self.space = Space()
         self._segments_by_id = {}
         self._warned_about_missing_pan_segment = False
+        self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
 
         if self.ssr_enabled:
             self.ssr = SsrControl()
@@ -161,7 +162,7 @@ class Visualizer:
         window_width = self.width + MARGIN*2
         window_height = self.height + MARGIN*2
         glutInit(sys.argv)
-        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+        glutInitDisplayMode(self.gl_display_mode)
         glutInitWindowSize(window_width, window_height)
         glutInitWindowPosition(0, 0)
         glutCreateWindow("")

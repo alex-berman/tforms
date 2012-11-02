@@ -47,6 +47,18 @@ CAMERA_Y_SPEED = .1
 MIN_GATHERED_SIZE = 0
 MIN_POLYGON_WIDTH = 0.02
 
+NUM_ACCUM_SAMPLES = 8
+ACCUM_JITTER = [
+	(-0.334818,  0.435331),
+	( 0.286438, -0.393495),
+	( 0.459462,  0.141540),
+	(-0.414498, -0.192829),
+	(-0.183790,  0.082102),
+	(-0.079263, -0.317383),
+	( 0.102254,  0.299133),
+	( 0.164216, -0.054399)
+]
+
 class Segment(visualizer.Segment):
     def target_position(self):
         return self.wall_step_crossing()
@@ -276,6 +288,7 @@ class Stairs(visualizer.Visualizer):
         self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
+        self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ACCUM
 
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
@@ -292,19 +305,76 @@ class Stairs(visualizer.Visualizer):
         self._camera_x_orientation = x_orientation
         self.set_listener_orientation(y_orientation)
 
-    def render(self):
+    def accPerspective(self, fovy, aspect,
+                       near, far, pixdx, pixdy,
+                       eyedx, eyedy, eyedz, focus):
+        fov2 = ((fovy*math.pi) / 180.0) / 2.0
+
+        top = near / (math.cos(fov2) / math.sin(fov2))
+        bottom = -top
+
+        right = top * aspect
+        left = -right
+
+        xwsize = right - left
+        ywsize = top - bottom
+
+        # dx = -(pixdx*xwsize/self._window_width + eyedx*near/focus)
+        # dy = -(pixdy*ywsize/self._window_height + eyedy*near/focus)
+        # I don't understand why this modification solved the problem
+        dx = -(pixdx*xwsize/self._window_width)
+        dy = -(pixdy*ywsize/self._window_height)
+
+        glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
+        glFrustum (left + dx, right + dx, bottom + dy, top + dy, near, far)
+        #gluPerspective(fovy, aspect, near, far)
+        #print glGetFloatv (GL_PROJECTION_MATRIX); sys.exit()
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
         glRotatef(self._camera_x_orientation, 1.0, 0.0, 0.0)
         glRotatef(self._camera_y_orientation, 0.0, 1.0, 0.0)
         glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
+    def render(self):
         for peer in self.peers.values():
             peer.update()
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_ACCUM_BUFFER_BIT)
+        for jitter in range(NUM_ACCUM_SAMPLES):
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            self.accPerspective (45.0, float(self._window_width)/self._window_height,
+                                 0.1, 100.0,
+                                 ACCUM_JITTER[jitter][0], ACCUM_JITTER[jitter][1],
+                                 -self._camera_position.x, -self._camera_position.y, self._camera_position.z,
+                                 1.0)
+            self.render_accum_objects()
+            glAccum(GL_ACCUM, 1.0/NUM_ACCUM_SAMPLES)
+
+        # glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        # self.accPerspective (45.0, float(self._window_width)/self._window_height,
+        #                      0.1, 100.0,
+        #                      0, 0,
+        #                      -self._camera_position.x, -self._camera_position.y, self._camera_position.z,
+        #                      1.0)
+
+        # self.render_accum_objects()
+        # if len(self.files) > 0:
+        #     self.draw_branches()
+        # glAccum(GL_ACCUM, 1.0)
+
+        glAccum(GL_RETURN, 1.0)
+
+        if len(self.files) > 0:
+            self.draw_branches()
+
+    def render_accum_objects(self):
         self.draw_step_surfaces()
         self.draw_wall_surfaces()
         if len(self.files) > 0:
             self.draw_gathered_segments()
-            self.draw_branches()
 
     def draw_branches(self):
         for peer in self.peers.values():
@@ -391,13 +461,12 @@ class Stairs(visualizer.Visualizer):
         if _height == 0:
             _height = 1
         glViewport(0, 0, _width, _height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(45, float(_width) / _height, 0.1, 100)
-        glMatrixMode(GL_MODELVIEW)
+        self._window_width = _width
+        self._window_height = _height
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
+        glClearAccum(0.0, 0.0, 0.0, 0.0)
         glutMouseFunc(self._mouse_clicked)
         glutMotionFunc(self._mouse_moved)
         glutSpecialFunc(self._special_key_pressed)

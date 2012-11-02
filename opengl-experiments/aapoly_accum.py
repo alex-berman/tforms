@@ -34,7 +34,7 @@ def accFrustum(left, right, bottom,
     glFrustum (left + dx, right + dx, bottom + dy, top + dy, near, far)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    #glTranslatef (-eyedx, -eyedy, 0.0)
+    glTranslatef (-eyedx, -eyedy, 0.0)
 
 def accPerspective(fovy, aspect,
                    near, far, pixdx, pixdy,
@@ -50,39 +50,6 @@ def accPerspective(fovy, aspect,
     accFrustum (left, right, bottom, top, near, far,
 		pixdx, pixdy, eyedx, eyedy, focus)
 
-def perspective(fovy, near, far):
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-
-    aspect = float(window_width)/window_height
-
-    #gluPerspective(fovy, aspect, near, far)
-
-    eyedx = 0.0
-    eyedy = 0.0
-    focus = 1.0
-    pixdx = 0
-    pixdy = 0
-
-    fov2 = ((fovy*math.pi) / 180.0) / 2.0
-
-    top = near / (math.cos(fov2) / math.sin(fov2))
-    bottom = -top
-
-    right = top * aspect
-    left = -right
-
-    xwsize = right - left
-    ywsize = top - bottom
-
-    dx = -(pixdx*xwsize/window_width + eyedx*near/focus)
-    dy = -(pixdy*ywsize/window_height + eyedy*near/focus)
-
-    glFrustum (left + dx, right + dx, bottom + dy, top + dy, near, far)
-
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-
 def DrawGLScene():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_ACCUM_BUFFER_BIT)
 
@@ -94,15 +61,6 @@ def DrawGLScene():
         render()
         glAccum(GL_ACCUM, 1.0/NUM_SAMPLES)
     glAccum(GL_RETURN, 1.0)
-
-    # perspective(45, 0.1, 100)
-    # render()
-
-    # glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    # perspective(45, 0.1, 100)
-    # render()
-    # glAccum(GL_ACCUM, 1.0)
-    # glAccum(GL_RETURN, 1.0)
 
     glFlush()
     glutSwapBuffers()
