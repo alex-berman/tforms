@@ -396,6 +396,7 @@ class Visualizer:
 
     def keyPressed(self, *args):
         if args[0] == ESCAPE:
+            self.synth.stop_all()
             self.exiting = True
 
     def playing_segment(self, segment):
