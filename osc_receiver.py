@@ -1,6 +1,7 @@
 import liblo
 import pickle
 import traceback, sys
+import threading
 
 class OscReceiver(liblo.Server):
     def __init__(self, port, log_filename=None):
@@ -11,10 +12,32 @@ class OscReceiver(liblo.Server):
             self.sender = liblo.Address(port)
         else:
             self.log = False
+            self._queue = []
+            self._lock = threading.Lock()
+
+    def add_method(self, path, typespec, callback_func):
+        liblo.Server.add_method(self, path, typespec, self._callback, callback_func)
+
+    def _callback(self, path, args, types, src, callback_func):
+        with self._lock:
+            self._queue.append((path, args, types, src, callback_func))
+
+    def start(self):
+        if not self.log:
+            serve_thread = threading.Thread(target=self._serve)
+            serve_thread.daemon = True
+            serve_thread.start()
+
+    def _serve(self):
+        while True:
+            self.recv()
 
     def serve(self):
-        while self.recv(0.01):
-            pass
+        with self._lock:
+            for path, args, types, src, callback_func in self._queue:
+                self._fire_callback_with_exception_handler(
+                    path, args, types, src, callback_func)
+            self._queue = []
 
     def read_log(self, filename):
         f = open(filename, "r")
@@ -38,10 +61,6 @@ class OscReceiver(liblo.Server):
                 self.serve()
             else:
                 return
-
-    def add_method(self, path, typespec, callback):
-        liblo.Server.add_method(self, path, typespec,
-                                self._fire_callback_with_exception_handler, callback)
 
     def _fire_callback_with_exception_handler(self, path, args, types, src, callback):
         data = None

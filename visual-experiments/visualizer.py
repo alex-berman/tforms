@@ -320,6 +320,7 @@ class Visualizer:
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.add_method("/amp", "if", self.handle_amp_message)
         self.server.add_method("/waveform", "if", self.handle_waveform_message)
+        self.server.start()
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)

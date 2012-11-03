@@ -47,7 +47,7 @@ MIN_GATHERED_SIZE = 0
 class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
-        self.step = self.visualizer._byte_to_step(self.begin)
+        self.step = self.visualizer._byte_to_step(self.torrent_begin)
         self.amp = 0
 
     def target_position(self):
@@ -98,7 +98,7 @@ class Segment(visualizer.Segment):
     #     wall_step_crossing = Vector2d(WALL_X, wall_step_crossing_zy[0])
     #     control_points = []
     #     control_points.append(wall_step_crossing)
-    #     x = self.step.byte_to_x(self.playback_byte_cursor())
+    #     x = self.step.byte_to_x(self.playback_torrent_byte_cursor())
     #     if self.peer.departure_position[0] > self.step.z1:
     #         z = self.step.z1
     #     else:
@@ -109,7 +109,7 @@ class Segment(visualizer.Segment):
     #     return bezier(CURVE_PRECISION_ON_STEPS)
 
     def draw_gathered(self):
-        self.draw_as_gathered(self.begin, self.end)
+        self.draw_as_gathered(self.torrent_begin, self.torrent_end)
 
     def draw_as_gathered(self, begin, end):
         x1 = self.step.byte_to_x(begin)
@@ -126,11 +126,11 @@ class Segment(visualizer.Segment):
 
     def draw_playing(self):
         if self.is_playing():
-            self.draw_as_gathered(self.begin, self.playback_byte_cursor())
+            self.draw_as_gathered(self.torrent_begin, self.playback_torrent_byte_cursor())
             self.draw_cursor()
 
     def draw_cursor(self):
-        x = self.step.byte_to_x(self.playback_byte_cursor())
+        x = self.step.byte_to_x(self.playback_torrent_byte_cursor())
         glLineWidth(CURSOR_THICKNESS)
         self.visualizer.set_color(
             self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H))
@@ -267,6 +267,7 @@ class Stairs(visualizer.Visualizer):
         self.stairs_depth = self.step_z(NUM_STEPS)
         self.files = {}
         self.segments = {}
+        self._steps = []
         self._dragging_orientation = False
         self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
@@ -279,7 +280,6 @@ class Stairs(visualizer.Visualizer):
         self._create_steps()
 
     def _create_steps(self):
-        self._steps = []
         remaining_bytes = self.torrent_length
         remaining_num_steps = NUM_STEPS
         byte_offset = 0

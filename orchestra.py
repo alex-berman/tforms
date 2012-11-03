@@ -153,6 +153,7 @@ class Orchestra:
         self.server = OscReceiver(PORT)
         self.server.add_method("/visualizing", "ii", self._handle_visualizing_message)
         self.server.add_method("/register", "", self._handle_register)
+        self.server.start()
         self._visualizer_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
@@ -160,7 +161,7 @@ class Orchestra:
 
     def _serve_osc(self):
         while True:
-            self.server.recv(0.01)
+            self.server.serve()
             time.sleep(0.01)
 
     def _wait_for_visualizer_to_register(self):
@@ -172,7 +173,6 @@ class Orchestra:
     def _handle_visualizing_message(self, path, args, types, src, data):
         (segment_id, channel) = args
         segment = self.segments_by_id[segment_id]
-        logger.debug("visualizing segment %s with channel %s" % (segment, channel))
         self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
@@ -353,7 +353,8 @@ class Orchestra:
     def handle_segment(self, segment):
         logger.debug("handling segment %s" % segment)
         player = self.get_player_for_segment(segment)
-        logger.debug("get_player_for_segment returned %s" % player)
+        if not player:
+            logger.debug("get_player_for_segment returned None - skipping playback")
         if not self.fast_forwarding:
             now = self.get_current_log_time()
             time_margin = segment["onset"] - now
