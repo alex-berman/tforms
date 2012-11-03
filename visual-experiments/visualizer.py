@@ -109,9 +109,22 @@ class Segment(Chunk):
                  arrival_time, visualizer)
         self.duration = duration
         self.f = f
+        self.torrent_begin = self.begin + f.offset
+        self.torrent_end = self.end + f.offset
 
     def playback_byte_cursor(self):
         return self.begin + min(self.relative_age(), 1) * self.byte_size
+
+    def playback_torrent_byte_cursor(self):
+        return self.torrent_begin + min(self.relative_age(), 1) * self.byte_size
+
+    def append(self, other):
+        Chunk.append(self, other)
+        self.torrent_end = other.torrent_end
+
+    def prepend(self, other):
+        Chunk.prepend(self, other)
+        self.torrent_begin = other.torrent_begin
 
     def __str__(self):
         return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
