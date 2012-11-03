@@ -45,6 +45,7 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
 ~amp_subscriber = nil;
+~waveform_subscriber = nil;
 
 OSCresponder.new(nil, "/amp_subscribe",
   { arg t, r, msg;
@@ -52,7 +53,12 @@ OSCresponder.new(nil, "/amp_subscribe",
 	  ~amp_subscriber = NetAddr.new("127.0.0.1", port);
   }).add;
 
-(
+OSCresponder.new(nil, "/waveform_subscribe",
+  { arg t, r, msg;
+	  var port = msg[1];
+	  ~waveform_subscriber = NetAddr.new("127.0.0.1", port);
+  }).add;
+
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir, amp;
 	pointer = Line.kr(begin, end, duration);
@@ -65,6 +71,8 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 
 	amp = LPF.kr(Amplitude.kr(out), 5);
 	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
+
+	SendReply.ar(Impulse.ar(50), "/waveform_private", out, segment_id);
 }).send(s);
 
 OSCresponderNode(nil,"/amp_private",{|t,r,msg|
@@ -72,7 +80,14 @@ OSCresponderNode(nil,"/amp_private",{|t,r,msg|
 	var amp = msg[3];
 	if(~amp_subscriber != nil,
 		{ ~amp_subscriber.sendMsg("/amp", segment_id, amp) }, {});
-})).add; 
+}).add;
+
+OSCresponderNode(nil,"/waveform_private",{|t,r,msg|
+	var segment_id = msg[2];
+	var sample_value = msg[3];
+	if(~waveform_subscriber != nil,
+		{ ~waveform_subscriber.sendMsg("/waveform", segment_id, sample_value); }, {});
+}).add; 
 
 OSCresponder.new(nil, "/load",
   { arg t, r, msg;

@@ -8,6 +8,7 @@ from vector import Vector2d, Vector3d, Vector
 from bezier import make_bezier
 import colorsys
 from smoother import Smoother
+import collections
 
 NUM_STEPS = 12
 STAIRS_WIDTH = 1.5
@@ -16,6 +17,8 @@ STEP_DEPTH = 0.3
 WALL_X = -0.5
 WALL_TOP = 2
 WALL_WIDTH = 0.15
+WAVEFORM_WIDTH = .05
+WAVEFORM_THICKNESS = 1.0
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -34,21 +37,20 @@ CURSOR_THICKNESS = 2.0
 # CAMERA_Y_ORIENTATION = -37
 # CAMERA_X_ORIENTATION = 0
 
-CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.497856691748922])
+# CAMERA_POSITION = Vector(3, [-5.093144825477394, -3.8999999999999995, -7.497856691748922])
+# CAMERA_Y_ORIENTATION = -42
+# CAMERA_X_ORIENTATION = 25
+
+CAMERA_POSITION = Vector(3, [-3.0857530064008176, -0.8999999999999985, -5.26842221531674])
 CAMERA_Y_ORIENTATION = -42
 CAMERA_X_ORIENTATION = 25
-
-# CAMERA_POSITION = Vector(3, [-4.209222067879907, -3.8999999999999995, -1.6080925456044803])
-# CAMERA_Y_ORIENTATION = -90
-# CAMERA_X_ORIENTATION = 35
-
-MIN_GATHERED_SIZE = 0
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
         self.step = self.visualizer._byte_to_step(self.begin)
         self.amp = 0
+        self.waveform = collections.deque([], maxlen=30)
 
     def target_position(self):
         return self.wall_step_crossing()
@@ -126,24 +128,33 @@ class Segment(visualizer.Segment):
 
     def draw_playing(self):
         if self.is_playing():
-            self.draw_as_gathered(self.begin, self.playback_byte_cursor())
+            #self.draw_as_gathered(self.begin, self.playback_byte_cursor())
             self.draw_cursor()
 
     def draw_cursor(self):
         x = self.step.byte_to_x(self.playback_byte_cursor())
-        glLineWidth(CURSOR_THICKNESS)
-        self.visualizer.set_color(
-            self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H))
-        glBegin(GL_LINES)
-        glVertex3f(x, self.step.y, self.step.z1)
-        glVertex3f(x, self.step.y, self.step.z2)
-        glEnd()
+        #self.visualizer.set_color(self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H))
+        self.visualizer.set_color(CURSOR_COLOR_H)
+        self.draw_waveform_on_step_h(x, self.step.y, self.step.z1, self.step.z2)
 
+        glLineWidth(CURSOR_THICKNESS)
         glBegin(GL_LINES)
-        self.visualizer.set_color(
-            self.amp_controlled_color(STEPS_COLOR_V, CURSOR_COLOR_V))
+        self.visualizer.set_color(self.amp_controlled_color(STEPS_COLOR_V, CURSOR_COLOR_V))
         glVertex3f(x, self.step.y, self.step.z2)
         glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
+        glEnd()
+
+    def draw_waveform_on_step_h(self, x, y, z1, z2):
+        glLineWidth(WAVEFORM_THICKNESS)
+        glBegin(GL_LINE_STRIP)
+        glVertex3f(x, y, z1)
+        n = 1
+        for value in self.waveform:
+            z = z1 + (float(n) / (len(self.waveform) - 1)) * (z2 - z1)
+            x1 = x + value * WAVEFORM_WIDTH
+            glVertex3f(x1, y, z)
+            n += 1
+        glVertex3f(x, y, z2)
         glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
@@ -274,6 +285,7 @@ class Stairs(visualizer.Visualizer):
         self.enable_accum()
         self.enable_3d()
         self.subscribe_to_amp()
+        self.subscribe_to_waveform()
 
     def added_all_files(self):
         self._create_steps()
@@ -397,7 +409,10 @@ class Stairs(visualizer.Visualizer):
         raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
 
     def handle_segment_amplitude(self, segment, amp):
-        segment.amp = amp
+        segment.amp = abs(amp)
+
+    def handle_segment_waveform_value(self, segment, value):
+        segment.waveform.append(value)
 
 if __name__ == '__main__':
     visualizer.run(Stairs)

@@ -287,6 +287,14 @@ class Visualizer:
     def handle_segment_amplitude(self, segment, amp):
         pass
 
+    def handle_waveform_message(self, path, args, types, src, data):
+        (segment_id, value) = args
+        segment = self._segments_by_id[segment_id]
+        self.handle_segment_waveform_value(segment, value)
+
+    def handle_segment_waveform_value(self, segment, value):
+        pass
+
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController()
         self.server = OscReceiver(VISUALIZER_PORT, log_filename)
@@ -297,6 +305,7 @@ class Visualizer:
         self.server.add_method("/stopped_playing_segment", "i", self.handle_stopped_playing_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.add_method("/amp", "if", self.handle_amp_message)
+        self.server.add_method("/waveform", "if", self.handle_waveform_message)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -520,6 +529,9 @@ class Visualizer:
 
     def subscribe_to_amp(self):
         self.synth.subscribe_to_amp(VISUALIZER_PORT)
+
+    def subscribe_to_waveform(self):
+        self.synth.subscribe_to_waveform(VISUALIZER_PORT)
 
 
 def run(visualizer_class):

@@ -26,6 +26,9 @@ class SynthController:
     def subscribe_to_amp(self, port):
         self._send("/amp_subscribe", port)
 
+    def subscribe_to_waveform(self, port):
+        self._send("/waveform_subscribe", port)
+
     def _send(self, command, *args):
         with self._lock:
             liblo.send(self.target, command, *args)
