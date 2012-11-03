@@ -53,15 +53,8 @@ OSCresponder.new(nil, "/amp_subscribe",
   }).add;
 
 (
-o = OSCresponderNode(nil,"/amp_private",{|t,r,msg|
-	var segment_id = msg[2];
-	var amp = msg[3];
-	if(~amp_subscriber != nil,
-		{ ~amp_subscriber.sendMsg("/amp", segment_id, amp) }, {});
-})).add; 
-
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
-	var out, pointer, filelength, pitch, env, dir;
+	var out, pointer, filelength, pitch, env, dir, amp;
 	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
@@ -69,8 +62,17 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
 	Out.ar(channel, out);
-	SendReply.kr(Impulse.kr(24), "/amp_private", Amplitude.kr(out), segment_id);
+
+	amp = LPF.kr(Amplitude.kr(out), 5);
+	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
 }).send(s);
+
+OSCresponderNode(nil,"/amp_private",{|t,r,msg|
+	var segment_id = msg[2];
+	var amp = msg[3];
+	if(~amp_subscriber != nil,
+		{ ~amp_subscriber.sendMsg("/amp", segment_id, amp) }, {});
+})).add; 
 
 OSCresponder.new(nil, "/load",
   { arg t, r, msg;
