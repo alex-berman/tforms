@@ -25,8 +25,8 @@ CURVE_PRECISION_ON_WALL = 50
 CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-GATHERED_COLOR_V = (.62, .17, .20)
-GATHERED_COLOR_H = (.9, .3, .35)
+GATHERED_COLOR_V = Vector3d(.62, .17, .20)
+GATHERED_COLOR_H = Vector3d(.9, .3, .35)
 CURSOR_COLOR_V = Vector3d(.9, 0, 0)
 CURSOR_COLOR_H = Vector3d(1, 0, 0)
 STEPS_COLOR_V = WALL_COLOR_V = Vector3d(.58, .58, .58)
@@ -49,7 +49,6 @@ class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
         self.step = self.visualizer._byte_to_step(self.begin)
-        self.amp = 0
         self.waveform = collections.deque([], maxlen=30)
 
     def target_position(self):
@@ -133,13 +132,18 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self):
         x = self.step.byte_to_x(self.playback_byte_cursor())
-        #self.visualizer.set_color(self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H))
-        self.visualizer.set_color(CURSOR_COLOR_H)
+
+        if len(self.waveform) == 0:
+            amp = 0
+        else:
+            amp = max([abs(value) for value in self.waveform])
+
+        self.visualizer.set_color(self.amp_controlled_color(GATHERED_COLOR_H, CURSOR_COLOR_H, amp))
         self.draw_waveform_on_step_h(x, self.step.y, self.step.z1, self.step.z2)
 
         glLineWidth(CURSOR_THICKNESS)
         glBegin(GL_LINES)
-        self.visualizer.set_color(self.amp_controlled_color(STEPS_COLOR_V, CURSOR_COLOR_V))
+        self.visualizer.set_color(self.amp_controlled_color(GATHERED_COLOR_V, CURSOR_COLOR_V, amp))
         glVertex3f(x, self.step.y, self.step.z2)
         glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
@@ -173,8 +177,8 @@ class Segment(visualizer.Segment):
         glVertex3f(x2, y1, z)
         glEnd()
 
-    def amp_controlled_color(self, weak_color, strong_color):
-        return weak_color + (strong_color - weak_color) * self.amp
+    def amp_controlled_color(self, weak_color, strong_color, amp):
+        return weak_color + (strong_color - weak_color) * amp
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
@@ -284,7 +288,6 @@ class Stairs(visualizer.Visualizer):
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
         self.enable_accum()
         self.enable_3d()
-        self.subscribe_to_amp()
         self.subscribe_to_waveform()
 
     def added_all_files(self):
@@ -407,9 +410,6 @@ class Stairs(visualizer.Visualizer):
             if step.byte_offset <= byte and byte < step.byte_end:
                 return step
         raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
-
-    def handle_segment_amplitude(self, segment, amp):
-        segment.amp = abs(amp)
 
     def handle_segment_waveform_value(self, segment, value):
         segment.waveform.append(value)
