@@ -25,13 +25,17 @@ CURVE_PRECISION_ON_WALL = 50
 CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
-GATHERED_COLOR_V = Vector3d(.62, .17, .20)
-GATHERED_COLOR_H = Vector3d(.9, .3, .35)
 CURSOR_COLOR_V = Vector3d(.9, 0, 0)
 CURSOR_COLOR_H = Vector3d(1, 0, 0)
 STEPS_COLOR_V = WALL_COLOR_V = Vector3d(.58, .58, .58)
 STEPS_COLOR_H = WALL_COLOR_H = Vector3d(.9, .9, .9)
+#GATHERED_COLOR_V = #Vector3d(.62, .17, .20)
+#GATHERED_COLOR_H = #Vector3d(.9, .3, .35)
+GATHERED_OPACITY = .3
 CURSOR_THICKNESS = 2.0
+
+GATHERED_COLOR_V = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
+GATHERED_COLOR_H = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
 
 # CAMERA_POSITION = Vector3d(-4.6, -0.6, -8.6)
 # CAMERA_Y_ORIENTATION = -37
@@ -154,7 +158,7 @@ class Segment(visualizer.Segment):
         glVertex3f(x, y, z1)
         n = 1
         for value in self.waveform:
-            z = z1 + (float(n) / (len(self.waveform) - 1)) * (z2 - z1)
+            z = z1 + (float(n) / (len(self.waveform) + 1)) * (z2 - z1)
             x1 = x + value * WAVEFORM_WIDTH
             glVertex3f(x1, y, z)
             n += 1

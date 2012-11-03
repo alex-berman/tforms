@@ -9,6 +9,11 @@ class Peer:
         self.segment_cursor = None
 
 class Interpreter:
+    def __init__(self, max_pause_within_segment=None):
+        if max_pause_within_segment is None:
+            max_pause_within_segment = MAX_PAUSE_WITHIN_SEGMENT
+        self.max_pause_within_segment = max_pause_within_segment
+
     def interpret(self, chunks, files):
         self._files = files
         segments = []
@@ -32,7 +37,7 @@ class Interpreter:
             chunk["begin"] == segment["end"] and
             chunk["peeraddr"] == segment["peeraddr"] and
             chunk["filenum"] == segment["filenum"] and
-            ((chunk["t"] - (segment["onset"]+segment["duration"])) < MAX_PAUSE_WITHIN_SEGMENT) and
+            ((chunk["t"] - (segment["onset"]+segment["duration"])) < self.max_pause_within_segment) and
             (chunk["t"] - segment["onset"]) < MAX_SEGMENT_DURATION)
 
     def _new_segment(self, chunk):

@@ -74,7 +74,8 @@ class Orchestra:
                  visualizer_enabled=False,
                  loop=False,
                  osc_log=None,
-                 max_passivity=None):
+                 max_passivity=None,
+                 max_pause_within_segment=None):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -96,7 +97,7 @@ class Orchestra:
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
         self.chunks = self._filter_playable_chunks(tr_log.chunks)
-        self._interpret_chunks_to_score()
+        self._interpret_chunks_to_score(max_pause_within_segment)
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -112,8 +113,8 @@ class Orchestra:
         else:
             self.visualizer = None
 
-    def _interpret_chunks_to_score(self):
-        self.score = Interpreter().interpret(self.chunks, self.tr_log.files)
+    def _interpret_chunks_to_score(self, max_pause_within_segment):
+        self.score = Interpreter(max_pause_within_segment).interpret(self.chunks, self.tr_log.files)
         if self._max_passivity:
             self._reduce_max_passivity_in_score()
         for segment in self.score:

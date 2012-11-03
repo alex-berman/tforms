@@ -154,6 +154,7 @@ class Visualizer:
         self.export = args.export
         self.osc_log = args.osc_log
         self.ssr_enabled = args.ssr_enabled
+        self.waveform_gain = args.waveform_gain
         self.logger = logging.getLogger("visualizer")
         self.files = {}
         self.peers = {}
@@ -303,7 +304,7 @@ class Visualizer:
     def handle_waveform_message(self, path, args, types, src, data):
         (segment_id, value) = args
         segment = self._segments_by_id[segment_id]
-        self.handle_segment_waveform_value(segment, value)
+        self.handle_segment_waveform_value(segment, value * self.waveform_gain)
 
     def handle_segment_waveform_value(self, segment, value):
         pass
@@ -560,6 +561,7 @@ def run(visualizer_class):
     parser.add_argument('-export', dest='export', action='store_true')
     parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
     parser.add_argument("-no-ssr", dest="ssr_enabled", action="store_false", default=True)
+    parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     args = parser.parse_args()
 
     visualizer_class(args).run()
