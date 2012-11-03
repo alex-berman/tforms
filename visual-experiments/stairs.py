@@ -5,7 +5,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from gatherer import Gatherer
-from collections import OrderedDict
 from dynamic_scope import DynamicScope
 import random
 from vector import Vector2d, Vector3d

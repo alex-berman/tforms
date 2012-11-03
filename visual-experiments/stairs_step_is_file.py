@@ -3,7 +3,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from gatherer import Gatherer
-from collections import OrderedDict
 import random
 from vector import Vector2d, Vector3d, Vector
 from bezier import make_bezier
