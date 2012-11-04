@@ -19,6 +19,7 @@ from osc_receiver import OscReceiver
 from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
+import traceback_printer
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -365,7 +366,12 @@ class Visualizer:
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
             self.handle_incoming_messages()
-            self.render()
+            try:
+                self.render()
+            except Exception as error:
+                traceback_printer.print_traceback()
+                self.exiting = True
+                raise error
             if self.show_fps:
                 self.update_fps_history()
                 self.show_fps_if_timely()
