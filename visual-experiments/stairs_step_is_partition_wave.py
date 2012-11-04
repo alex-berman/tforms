@@ -316,11 +316,15 @@ class Stairs(visualizer.Visualizer):
                           segment.duration)
 
     def render(self):
+        glEnable(GL_DEPTH_TEST)
         for peer in self.peers.values():
             peer.update()
         self.accum(self.render_accum_objects)
         if len(self.files) > 0:
             self.draw_branches()
+
+        glDisable(GL_DEPTH_TEST)
+        self.draw_step_edges()
 
     def render_accum_objects(self):
         self.draw_step_surfaces()
@@ -353,6 +357,17 @@ class Stairs(visualizer.Visualizer):
             for vertex in surface:
                 glVertex3f(*vertex)
         glEnd()
+
+    def draw_step_edges(self):
+        glLineWidth(1.0)
+        glColor3f(*STEPS_COLOR_V)
+        for n in range(1, NUM_STEPS+1):
+            y = self.step_y(n)
+            z = self.step_z(n)
+            glBegin(GL_LINES)
+            glVertex3f(self.inner_x, y, z)
+            glVertex3f(self.outer_x, y, z)
+            glEnd()
 
     def draw_wall_surfaces(self):
         glColor3f(*WALL_COLOR_H)
