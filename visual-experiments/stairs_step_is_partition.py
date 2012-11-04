@@ -214,7 +214,7 @@ class Peer(visualizer.Peer):
     def update(self):
         for segment in self.segments.values():
             if not segment.gathered and not segment.is_playing():
-                self.visualizer.gatherer.add(segment)
+                self.visualizer.gather(segment)
                 segment.gathered = True
 
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
@@ -289,6 +289,7 @@ class Stairs(visualizer.Visualizer):
         self.files = {}
         self.segments = {}
         self.gatherer = Gatherer()
+        self._segments_split_at_step_boundaries = None
         self._dragging_orientation = False
         self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
@@ -303,6 +304,10 @@ class Stairs(visualizer.Visualizer):
             self.gathered_color_v = GATHERED_COLOR_V
             self.gathered_color_h = GATHERED_COLOR_H
             self.subscribe_to_amp()
+
+    def gather(self, segment):
+        self.gatherer.add(segment)
+        self._segments_split_at_step_boundaries = None
 
     def added_all_files(self):
         self._create_steps()
@@ -434,11 +439,19 @@ class Stairs(visualizer.Visualizer):
         return step * STEP_DEPTH
 
     def draw_gathered_segments(self):
+        if self._segments_split_at_step_boundaries is None:
+            self._segments_split_at_step_boundaries = self._split_gathered_segments_at_step_boundaries()
+        for segment in self._segments_split_at_step_boundaries:
+            segment.draw_gathered()
+
+    def _split_gathered_segments_at_step_boundaries(self):
+        result = []
         for piece in self.gatherer.pieces():
             segments = self._split_at_step_boundaries(piece)
             for segment in segments:
                 segment.step = self._byte_to_step(segment.torrent_begin)
-                segment.draw_gathered()
+                result.append(segment)
+        return result
 
     def _split_at_step_boundaries(self, segment):
         result = []
