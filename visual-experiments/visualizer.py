@@ -20,6 +20,7 @@ from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
 import traceback_printer
+from camera_script_interpreter import CameraScriptInterpreter
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -156,6 +157,7 @@ class Visualizer:
         self.osc_log = args.osc_log
         self.ssr_enabled = args.ssr_enabled
         self.waveform_gain = args.waveform_gain
+
         self.logger = logging.getLogger("visualizer")
         self.files = {}
         self.peers = {}
@@ -170,6 +172,11 @@ class Visualizer:
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._3d_enabled = False
         self.torrent_length = 0
+
+        if args.camera_script:
+            self._camera_script = CameraScriptInterpreter(args.camera_script)
+        else:
+            self._camera_script = None
 
         if self.ssr_enabled:
             self.ssr = SsrControl()
@@ -349,6 +356,17 @@ class Visualizer:
         if self.exiting:
             sys.exit()
 
+        try:
+            self._draw_gl_scene_error_handled()
+        except Exception as error:
+            traceback_printer.print_traceback()
+            self.exiting = True
+            raise error
+
+    def _draw_gl_scene_error_handled(self):
+        if self._camera_script:
+            self._move_camera_by_script()
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -366,12 +384,7 @@ class Visualizer:
             glTranslatef(MARGIN, MARGIN, 0)
             self.draw_border()
             self.handle_incoming_messages()
-            try:
-                self.render()
-            except Exception as error:
-                traceback_printer.print_traceback()
-                self.exiting = True
-                raise error
+            self.render()
             if self.show_fps:
                 self.update_fps_history()
                 self.show_fps_if_timely()
@@ -555,6 +568,9 @@ class Visualizer:
     def subscribe_to_waveform(self):
         self.synth.subscribe_to_waveform(VISUALIZER_PORT)
 
+    def _move_camera_by_script(self):
+        position = self._camera_script.position(self.current_time())
+        self._set_camera_position(position)
 
 def run(visualizer_class):
     print "Hit ESC key to quit."
@@ -569,6 +585,7 @@ def run(visualizer_class):
     parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
     parser.add_argument("-no-ssr", dest="ssr_enabled", action="store_false", default=True)
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
+    parser.add_argument("-camera-script", dest="camera_script", type=str)
     args = parser.parse_args()
 
     visualizer_class(args).run()
