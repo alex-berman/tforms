@@ -1,4 +1,5 @@
 from vector import Vector
+import math
 
 class CameraScriptInterpreter:
     def __init__(self, script_filename):
@@ -10,7 +11,7 @@ class CameraScriptInterpreter:
 
     def _parse_keyframe(self, keyframe):
         t, position, y_orientation, x_orientation = keyframe
-        return {"t": t,
+        return {"t": float(t),
                 "position": Vector(3, position),
                 "orientation": Vector(2, (x_orientation, y_orientation))}
 
@@ -27,7 +28,7 @@ class CameraScriptInterpreter:
                 n2 = n1 + 1
                 t1 = self._script[n1]["t"]
                 t2 = self._script[n2]["t"]
-                opacity2 = (t - t1) / (t2 - t1)
+                opacity2 = self._sigmoid((t - t1) / (t2 - t1))
 
                 position1 = self._script[n1]["position"]
                 position2 = self._script[n2]["position"]
@@ -44,3 +45,6 @@ class CameraScriptInterpreter:
             n2 = n1 + 1
             if self._script[n1]["t"] < t <= self._script[n2]["t"]:
                 return n1
+
+    def _sigmoid(self, v):
+        return 1.0 / (1.0 + math.exp((-v + .5) * 20))
