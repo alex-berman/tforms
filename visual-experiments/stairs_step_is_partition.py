@@ -20,6 +20,7 @@ WALL_TOP = 2
 WALL_WIDTH = 0.15
 WAVEFORM_WIDTH = .05
 WAVEFORM_THICKNESS = 2.0
+WAVEFORM_ALONG_X = True
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -47,6 +48,11 @@ CAMERA_POSITION = Vector(3, [-3.0857530064008176, -0.8999999999999985, -5.268422
 CAMERA_Y_ORIENTATION = -42
 CAMERA_X_ORIENTATION = 25
 
+
+def clamp(value, min_value, max_value):
+    return max(min(max_value, value), min_value)
+
+
 class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
@@ -58,7 +64,14 @@ class Segment(visualizer.Segment):
         return self.wall_step_crossing()
 
     def wall_step_crossing(self):
-        return Vector2d(self.step.z2, self.step.y)
+        if WAVEFORM_ALONG_X:
+            if self.peer.departure_position[0] > self.step.z1:
+                z = self.step.z1 + STEP_DEPTH * self.playback_byte_cursor() / self.f.length
+            else:
+                z = self.step.z2 - STEP_DEPTH * self.playback_byte_cursor() / self.f.length
+            return Vector2d(z, self.step.y)
+        else:
+            return Vector2d(self.step.z2, self.step.y)
 
     def decay_time(self):
         return self.age() - self.duration
@@ -136,20 +149,30 @@ class Segment(visualizer.Segment):
 
     def draw_cursor(self):
         x = self.step.byte_to_x(self.playback_torrent_byte_cursor())
-        glLineWidth(CURSOR_THICKNESS)
 
         if self.visualizer.args.waveform:
             if len(self.waveform) == 0:
                 amp = 0
             else:
                 amp = max([abs(value) for value in self.waveform])
-            self.visualizer.set_color(self.amp_controlled_color(
+
+            if WAVEFORM_ALONG_X:
+                z = self.wall_step_crossing()[0]
+                self.peer.set_color(0)
+                self.draw_waveform_on_step_along_x(
+                    z, self.step.y, x, self.visualizer.inner_x)
+            else:
+                self.visualizer.set_color(self.amp_controlled_color(
                     self.visualizer.gathered_color_h, CURSOR_COLOR_H, amp))
-            self.draw_waveform_on_step_h(x, self.step.y, self.step.z1, self.step.z2)
+                self.draw_waveform_on_step_along_z(
+                    x, self.step.y, self.step.z1, self.step.z2)
         else:
             amp = self.amp
+
+        if not (self.visualizer.args.waveform and not WAVEFORM_ALONG_X):
             self.visualizer.set_color(
                 self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H, amp))
+            glLineWidth(CURSOR_THICKNESS)
             glBegin(GL_LINES)
             glVertex3f(x, self.step.y, self.step.z1)
             glVertex3f(x, self.step.y, self.step.z2)
@@ -162,17 +185,32 @@ class Segment(visualizer.Segment):
         glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
 
-    def draw_waveform_on_step_h(self, x, y, z1, z2):
+    def draw_waveform_on_step_along_x(self, z_baseline, y, x1, x2):
         glLineWidth(WAVEFORM_THICKNESS)
         glBegin(GL_LINE_STRIP)
-        glVertex3f(x, y, z1)
+        glVertex3f(x1, y, z_baseline)
+        n = 1
+        for value in self.waveform:
+            x = x1 + (float(n) / (len(self.waveform) + 1)) * (x2 - x1)
+            z = clamp(z_baseline + value * WAVEFORM_WIDTH,
+                      self.step.z1, self.step.z2)
+            glVertex3f(x, y, z)
+            n += 1
+        glVertex3f(x2, y, z_baseline)
+        glEnd()
+
+    def draw_waveform_on_step_along_z(self, x_baseline, y, z1, z2):
+        glLineWidth(WAVEFORM_THICKNESS)
+        glBegin(GL_LINE_STRIP)
+        glVertex3f(x_baseline, y, z1)
         n = 1
         for value in self.waveform:
             z = z1 + (float(n) / (len(self.waveform) + 1)) * (z2 - z1)
-            x1 = x + value * WAVEFORM_WIDTH
-            glVertex3f(x1, y, z)
+            x = clamp(x_baseline + value * WAVEFORM_WIDTH, 
+                      self.visualizer.inner_x, self.visualizer.outer_x)
+            glVertex3f(x, y, z)
             n += 1
-        glVertex3f(x, y, z2)
+        glVertex3f(x_baseline, y, z2)
         glEnd()
 
     def draw_xz_polygon(self, y, x1, z1, x2, z2):
