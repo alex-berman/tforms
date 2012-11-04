@@ -569,8 +569,10 @@ class Visualizer:
         self.synth.subscribe_to_waveform(VISUALIZER_PORT)
 
     def _move_camera_by_script(self):
-        position = self._camera_script.position(self.current_time())
+        position, orientation = self._camera_script.position_and_orientation(
+            self.current_time())
         self._set_camera_position(position)
+        self._set_camera_orientation(orientation.y, orientation.x)
 
 def run(visualizer_class):
     print "Hit ESC key to quit."

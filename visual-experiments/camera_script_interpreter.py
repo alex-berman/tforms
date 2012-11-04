@@ -12,24 +12,32 @@ class CameraScriptInterpreter:
         t, position, y_orientation, x_orientation = keyframe
         return {"t": t,
                 "position": Vector(3, position),
-                "y_orientation": y_orientation,
-                "x_orientation": x_orientation}
+                "orientation": Vector(2, (x_orientation, y_orientation))}
 
-    def position(self, t):
+    def position_and_orientation(self, t):
         if t < self._script[0]["t"]:
-            return self._script[0]["position"]
+            return (self._script[0]["position"],
+                    self._script[0]["orientation"])
         else:
             n1 = self._get_keyframe_index(t)
             if n1 is None:
-                return self._script[-1]["position"]
+                return (self._script[-1]["position"],
+                        self._script[-1]["orientation"])
             else:
                 n2 = n1 + 1
                 t1 = self._script[n1]["t"]
                 t2 = self._script[n2]["t"]
                 opacity2 = (t - t1) / (t2 - t1)
+
                 position1 = self._script[n1]["position"]
                 position2 = self._script[n2]["position"]
-                return position1 + (position2 - position1) * opacity2
+                position = position1 + (position2 - position1) * opacity2
+
+                orientation1 = self._script[n1]["orientation"]
+                orientation2 = self._script[n2]["orientation"]
+                orientation = orientation1 + (orientation2 - orientation1) * opacity2
+
+                return (position, orientation)
 
     def _get_keyframe_index(self, t):
         for n1 in range(len(self._script) - 1):
