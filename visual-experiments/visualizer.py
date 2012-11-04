@@ -149,6 +149,7 @@ class Visualizer:
         self.chunk_class = chunk_class
         self.segment_class = segment_class
         self.peer_class = peer_class
+        self.args = args
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
@@ -590,6 +591,7 @@ def run(visualizer_class):
     parser.add_argument('-export', dest='export', action='store_true')
     parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
     parser.add_argument("-no-ssr", dest="ssr_enabled", action="store_false", default=True)
+    parser.add_argument("-waveform", dest="waveform", action='store_true')
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     parser.add_argument("-camera-script", dest="camera_script", type=str)
     args = parser.parse_args()
