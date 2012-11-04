@@ -170,6 +170,7 @@ class Visualizer:
         self.space = Space()
         self._segments_by_id = {}
         self._warned_about_missing_pan_segment = False
+        self._warned_about_max_sources = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._3d_enabled = False
         self.torrent_length = 0
@@ -270,8 +271,9 @@ class Visualizer:
 
         if self.ssr_enabled:
             segment.sound_source_id = self.ssr.allocate_source()
-            if not segment.sound_source_id:
+            if not segment.sound_source_id and not self._warned_about_max_sources:
                 print "WARNING: max sources exceeded, skipping segment playback"
+                self._warned_about_max_sources = True
         else:
             segment.sound_source_id = None
             

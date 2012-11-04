@@ -68,6 +68,7 @@ class Orchestra:
                  realtime=False,
                  timefactor=1,
                  start_time=0,
+                 ff_to_start=False,
                  quiet=False,
                  predecoded=False,
                  file_location=None,
@@ -103,7 +104,14 @@ class Orchestra:
         self._playing = False
         self._quitting = False
         self._informed_visualizer_about_torrent = False
-        self.set_time_cursor(start_time)
+
+        if ff_to_start:
+            self._ff_to_time = start_time
+            self.set_time_cursor(0)
+        else:
+            self._ff_to_time = None
+            self.set_time_cursor(start_time)
+
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
@@ -355,7 +363,10 @@ class Orchestra:
         player = self.get_player_for_segment(segment)
         if not player:
             logger.debug("get_player_for_segment returned None - skipping playback")
-        if not self.fast_forwarding:
+
+        if self.fast_forwarding:
+            self._stop_ff_if_necessary()
+        else:
             now = self.get_current_log_time()
             time_margin = segment["onset"] - now
             logger.debug("time_margin=%f-%f=%f" % (segment["onset"], now, time_margin))
@@ -373,7 +384,10 @@ class Orchestra:
         logger.debug("handling chunk %s" % chunk)
         player = self.get_player_for_chunk(chunk)
         logger.debug("get_player_for_chunk returned %s" % player)
-        if not self.fast_forwarding:
+
+        if self.fast_forwarding:
+            self._stop_ff_if_necessary()
+        else:
             now = self.get_current_log_time()
             time_margin = chunk["t"] - now
             logger.debug("time_margin=%f-%f=%f" % (chunk["t"], now, time_margin))
@@ -386,6 +400,13 @@ class Orchestra:
         if player and player.enabled:
             player.visualize(chunk)
         self._log_time_for_last_handled_event = chunk["t"]
+
+    def _stop_ff_if_necessary(self):
+        if self._ff_to_time is not None and \
+                self._log_time_for_last_handled_event >= self._ff_to_time:
+            self._ff_to_time = None
+            self.fast_forwarding = False
+            self.set_time_cursor(self.log_time_played_from)
 
     def highlight_segment(self, segment):
         if self.gui:

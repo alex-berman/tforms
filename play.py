@@ -24,6 +24,7 @@ parser.add_argument("--download-location", dest="download_location", default="..
 parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
 parser.add_argument("--visualizer", dest="visualizer")
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
+parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
 parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
 parser.add_argument("--loop", dest="loop", action="store_true")
 parser.add_argument("--osc-log", dest="osc_log")
@@ -58,6 +59,7 @@ orchestra = Orchestra(sessiondir,
                       realtime=options.realtime,
                       timefactor=options.timefactor,
                       start_time=options.start_time,
+                      ff_to_start=options.ff_to_start,
                       quiet=options.quiet,
                       predecoded=options.predecode,
                       file_location=options.download_location,
@@ -105,7 +107,7 @@ def run_offline():
 def play():
     global orchestra_thread
     quit_on_end = False
-    orchestra.fast_forwarding = options.ff
+    orchestra.fast_forwarding = options.ff or options.ff_to_start
     orchestra_thread = threading.Thread(target=orchestra.play_non_realtime,
                                         args=[quit_on_end])
     orchestra_thread.daemon = True
