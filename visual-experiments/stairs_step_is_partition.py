@@ -329,6 +329,7 @@ class Stairs(visualizer.Visualizer):
 
     def render(self):
         glEnable(GL_DEPTH_TEST)
+        glEnable(GL_POLYGON_OFFSET_FILL)
         for peer in self.peers.values():
             peer.update()
         self.accum(self.render_accum_objects)
@@ -339,9 +340,11 @@ class Stairs(visualizer.Visualizer):
         self.draw_step_edges()
 
     def render_accum_objects(self):
+        glPolygonOffset(1.0, 0.0)
         self.draw_step_surfaces()
         self.draw_wall_surfaces()
         if len(self.files) > 0:
+            glPolygonOffset(0.0, 0.0)
             self.draw_gathered_segments()
 
     def draw_branches(self):
