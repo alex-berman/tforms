@@ -9,6 +9,7 @@ from bezier import make_bezier
 import colorsys
 from smoother import Smoother
 import collections
+import copy
 
 NUM_STEPS = 12
 STAIRS_WIDTH = 1.5
@@ -18,7 +19,7 @@ WALL_X = -0.5
 WALL_TOP = 2
 WALL_WIDTH = 0.15
 WAVEFORM_WIDTH = .05
-WAVEFORM_THICKNESS = 1.0
+WAVEFORM_THICKNESS = 2.0
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -117,12 +118,12 @@ class Segment(visualizer.Segment):
     def draw_as_gathered(self, begin, end):
         x1 = self.step.byte_to_x(begin)
         x2 = self.step.byte_to_x(end)
-        self.visualizer.set_color(GATHERED_COLOR_H)
+        self.visualizer.set_color(self.visualizer.gathered_color_h)
         self.draw_xz_polygon(self.step.y,
                              x1, self.step.z1,
                              x2, self.step.z2)
 
-        self.visualizer.set_color(GATHERED_COLOR_V)
+        self.visualizer.set_color(self.visualizer.gathered_color_v)
         self.draw_xy_polygon(self.step.z2,
                              x1, self.step.y,
                              x2, self.step.neighbour_y)
@@ -142,7 +143,8 @@ class Segment(visualizer.Segment):
                 amp = 0
             else:
                 amp = max([abs(value) for value in self.waveform])
-            self.visualizer.set_color(self.amp_controlled_color(GATHERED_COLOR_H, CURSOR_COLOR_H, amp))
+            self.visualizer.set_color(self.amp_controlled_color(
+                    self.visualizer.gathered_color_h, CURSOR_COLOR_H, amp))
             self.draw_waveform_on_step_h(x, self.step.y, self.step.z1, self.step.z2)
         else:
             amp = self.amp
@@ -154,7 +156,8 @@ class Segment(visualizer.Segment):
             glEnd()
 
         glBegin(GL_LINES)
-        self.visualizer.set_color(self.amp_controlled_color(GATHERED_COLOR_V, CURSOR_COLOR_V, amp))
+        self.visualizer.set_color(self.amp_controlled_color(
+                self.visualizer.gathered_color_v, CURSOR_COLOR_V, amp))
         glVertex3f(x, self.step.y, self.step.z2)
         glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
@@ -211,7 +214,7 @@ class Peer(visualizer.Peer):
     def update(self):
         for segment in self.segments.values():
             if not segment.gathered and not segment.is_playing():
-                segment.step.gatherer.add(segment)
+                self.visualizer.gatherer.add(segment)
                 segment.gathered = True
 
         outdated = filter(lambda segment_id: self.segments[segment_id].outdated(),
@@ -252,7 +255,6 @@ class Step:
         self.byte_offset = byte_offset
         self.byte_size = byte_size
         self.byte_end = byte_offset + byte_size
-        self.gatherer = Gatherer()
         self.y = visualizer.step_y(n+1)
         self.z1 = visualizer.step_z(n)
         self.z2 = visualizer.step_z(n+1)
@@ -261,14 +263,7 @@ class Step:
         self.neighbour_z1 = visualizer.step_z(n+1)
 
     def __repr__(self):
-        return "Step(%s, %s, %s)" % (self.n, self.byte_offset, self.byte_size)
-
-    def render(self):
-        self.draw_gathered_segments()
-
-    def draw_gathered_segments(self):
-        for segment in self.gatherer.pieces():
-            segment.draw_gathered()
+        return "Step(n=%s, byte_offset=%s, byte_end=%s)" % (self.n, self.byte_offset, self.byte_end)
 
     def byte_to_x(self, byte):
         return WALL_X + float(byte - self.byte_offset) / self.byte_size * STAIRS_WIDTH
@@ -293,6 +288,7 @@ class Stairs(visualizer.Visualizer):
         self.stairs_depth = self.step_z(NUM_STEPS)
         self.files = {}
         self.segments = {}
+        self.gatherer = Gatherer()
         self._dragging_orientation = False
         self._dragging_y_position = False
         self._set_camera_position(CAMERA_POSITION)
@@ -300,10 +296,12 @@ class Stairs(visualizer.Visualizer):
         self.enable_accum()
         self.enable_3d()
         if self.args.waveform:
-            GATHERED_COLOR_V = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
-            GATHERED_COLOR_H = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
+            self.gathered_color_v = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
+            self.gathered_color_h = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
             self.subscribe_to_waveform()
         else:
+            self.gathered_color_v = GATHERED_COLOR_V
+            self.gathered_color_h = GATHERED_COLOR_H
             self.subscribe_to_amp()
 
     def added_all_files(self):
@@ -436,8 +434,25 @@ class Stairs(visualizer.Visualizer):
         return step * STEP_DEPTH
 
     def draw_gathered_segments(self):
+        for piece in self.gatherer.pieces():
+            segments = self._split_at_step_boundaries(piece)
+            for segment in segments:
+                segment.step = self._byte_to_step(segment.torrent_begin)
+                segment.draw_gathered()
+
+    def _split_at_step_boundaries(self, segment):
+        result = []
         for step in self._steps:
-            step.render()
+            if self._segment_matches_step(segment, step):
+                new_segment = copy.copy(segment)
+                new_segment.torrent_begin = max(segment.torrent_begin, step.byte_offset)
+                new_segment.torrent_end = min(segment.torrent_end, step.byte_offset + step.byte_size)
+                result.append(new_segment)
+        return result
+
+    def _segment_matches_step(self, segment, step):
+        return (step.byte_offset <= segment.torrent_begin < (step.byte_offset + step.byte_size) or
+                step.byte_offset < segment.torrent_end < (step.byte_offset + step.byte_size))
 
     def _byte_to_step(self, byte):
         for step in self._steps:

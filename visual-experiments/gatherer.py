@@ -1,3 +1,4 @@
+
 class Gatherer:
     def __init__(self):
         self._pieces = dict()
@@ -9,9 +10,14 @@ class Gatherer:
             new_extension = [new_piece]
             new_extension.extend([self._pieces[key] for key in overlapping_pieces])
             kept_overlapping_piece = self._pieces[overlapping_pieces.pop(0)]
-            kept_overlapping_piece.begin = min([piece.begin for piece in new_extension])
-            kept_overlapping_piece.end = max([piece.end for piece in new_extension])
-            kept_overlapping_piece.byte_size = kept_overlapping_piece.end - kept_overlapping_piece.begin
+            kept_overlapping_piece.torrent_begin = min([piece.torrent_begin for piece in new_extension])
+            kept_overlapping_piece.torrent_end = max([piece.torrent_end for piece in new_extension])
+            kept_overlapping_piece.byte_size = \
+                kept_overlapping_piece.torrent_end - kept_overlapping_piece.torrent_begin
+            kept_overlapping_piece.begin = \
+                kept_overlapping_piece.torrent_begin - kept_overlapping_piece.f.offset
+            kept_overlapping_piece.end = \
+                kept_overlapping_piece.torrent_end - kept_overlapping_piece.f.offset
             for key in overlapping_pieces:
                 del self._pieces[key]
         else:
@@ -21,7 +27,7 @@ class Gatherer:
     def would_append(self, new_piece):
         for key in self._overlapping_pieces(new_piece):
             overlapping_piece = self._pieces[key]
-            if overlapping_piece.end <= new_piece.begin:
+            if overlapping_piece.torrent_end <= new_piece.torrent_begin:
                 return overlapping_piece
 
     def pieces(self):
@@ -35,11 +41,11 @@ class Gatherer:
                       self._pieces.keys())
 
     def _pieces_overlap(self, piece1, piece2):
-        return ((piece2.begin <= piece1.begin <= piece2.end) or
-                (piece2.begin <= piece1.end <= piece2.end) or
-                (piece1.begin <= piece2.begin <= piece1.end) or
-                (piece1.begin <= piece2.end <= piece1.end))
+        return ((piece2.torrent_begin <= piece1.torrent_begin <= piece2.torrent_end) or
+                (piece2.torrent_begin <= piece1.torrent_end <= piece2.torrent_end) or
+                (piece1.torrent_begin <= piece2.torrent_begin <= piece1.torrent_end) or
+                (piece1.torrent_begin <= piece2.torrent_end <= piece1.torrent_end))
 
     def __str__(self):
-        return "Gatherer(%s)" % ["Piece(%s,%s)" % (piece.begin, piece.end)
+        return "Gatherer(%s)" % ["Piece(%s,%s)" % (piece.torrent_begin, piece.torrent_end)
                                  for piece in self._pieces.values()]

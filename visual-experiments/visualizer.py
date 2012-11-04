@@ -98,7 +98,7 @@ class Chunk:
     def is_playing(self):
         return self.relative_age() < 1
 
-    def __str__(self):
+    def __repr__(self):
         return "Chunk(id=%s, begin=%s, end=%s, filenum=%s)" % (
             self.id, self.begin, self.end, self.filenum)
 
@@ -128,9 +128,9 @@ class Segment(Chunk):
         Chunk.prepend(self, other)
         self.torrent_begin = other.torrent_begin
 
-    def __str__(self):
-        return "Segment(id=%s, begin=%s, end=%s, filenum=%s, duration=%s)" % (
-            self.id, self.begin, self.end, self.filenum, self.duration)
+    def __repr__(self):
+        return "Segment(id=%s, begin=%s, end=%s, torrent_begin=%s, torrent_end=%s, filenum=%s, duration=%s)" % (
+            self.id, self.begin, self.end, self.torrent_begin, self.torrent_end, self.filenum, self.duration)
 
 class Peer:
     def __init__(self, visualizer):
