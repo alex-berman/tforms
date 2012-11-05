@@ -21,10 +21,11 @@ WALL_WIDTH = 0.15
 WAVEFORM_WIDTH = .05
 WAVEFORM_THICKNESS = 2.0
 WAVEFORM_ALONG_X = True
+WAVEFORM_AMOUNT_ALONG_WALL = 0.5
+WAVEFORM_SIZE = 30
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
-CURVE_PRECISION_ON_STEPS = 10
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 CURSOR_COLOR_V = Vector3d(.9, 0, 0)
@@ -57,7 +58,8 @@ class Segment(visualizer.Segment):
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
         self.step = self.visualizer._byte_to_step(self.torrent_begin)
-        self.waveform = collections.deque([], maxlen=30)
+        self.waveform = collections.deque([], maxlen=WAVEFORM_SIZE)
+        self.waveform.extend([0.0] * WAVEFORM_SIZE)
         self.amp = 0
 
     def target_position(self):
@@ -80,16 +82,32 @@ class Segment(visualizer.Segment):
         return (self.age() - self.duration) > SEGMENT_DECAY_TIME
 
     def draw_curve(self):
+        curve = self.curve_on_wall()
+        if self.visualizer.args.waveform and \
+                self.visualizer.waveform_frames_along_wall > 0 and \
+                self.is_playing():
+            curve = self._stretch_curve_with_waveform(curve)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
         glLineWidth(2)
         glBegin(GL_LINE_STRIP)
-        for z,y in self.curve_on_wall():
+        for z,y in curve:
             glVertex3f(WALL_X, y, z)
         glEnd()
+
+    def _stretch_curve_with_waveform(self, curve):
+        result = [curve[0]]
+        for n in range(CURVE_PRECISION_ON_WALL-1):
+            relative_n = float(n) / (CURVE_PRECISION_ON_WALL-1)
+            x1, y1 = curve[n]
+            x2, y2 = curve[n+1]
+            w = self.waveform[
+                int(relative_n * self.visualizer.waveform_frames_along_wall)]
+            v = (x2 + w * WAVEFORM_WIDTH * relative_n, y2)
+            result.append(v)
+        return result
 
     def curve_on_wall(self):
         control_points = []
@@ -142,7 +160,7 @@ class Segment(visualizer.Segment):
                 z = self.wall_step_crossing()[0]
                 self.peer.set_color(0)
                 self.draw_waveform_on_step_along_x(
-                    z, self.step.y, x, self.visualizer.inner_x)
+                    z, self.step.y, self.visualizer.inner_x, x)
             else:
                 self.visualizer.set_color(self.amp_controlled_color(
                     self.visualizer.gathered_color_h, CURSOR_COLOR_H, amp))
@@ -171,9 +189,13 @@ class Segment(visualizer.Segment):
         glLineWidth(WAVEFORM_THICKNESS)
         glBegin(GL_LINE_STRIP)
         glVertex3f(x1, y, z_baseline)
-        n = 1
-        for value in self.waveform:
-            x = x1 + (float(n) / (len(self.waveform) + 1)) * (x2 - x1)
+        n = 0
+        for waveform_frame in range(
+            self.visualizer.waveform_frames_along_wall,
+            self.visualizer.waveform_frames_along_wall + \
+                self.visualizer.waveform_frames_along_step):
+            value = self.waveform[waveform_frame]
+            x = x1 + (float(n) / self.visualizer.waveform_frames_along_step) * (x2 - x1)
             z = clamp(z_baseline + value * WAVEFORM_WIDTH,
                       self.step.z1, self.step.z2)
             glVertex3f(x, y, z)
@@ -317,6 +339,8 @@ class Stairs(visualizer.Visualizer):
         self.enable_accum()
         self.enable_3d()
         if self.args.waveform:
+            self.waveform_frames_along_wall = int(WAVEFORM_AMOUNT_ALONG_WALL * WAVEFORM_SIZE)
+            self.waveform_frames_along_step = WAVEFORM_SIZE - self.waveform_frames_along_wall
             self.gathered_color_v = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
             self.gathered_color_h = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
             self.subscribe_to_waveform()
@@ -494,7 +518,7 @@ class Stairs(visualizer.Visualizer):
         raise Exception("failed to get step for byte %s with steps %s" % (byte, self._steps))
 
     def handle_segment_waveform_value(self, segment, value):
-        segment.waveform.append(value)
+        segment.waveform.appendleft(value)
 
     def handle_segment_amplitude(self, segment, amp):
         segment.amp = amp
