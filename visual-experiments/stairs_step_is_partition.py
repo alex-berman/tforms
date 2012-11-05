@@ -10,6 +10,7 @@ import colorsys
 from smoother import Smoother
 import collections
 import copy
+import math
 
 NUM_STEPS = 12
 STAIRS_WIDTH = 1.5
@@ -22,7 +23,7 @@ WAVEFORM_WIDTH = .05
 WAVEFORM_THICKNESS = 2.0
 WAVEFORM_ALONG_X = True
 WAVEFORM_AMOUNT_ALONG_WALL = 0.5
-WAVEFORM_SIZE = 30
+WAVEFORM_SIZE = 60
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -55,6 +56,8 @@ def clamp(value, min_value, max_value):
 
 
 class Segment(visualizer.Segment):
+    HALF_PI = math.pi/2
+
     def __init__(self, *args):
         visualizer.Segment.__init__(self, *args)
         self.step = self.visualizer._byte_to_step(self.torrent_begin)
@@ -103,9 +106,13 @@ class Segment(visualizer.Segment):
             relative_n = float(n) / (CURVE_PRECISION_ON_WALL-1)
             x1, y1 = curve[n]
             x2, y2 = curve[n+1]
+            bearing = math.atan2(y2 - y1, x2 - x1)
+            stretch_angle = bearing + self.HALF_PI
             w = self.waveform[
                 int(relative_n * self.visualizer.waveform_frames_along_wall)]
-            v = (x2 + w * WAVEFORM_WIDTH * relative_n, y2)
+            stretch = w * WAVEFORM_WIDTH * relative_n
+            v = (x2 + stretch * math.cos(stretch_angle),
+                 y2 + stretch * math.sin(stretch_angle))
             result.append(v)
         return result
 
