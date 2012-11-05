@@ -27,6 +27,7 @@ WAVEFORM_SIZE = 60
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
+RELATIVE_BRANCHING_POSITION = .4
 CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 CURSOR_COLOR_V = Vector3d(.9, 0, 0)
@@ -101,11 +102,11 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def _stretch_curve_with_waveform(self, curve):
-        result = [curve[0]]
-        for n in range(CURVE_PRECISION_ON_WALL-1):
-            relative_n = float(n) / (CURVE_PRECISION_ON_WALL-1)
-            x1, y1 = curve[n]
-            x2, y2 = curve[n+1]
+        result = curve[0:self.visualizer.curve_vertices_before_branching]
+        for n in range(self.visualizer.curve_vertices_after_branching):
+            relative_n = float(n) / self.visualizer.curve_vertices_after_branching
+            x1, y1 = curve[self.visualizer.curve_vertices_before_branching + n - 1]
+            x2, y2 = curve[self.visualizer.curve_vertices_before_branching + n]
             bearing = math.atan2(y2 - y1, x2 - x1)
             stretch_angle = bearing + self.HALF_PI
             w = self.waveform[
@@ -280,7 +281,8 @@ class Peer(visualizer.Peer):
             average_target_position = \
                 sum([segment.target_position() for segment in self.segments.values()]) / \
                 len(self.segments)
-            new_branching_position = self.departure_position*0.4 + average_target_position*0.6
+            new_branching_position = self.departure_position * RELATIVE_BRANCHING_POSITION \
+                + average_target_position * (1-RELATIVE_BRANCHING_POSITION)
             self.smoothed_branching_position.smooth(
                 new_branching_position, self.visualizer.time_increment)
 
@@ -350,6 +352,8 @@ class Stairs(visualizer.Visualizer):
             self.waveform_frames_along_step = WAVEFORM_SIZE - self.waveform_frames_along_wall
             self.gathered_color_v = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
             self.gathered_color_h = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
+            self.curve_vertices_before_branching = int(CURVE_PRECISION_ON_WALL * RELATIVE_BRANCHING_POSITION)
+            self.curve_vertices_after_branching = CURVE_PRECISION_ON_WALL - self.curve_vertices_before_branching
             self.subscribe_to_waveform()
         else:
             self.gathered_color_v = GATHERED_COLOR_V
