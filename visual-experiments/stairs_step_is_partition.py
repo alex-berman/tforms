@@ -22,8 +22,9 @@ WALL_WIDTH = 0.15
 WAVEFORM_WIDTH = .05
 WAVEFORM_THICKNESS = 2.0
 WAVEFORM_ALONG_X = True
-WAVEFORM_AMOUNT_ALONG_WALL = 0.5
+WAVEFORM_ALONG_WALL = True
 WAVEFORM_SIZE = 60
+WAVEFORM_LENGTH = STAIRS_WIDTH + 0.3
 
 CONTROL_POINTS_BEFORE_BRANCH = 15
 CURVE_PRECISION_ON_WALL = 50
@@ -88,7 +89,7 @@ class Segment(visualizer.Segment):
     def draw_curve(self):
         curve = self.curve_on_wall()
         if self.visualizer.args.waveform and \
-                self.visualizer.waveform_frames_along_wall > 0 and \
+                WAVEFORM_ALONG_WALL and \
                 self.is_playing():
             curve = self._stretch_curve_with_waveform(curve)
         glEnable(GL_LINE_SMOOTH)
@@ -102,19 +103,36 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def _stretch_curve_with_waveform(self, curve):
-        result = curve[0:self.visualizer.curve_vertices_before_branching]
-        for n in range(self.visualizer.curve_vertices_after_branching):
-            relative_n = float(n) / self.visualizer.curve_vertices_after_branching
-            x1, y1 = curve[self.visualizer.curve_vertices_before_branching + n - 1]
-            x2, y2 = curve[self.visualizer.curve_vertices_before_branching + n]
+        vertex_for_waveform_start = self._vertex_for_waveform_start(curve)
+        num_waveform_vertices = CURVE_PRECISION_ON_WALL - vertex_for_waveform_start
+        result = curve[0:vertex_for_waveform_start]
+        for n in range(num_waveform_vertices):
+            relative_n = float(n) / num_waveform_vertices
+            x1, y1 = curve[vertex_for_waveform_start + n - 1]
+            x2, y2 = curve[vertex_for_waveform_start + n]
             bearing = math.atan2(y2 - y1, x2 - x1)
             stretch_angle = bearing + self.HALF_PI
             w = self.waveform[
-                int(relative_n * self.visualizer.waveform_frames_along_wall)]
+                int(relative_n * self.waveform_frames_along_wall)]
             stretch = w * WAVEFORM_WIDTH * relative_n
             v = (x2 + stretch * math.cos(stretch_angle),
                  y2 + stretch * math.sin(stretch_angle))
             result.append(v)
+        return result
+
+    def _vertex_for_waveform_start(self, curve):
+        waveform_length_on_wall = WAVEFORM_LENGTH - self.waveform_length_on_step
+        result = 0
+        length = 0
+        for n in range(CURVE_PRECISION_ON_WALL - 1):
+            x1, y1 = curve[n]
+            x2, y2 = curve[n+1]
+            dx = x2 - x1
+            dy = y2 - y1
+            length += math.sqrt(dx*dx + dy*dy)
+            if length > waveform_length_on_wall:
+                return result
+            result += 1
         return result
 
     def curve_on_wall(self):
@@ -153,27 +171,28 @@ class Segment(visualizer.Segment):
         if self.is_playing():
             if not self.visualizer.args.waveform:
                 self.draw_as_gathered(self.torrent_begin, self.playback_torrent_byte_cursor())
-            self.draw_cursor()
+            self.draw_cursor_and_waveform()
 
-    def draw_cursor(self):
-        x = self.step.byte_to_x(self.playback_torrent_byte_cursor())
+    def draw_cursor_and_waveform(self):
+        self.cursor_x = self.step.byte_to_x(self.playback_torrent_byte_cursor())
 
         if self.visualizer.args.waveform:
-            if len(self.waveform) == 0:
-                amp = 0
-            else:
-                amp = max([abs(value) for value in self.waveform])
+            self.waveform_length_on_step = self.cursor_x - self.visualizer.inner_x
+            self.waveform_frames_along_step = int(
+                float(self.waveform_length_on_step) / WAVEFORM_LENGTH * WAVEFORM_SIZE)
+            self.waveform_frames_along_wall = WAVEFORM_SIZE - self.waveform_frames_along_step
+            amp = max([abs(value) for value in self.waveform])
 
             if WAVEFORM_ALONG_X:
                 z = self.wall_step_crossing()[0]
                 self.peer.set_color(0)
                 self.draw_waveform_on_step_along_x(
-                    z, self.step.y, self.visualizer.inner_x, x)
+                    z, self.step.y, self.visualizer.inner_x, self.cursor_x)
             else:
                 self.visualizer.set_color(self.amp_controlled_color(
                     self.visualizer.gathered_color_h, CURSOR_COLOR_H, amp))
                 self.draw_waveform_on_step_along_z(
-                    x, self.step.y, self.step.z1, self.step.z2)
+                    self.cursor_x, self.step.y, self.step.z1, self.step.z2)
         else:
             amp = self.amp
 
@@ -182,15 +201,15 @@ class Segment(visualizer.Segment):
                 self.amp_controlled_color(STEPS_COLOR_H, CURSOR_COLOR_H, amp))
             glLineWidth(CURSOR_THICKNESS)
             glBegin(GL_LINES)
-            glVertex3f(x, self.step.y, self.step.z1)
-            glVertex3f(x, self.step.y, self.step.z2)
+            glVertex3f(self.cursor_x, self.step.y, self.step.z1)
+            glVertex3f(self.cursor_x, self.step.y, self.step.z2)
             glEnd()
 
         glBegin(GL_LINES)
         self.visualizer.set_color(self.amp_controlled_color(
                 self.visualizer.gathered_color_v, CURSOR_COLOR_V, amp))
-        glVertex3f(x, self.step.y, self.step.z2)
-        glVertex3f(x, self.step.neighbour_y, self.step.neighbour_z1)
+        glVertex3f(self.cursor_x, self.step.y, self.step.z2)
+        glVertex3f(self.cursor_x, self.step.neighbour_y, self.step.neighbour_z1)
         glEnd()
 
     def draw_waveform_on_step_along_x(self, z_baseline, y, x1, x2):
@@ -199,11 +218,11 @@ class Segment(visualizer.Segment):
         glVertex3f(x1, y, z_baseline)
         n = 0
         for waveform_frame in range(
-            self.visualizer.waveform_frames_along_wall,
-            self.visualizer.waveform_frames_along_wall + \
-                self.visualizer.waveform_frames_along_step):
+            self.waveform_frames_along_wall,
+            self.waveform_frames_along_wall + \
+                self.waveform_frames_along_step):
             value = self.waveform[waveform_frame]
-            x = x1 + (float(n) / self.visualizer.waveform_frames_along_step) * (x2 - x1)
+            x = x1 + (float(n) / self.waveform_frames_along_step) * (x2 - x1)
             z = clamp(z_baseline + value * WAVEFORM_WIDTH,
                       self.step.z1, self.step.z2)
             glVertex3f(x, y, z)
@@ -348,12 +367,8 @@ class Stairs(visualizer.Visualizer):
         self.enable_accum()
         self.enable_3d()
         if self.args.waveform:
-            self.waveform_frames_along_wall = int(WAVEFORM_AMOUNT_ALONG_WALL * WAVEFORM_SIZE)
-            self.waveform_frames_along_step = WAVEFORM_SIZE - self.waveform_frames_along_wall
             self.gathered_color_v = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
             self.gathered_color_h = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
-            self.curve_vertices_before_branching = int(CURVE_PRECISION_ON_WALL * RELATIVE_BRANCHING_POSITION)
-            self.curve_vertices_after_branching = CURVE_PRECISION_ON_WALL - self.curve_vertices_before_branching
             self.subscribe_to_waveform()
         else:
             self.gathered_color_v = GATHERED_COLOR_V
