@@ -7,6 +7,9 @@ class Step:
         self.byte_size = byte_size
         self.byte_end = byte_offset + byte_size
 
+    def __repr__(self):
+        return "Step(byte_offset=%s, byte_end=%s)" % (self.byte_offset, self.byte_end)
+
 class Segment:
     def __init__(self, begin, end):
         self.torrent_begin = begin

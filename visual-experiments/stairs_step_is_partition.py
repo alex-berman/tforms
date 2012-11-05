@@ -535,7 +535,7 @@ class Stairs(visualizer.Visualizer):
 
     def _segment_matches_step(self, segment, step):
         return (step.byte_offset <= segment.torrent_begin < (step.byte_offset + step.byte_size) or
-                step.byte_offset < segment.torrent_end < (step.byte_offset + step.byte_size))
+                step.byte_offset < segment.torrent_end <= (step.byte_offset + step.byte_size))
 
     def _byte_to_step(self, byte):
         for step in self._steps:
