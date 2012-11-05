@@ -129,12 +129,11 @@ class Orchestra:
             segment["duration"] /= self.timefactor
 
     def _reduce_max_passivity_in_score(self):
-        previous_onset = None
+        previous_onset = 0
         reduced_time = 0
         for i in range(len(self.score)):
-            if previous_onset is not None:
-                if (self.score[i]["onset"] - reduced_time - previous_onset) > self._max_passivity:
-                    reduced_time += self.score[i]["onset"] - reduced_time - previous_onset - self._max_passivity
+            if (self.score[i]["onset"] - reduced_time - previous_onset) > self._max_passivity:
+                reduced_time += self.score[i]["onset"] - reduced_time - previous_onset - self._max_passivity
             self.score[i]["onset"] -= reduced_time
             previous_onset = self.score[i]["onset"]
 
