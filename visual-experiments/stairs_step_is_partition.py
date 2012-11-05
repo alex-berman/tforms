@@ -510,17 +510,16 @@ class Stairs(visualizer.Visualizer):
 
     def draw_gathered_segments(self):
         if self._segments_split_at_step_boundaries is None:
-            self._segments_split_at_step_boundaries = self._split_gathered_segments_at_step_boundaries()
+            self._segments_split_at_step_boundaries = self._split_segments_at_step_boundaries(
+                self.gatherer.pieces())
         for segment in self._segments_split_at_step_boundaries:
             segment.draw_gathered()
 
-    def _split_gathered_segments_at_step_boundaries(self):
+    def _split_segments_at_step_boundaries(self, pieces):
         result = []
-        for piece in self.gatherer.pieces():
+        for piece in pieces:
             segments = self._split_at_step_boundaries(piece)
-            for segment in segments:
-                segment.step = self._byte_to_step(segment.torrent_begin)
-                result.append(segment)
+            result.extend(segments)
         return result
 
     def _split_at_step_boundaries(self, segment):
@@ -530,6 +529,7 @@ class Stairs(visualizer.Visualizer):
                 new_segment = copy.copy(segment)
                 new_segment.torrent_begin = max(segment.torrent_begin, step.byte_offset)
                 new_segment.torrent_end = min(segment.torrent_end, step.byte_offset + step.byte_size)
+                new_segment.step = step
                 result.append(new_segment)
         return result
 

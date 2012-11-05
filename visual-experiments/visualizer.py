@@ -60,6 +60,10 @@ class File:
     def add_segment(self, segment):
         pass
 
+    def __str__(self):
+        return "File(filenum=%s, offset=%s, length=%s)" % (
+            self.filenum, self.offset, self.length)
+
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
                  filenum, peer_id,
@@ -225,6 +229,7 @@ class Visualizer:
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
         f = self.files[filenum] = self.file_class(self, filenum, offset, length)
+        self.logger.debug("added file %s" % f)
         self.torrent_length += length
         self.added_file(f)
         if len(self.files) == self.num_files:
