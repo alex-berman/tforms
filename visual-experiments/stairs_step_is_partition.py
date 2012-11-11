@@ -415,6 +415,7 @@ class Stairs(visualizer.Visualizer):
 
         glDisable(GL_DEPTH_TEST)
         self.draw_step_edges()
+        self.draw_wall_edge()
 
     def render_accum_objects(self):
         glPolygonOffset(1.0, 0.0)
@@ -460,6 +461,14 @@ class Stairs(visualizer.Visualizer):
             glVertex3f(self.inner_x, y, z)
             glVertex3f(self.outer_x, y, z)
             glEnd()
+
+    def draw_wall_edge(self):
+        glLineWidth(1.0)
+        glColor3f(*WALL_SHADE_COLOR_H)
+        glBegin(GL_LINES)
+        glVertex3f(self.inner_x, WALL_TOP, self.stairs_depth)
+        glVertex3f(self.inner_x, self.wall_bottom, self.stairs_depth)
+        glEnd()
 
     def draw_wall_surfaces(self):
         glColor3f(*WALL_SHADE_COLOR_H)
