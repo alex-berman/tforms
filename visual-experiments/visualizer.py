@@ -27,7 +27,6 @@ logging.basicConfig(filename="visualizer.log",
                     filemode="w")
 
 ESCAPE = '\033'
-MARGIN = 30
 BORDER_OPACITY = 0.7
 FAKE_CHUNK_DURATION = 0.1
 EXPORT_DIR = "export"
@@ -157,6 +156,7 @@ class Visualizer:
         self.sync = args.sync
         self.width = args.width
         self.height = args.height
+        self.margin = args.margin
         self.show_fps = args.show_fps
         self.export = args.export
         self.osc_log = args.osc_log
@@ -202,14 +202,14 @@ class Visualizer:
             import shutil
             shutil.rmtree(EXPORT_DIR)
             os.mkdir(EXPORT_DIR)
-            self.exporter = Exporter(EXPORT_DIR, MARGIN, MARGIN, self.width, self.height)
+            self.exporter = Exporter(EXPORT_DIR, self.margin, self.margin, self.width, self.height)
 
     def enable_3d(self):
         self._3d_enabled = True
 
     def run(self):
-        window_width = self.width + MARGIN*2
-        window_height = self.height + MARGIN*2
+        window_width = self.width + self.margin*2
+        window_height = self.height + self.margin*2
         glutInit(sys.argv)
         glutInitDisplayMode(self.gl_display_mode)
         glutInitWindowSize(window_width, window_height)
@@ -389,7 +389,7 @@ class Visualizer:
             self.first_frame = False
         else:
             self.time_increment = self.now - self.previous_frame_time
-            glTranslatef(MARGIN, MARGIN, 0)
+            glTranslatef(self.margin, self.margin, 0)
             self.draw_border()
             self.handle_incoming_messages()
             self.render()
@@ -593,6 +593,7 @@ def run(visualizer_class):
     parser.add_argument('-sync', action='store_true')
     parser.add_argument('-width', dest='width', type=int, default=640)
     parser.add_argument('-height', dest='height', type=int, default=480)
+    parser.add_argument('-margin', dest='margin', type=int, default=0)
     parser.add_argument('-show-fps', dest='show_fps', action='store_true')
     parser.add_argument('-osc-log', dest='osc_log')
     parser.add_argument('-export', dest='export', action='store_true')

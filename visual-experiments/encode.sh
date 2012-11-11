@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage (?): encode.sh audio-sync-offset start length
+# Usage (?): encode.sh <audio-sync-offset> <start> <length>
 # Audio sync offset can be detected by the beep in capture.wav
 sox capture-mastered.wav capture-trimmed.wav trim $1
 rm capture.mp4
