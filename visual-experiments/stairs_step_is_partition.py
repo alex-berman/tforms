@@ -45,14 +45,17 @@ GATHERED_COLOR_H = Vector3d(.9, .3, .35)
 # CAMERA_Y_ORIENTATION = -37
 # CAMERA_X_ORIENTATION = 0
 
-CAMERA_POSITION = Vector(3, [-4.4240142191185345, -2.9, -6.754711866271528])
-CAMERA_Y_ORIENTATION = -42
-CAMERA_X_ORIENTATION = 25
+# CAMERA_POSITION = Vector(3, [-4.4240142191185345, -2.9, -6.754711866271528])
+# CAMERA_Y_ORIENTATION = -42
+# CAMERA_X_ORIENTATION = 25
 
 # CAMERA_POSITION = Vector(3, [-3.0857530064008176, -0.8999999999999985, -5.26842221531674])
 # CAMERA_Y_ORIENTATION = -42
 # CAMERA_X_ORIENTATION = 25
 
+CAMERA_POSITION = Vector(3, [-5.516145180239982, -0.599999999999998, -1.9135947601016645])
+CAMERA_Y_ORIENTATION = -88
+CAMERA_X_ORIENTATION = 9
 
 def clamp(value, min_value, max_value):
     return max(min(max_value, value), min_value)
@@ -482,6 +485,18 @@ class Stairs(visualizer.Visualizer):
         glVertex3f(self.inner_x, self.wall_bottom, self.stairs_depth)
         glVertex3f(self.inner_x, self.wall_bottom, 0)
         glEnd()
+
+        for n in range(1, NUM_STEPS+1):
+            glBegin(GL_POLYGON)
+            z = self.step_z(n)
+            y1 = self.step_y(n)
+            y2 = self.step_y(n+1)
+            glVertex3f(self.outer_x, y1, z)
+            glVertex3f(self.outer_x, y2, z)
+            glVertex3f(self.outer_x, y2, 0)
+            glVertex3f(self.outer_x, y1, 0)
+            glEnd()
+        
 
     def step_h_surface(self, n):
         y1 = self.step_y(n)
