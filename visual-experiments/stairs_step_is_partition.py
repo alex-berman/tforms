@@ -33,8 +33,9 @@ CURVE_OPACITY = 0.8
 SEGMENT_DECAY_TIME = 1.0
 CURSOR_COLOR_V = Vector3d(.9, 0, 0)
 CURSOR_COLOR_H = Vector3d(1, 0, 0)
-STEPS_COLOR_V = WALL_COLOR_V = Vector3d(.58, .58, .58)
-STEPS_COLOR_H = WALL_COLOR_H = Vector3d(.9, .9, .9)
+STEPS_COLOR_V = WALL_SHADE_COLOR_V = Vector3d(.58, .58, .58)
+STEPS_COLOR_H = WALL_SHADE_COLOR_H = Vector3d(.9, .9, .9)
+WALL_COLOR = (1.0, 1.0, 1.0)
 GATHERED_OPACITY = .3
 CURSOR_THICKNESS = 2.0
 GATHERED_COLOR_V = Vector3d(.62, .17, .20)
@@ -458,7 +459,7 @@ class Stairs(visualizer.Visualizer):
             glEnd()
 
     def draw_wall_surfaces(self):
-        glColor3f(*WALL_COLOR_H)
+        glColor3f(*WALL_SHADE_COLOR_H)
         glBegin(GL_QUADS)
         glVertex3f(self.inner_x, WALL_TOP, 0)
         glVertex3f(self.inner_x, WALL_TOP, self.stairs_depth)
@@ -466,12 +467,20 @@ class Stairs(visualizer.Visualizer):
         glVertex3f(self.wall_rear_x, WALL_TOP, 0)
         glEnd()
 
-        glColor3f(*WALL_COLOR_V)
+        glColor3f(*WALL_SHADE_COLOR_V)
         glBegin(GL_QUADS)
         glVertex3f(self.inner_x, WALL_TOP, self.stairs_depth)
         glVertex3f(self.wall_rear_x, WALL_TOP, self.stairs_depth)
         glVertex3f(self.wall_rear_x, self.wall_bottom, self.stairs_depth)
         glVertex3f(self.inner_x, self.wall_bottom, self.stairs_depth)
+        glEnd()
+
+        glColor3f(*WALL_COLOR)
+        glBegin(GL_QUADS)
+        glVertex3f(self.inner_x, WALL_TOP, 0)
+        glVertex3f(self.inner_x, WALL_TOP, self.stairs_depth)
+        glVertex3f(self.inner_x, self.wall_bottom, self.stairs_depth)
+        glVertex3f(self.inner_x, self.wall_bottom, 0)
         glEnd()
 
     def step_h_surface(self, n):
