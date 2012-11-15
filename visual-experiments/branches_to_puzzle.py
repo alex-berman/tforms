@@ -1,4 +1,4 @@
-import visualizer
+import rectangular_visualizer as visualizer
 from gatherer import Gatherer
 from OpenGL.GL import *
 from collections import OrderedDict
@@ -196,7 +196,7 @@ class File(visualizer.File):
         self.x_scope.put(segment.end)
         segment.pan = (self.x_scope.map(segment.begin) + self.x_scope.map(segment.end)) / 2
         segment.departure_position = segment.peer_position()
-        self.visualizer.playing_segment(segment, segment.pan)
+        self.visualizer.playing_segment(segment)
 
     def render(self):
         self.x_scope.update()
@@ -244,5 +244,11 @@ class Puzzle(visualizer.Visualizer):
     def filenum_to_y_coord(self, filenum):
         return self.y_scope.map(filenum) * self.height
 
+    # TODO: this panning probably isn't very useful
+    def pan_segment(self, segment):
+        self.place_source(segment.sound_source_id,
+                          segment.pan, 0,
+                          segment.duration)
+        
 if __name__ == '__main__':
     visualizer.run(Puzzle)
