@@ -1,6 +1,5 @@
 import rectangular_visualizer as visualizer
 from gatherer import Gatherer
-import time
 from OpenGL.GL import *
 from collections import OrderedDict
 from vector import Vector3d
@@ -11,22 +10,6 @@ PLAYING_HEIGHT = 10
 BACKGROUND_COLOR = Vector3d(.9, .9, .9)
 GATHERED_COLOR = Vector3d(.7, .9, .7)
 PLAYING_COLOR = Vector3d(1, 0, 0)
-
-class Smoother:
-    RESPONSE_FACTOR = 5
-
-    def __init__(self):
-        self._current_value = None
-
-    def smooth(self, new_value, time_increment):
-        if self._current_value:
-            self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
-        else:
-            self._current_value = new_value
-
-    def value(self):
-        return self._current_value
 
 class File(visualizer.File):
     def __init__(self, *args):
