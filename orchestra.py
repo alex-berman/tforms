@@ -64,19 +64,22 @@ class Orchestra:
 
     _extension_re = re.compile('\.(\w+)$')
 
-    def __init__(self, sessiondir, tr_log,
-                 realtime=False,
-                 timefactor=1,
-                 start_time=0,
-                 ff_to_start=False,
-                 quiet=False,
-                 predecoded=False,
-                 file_location=None,
-                 visualizer_enabled=False,
-                 loop=False,
-                 osc_log=None,
-                 max_passivity=None,
-                 max_pause_within_segment=None):
+    def __init__(self,
+                 sessiondir,
+                 tr_log,
+                 realtime,
+                 timefactor,
+                 start_time,
+                 ff_to_start,
+                 quiet,
+                 predecoded,
+                 file_location,
+                 visualizer_enabled,
+                 loop,
+                 osc_log,
+                 max_passivity,
+                 max_pause_within_segment,
+                 looped_duration):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -87,6 +90,7 @@ class Orchestra:
         self._visualizer_enabled = visualizer_enabled
         self._loop = loop
         self._max_passivity = max_passivity
+        self.looped_duration = looped_duration
 
         self.playback_enabled = True
         self.fast_forwarding = False
@@ -191,10 +195,11 @@ class Orchestra:
             segment["start_time_in_file"] / file_info["duration"],
             segment["end_time_in_file"] / file_info["duration"],
             segment["duration"],
+            self.looped_duration,            
             channel,
             pan)
         self.scheduler.enter(
-            segment["duration"], 1,
+            self.looped_duration, 1,
             self.stopped_playing, [segment])
 
     def _handle_register(self, path, args, types, src, data):
@@ -436,7 +441,7 @@ class Orchestra:
                                  segment["end"] - segment["begin"],
                                  file_info["playable_file_index"],
                                  player.id,
-                                 segment["duration"])
+                                 self.looped_duration)
         else:
             self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
 

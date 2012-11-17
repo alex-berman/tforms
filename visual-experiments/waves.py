@@ -3,7 +3,7 @@ import collections
 from OpenGL.GL import *
 
 WAVEFORM_SIZE = 60
-WAVEFORM_MAGNITUDE = 10
+WAVEFORM_MAGNITUDE = 30
 MARGIN = 20
 
 class Segment(visualizer.Segment):
