@@ -1,10 +1,13 @@
 import rectangular_visualizer as visualizer
 import collections
 from OpenGL.GL import *
+from vector import Vector3d
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30
 MARGIN = 20
+BACKGROUND_COLOR = Vector3d(1.0, 1.0, 1.0)
+WAVEFORM_COLOR = Vector3d(0.0, 0.0, 0.0)
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -16,6 +19,10 @@ class Segment(visualizer.Segment):
         self.y = self.f.byte_to_py(self.begin)
 
     def render(self):
+        amp = max([abs(value) for value in self.waveform])
+        self.visualizer.set_color(self.amp_controlled_color(
+                BACKGROUND_COLOR, WAVEFORM_COLOR, amp))
+
         glBegin(GL_LINE_STRIP)
         n = 0
         for value in self.waveform:
@@ -24,6 +31,9 @@ class Segment(visualizer.Segment):
             glVertex2f(x, y)
             n += 1
         glEnd()
+
+    def amp_controlled_color(self, weak_color, strong_color, amp):
+        return weak_color + (strong_color - weak_color) * pow(amp, 0.25)
 
 class File(visualizer.File):
     def __init__(self, *args):
@@ -44,8 +54,11 @@ class File(visualizer.File):
         self.draw_playing_segments()
 
     def draw_playing_segments(self):
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glLineWidth(1.0)
-        glColor3f(0.0, 0.0, 0.0)
         for segment in self.playing_segments.values():
             segment.render()
 

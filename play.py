@@ -30,7 +30,7 @@ parser.add_argument("--loop", dest="loop", action="store_true")
 parser.add_argument("--osc-log", dest="osc_log")
 parser.add_argument("--max-passivity", dest="max_passivity", type=float)
 parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
-parser.add_argument("--looped-duration", dest="looped_duration", default=8)
+parser.add_argument("--looped-duration", dest="looped_duration", default=8, type=float)
 options = parser.parse_args()
 
 if options.realtime:
