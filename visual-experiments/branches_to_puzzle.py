@@ -243,12 +243,6 @@ class Puzzle(visualizer.Visualizer):
 
     def filenum_to_y_coord(self, filenum):
         return self.y_scope.map(filenum) * self.height
-
-    # TODO: this panning probably isn't very useful
-    def pan_segment(self, segment):
-        self.place_source(segment.sound_source_id,
-                          segment.pan, 0,
-                          segment.duration)
         
 if __name__ == '__main__':
     visualizer.run(Puzzle)

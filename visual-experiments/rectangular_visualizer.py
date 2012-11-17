@@ -25,3 +25,9 @@ class Visualizer(visualizer.Visualizer):
         midpoint = Vector2d(width/2, height/2)
         circle_position = midpoint + DirectionalVector(bearing - 2*math.pi/4, radius)
         return circle_position
+
+    def pan_segment(self, segment):
+        relative_x = segment.pan
+        space_y = self.space.NEAREST_DISTANCE_TO_LISTENER
+        space_x = (relative_x - 0.5) * self.space.ROOM_RADIUS * 2
+        self.ssr.place_source(segment.sound_source_id, space_x, space_y, segment.duration)
