@@ -15,7 +15,7 @@ class Segment(visualizer.Segment):
         self.waveform = collections.deque([], maxlen=WAVEFORM_SIZE)
         self.waveform.extend([0.0] * WAVEFORM_SIZE)
         self.amp = 0
-        self.pan = .5
+        self.pan = 1
         self.y = self.f.byte_to_py(self.begin)
 
     def render(self):

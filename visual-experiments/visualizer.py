@@ -17,7 +17,6 @@ from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 from osc_receiver import OscReceiver
 from stopwatch import Stopwatch
-from ssr.ssr_control import SsrControl
 from space import Space
 import traceback_printer
 from camera_script_interpreter import CameraScriptInterpreter
@@ -160,7 +159,6 @@ class Visualizer:
         self.show_fps = args.show_fps
         self.export = args.export
         self.osc_log = args.osc_log
-        self.ssr_enabled = args.ssr_enabled
         self.waveform_gain = args.waveform_gain
 
         self.logger = logging.getLogger("visualizer")
@@ -174,7 +172,6 @@ class Visualizer:
         self.space = Space()
         self._segments_by_id = {}
         self._warned_about_missing_pan_segment = False
-        self._warned_about_max_sources = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._3d_enabled = False
         self.torrent_length = 0
@@ -183,11 +180,6 @@ class Visualizer:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
         else:
             self._camera_script = None
-
-        if self.ssr_enabled:
-            self.ssr = SsrControl()
-        else:
-            self.ssr = None
 
         if self.show_fps:
             self.fps_history = collections.deque(maxlen=10)
@@ -263,31 +255,17 @@ class Visualizer:
         else:
             print "ignoring segment from undeclared file %s" % filenum
 
-    def handle_stopped_playing_segment_message(self, path, args, types, src, data):
-        segment_id = args[0]
-        segment = self._segments_by_id[segment_id]
-        self.stopped_playing_segment(segment)
-
     def add_segment(self, segment):
         if not segment.peer_id in self.peers:
             self.peers[segment.peer_id] = self.peer_class(self)
         peer = self.peers[segment.peer_id]
         segment.peer = peer
 
-        if self.ssr_enabled:
-            segment.sound_source_id = self.ssr.allocate_source()
-            if not segment.sound_source_id and not self._warned_about_max_sources:
-                print "WARNING: max sources exceeded, skipping segment playback"
-                self._warned_about_max_sources = True
-        else:
-            segment.sound_source_id = None
-            
         f = self.files[segment.filenum]
         segment.f = f
         f.add_segment(segment)
 
-        if segment.sound_source_id:
-            self.pan_segment(segment)
+        self.pan_segment(segment)
 
         peer.add_segment(segment)
 
@@ -301,10 +279,6 @@ class Visualizer:
         if not self._warned_about_missing_pan_segment:
             print "WARNING: pan_segment undefined. All sounds will be centered."
             self._warned_about_missing_pan_segment = True
-
-    def stopped_playing_segment(self, segment):
-        if self.ssr_enabled and segment.sound_source_id:
-            self.ssr.free_source(segment.sound_source_id)
 
     def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
@@ -332,7 +306,6 @@ class Visualizer:
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
-        self.server.add_method("/stopped_playing_segment", "i", self.handle_stopped_playing_segment_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.add_method("/amp", "if", self.handle_amp_message)
         self.server.add_method("/waveform", "if", self.handle_waveform_message)
@@ -442,9 +415,7 @@ class Visualizer:
             self.exiting = True
 
     def playing_segment(self, segment):
-        if segment.sound_source_id:
-            channel = segment.sound_source_id - 1
-            self.orchestra.visualizing_segment(segment.id, channel)
+        self.orchestra.visualizing_segment(segment.id)
         segment.playing = True
 
     def current_time(self):
@@ -460,16 +431,13 @@ class Visualizer:
                   alpha)
 
     def set_listener_position(self, x, y):
-        if self.ssr_enabled:
-            self.ssr.set_listener_position(x, y)
+        self.orchestra.set_listener_position(x, y)
 
     def set_listener_orientation(self, orientation):
-        if self.ssr_enabled:
-            self.ssr.set_listener_orientation(-orientation)
+        self.orchestra.set_listener_orientation(-orientation)
 
-    def place_source(self, source_id, x, y, duration):
-        if self.ssr_enabled:
-            self.ssr.place_source(source_id, -x, y, duration)
+    def place_segment(self, segment_id, x, y, duration):
+        self.orchestra.place_segment(segment_id, -x, y, duration)
 
     def _mouse_clicked(self, button, state, x, y):
         if button == GLUT_LEFT_BUTTON:

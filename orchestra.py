@@ -13,6 +13,7 @@ from synth_controller import SynthController
 from osc_sender import OscSender
 from interpret import Interpreter
 from stopwatch import Stopwatch
+from ssr.ssr_control import SsrControl
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -61,6 +62,8 @@ class WavPlayer(Player):
 class Orchestra:
     SAMPLE_RATE = 44100
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
+    JACK = "jack"
+    SSR = "ssr"
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -79,7 +82,8 @@ class Orchestra:
                  osc_log,
                  max_passivity,
                  max_pause_within_segment,
-                 looped_duration):
+                 looped_duration,
+                 output):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -91,6 +95,7 @@ class Orchestra:
         self._loop = loop
         self._max_passivity = max_passivity
         self.looped_duration = looped_duration
+        self.output = output
 
         self.playback_enabled = True
         self.fast_forwarding = False
@@ -124,6 +129,13 @@ class Orchestra:
             self._setup_osc()
         else:
             self.visualizer = None
+
+        if self.output == self.SSR:
+            self.ssr = SsrControl()
+            self._warned_about_max_sources = False
+        else:
+            self.ssr = None
+
 
     def _interpret_chunks_to_score(self, max_pause_within_segment):
         self.score = Interpreter(max_pause_within_segment).interpret(self.chunks, self.tr_log.files)
@@ -162,8 +174,11 @@ class Orchestra:
 
     def _setup_osc(self):
         self.server = OscReceiver(PORT)
-        self.server.add_method("/visualizing", "ii", self._handle_visualizing_message)
+        self.server.add_method("/visualizing", "i", self._handle_visualizing_message)
         self.server.add_method("/register", "", self._handle_register)
+        self.server.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
+        self.server.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
+        self.server.add_method("/place_segment", "ifff", self._handle_place_segment)
         self.server.start()
         self._visualizer_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
@@ -182,13 +197,19 @@ class Orchestra:
         print "OK"
 
     def _handle_visualizing_message(self, path, args, types, src, data):
-        (segment_id, channel) = args
+        segment_id = args[0]
         segment = self.segments_by_id[segment_id]
-        self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
+        if self.output == self.SSR:
+            if segment["sound_source_id"]:
+                channel = segment["sound_source_id"] - 1
+                self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
+        else:
+            self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
         logger.debug("asking synth to play %s" % segment)
         file_info = self.tr_log.files[segment["filenum"]]
+
         self.synth.play_segment(
             segment["id"],
             segment["filenum"],
@@ -199,7 +220,7 @@ class Orchestra:
             channel,
             pan)
         self.scheduler.enter(
-            self.looped_duration, 1,
+            segment["playback_duration"], 1,
             self.stopped_playing, [segment])
 
     def _handle_register(self, path, args, types, src, data):
@@ -431,6 +452,12 @@ class Orchestra:
 
     def visualize_segment(self, segment, player):
         if self.visualizer:
+            if self.ssr:
+                segment["sound_source_id"] = self.ssr.allocate_source()
+                if not segment["sound_source_id"] and not self._warned_about_max_sources:
+                    print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
+                    self._warned_about_max_sources = True
+
             if not self._informed_visualizer_about_torrent:
                 self._send_torrent_info_to_visualizer()
             file_info = self.tr_log.files[segment["filenum"]]
@@ -441,7 +468,7 @@ class Orchestra:
                                  segment["end"] - segment["begin"],
                                  file_info["playable_file_index"],
                                  player.id,
-                                 self.looped_duration)
+                                 segment["playback_duration"])
         else:
             self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
 
@@ -450,10 +477,17 @@ class Orchestra:
         if self.gui:
             self.gui.unhighlight_segment(segment)
         if self.visualizer:
-            self.visualizer.send("/stopped_playing_segment", segment["id"])
+            if self.ssr and segment["sound_source_id"]:
+                self.ssr.free_source(segment["sound_source_id"])
 
     def play_segment(self, segment, player):
         self.segments_by_id[segment["id"]] = segment
+
+        if self.looped_duration:
+            segment["playback_duration"] = self.looped_duration
+        else:
+            segment["playback_duration"] = segment["duration"]
+
         self.visualize_segment(segment, player)
 
     def _send_torrent_info_to_visualizer(self):
@@ -528,6 +562,24 @@ class Orchestra:
     def shutdown(self):
         if self.visualizer:
             self.visualizer.send("/shutdown")
+
+    def _handle_set_listener_position(self, path, args, types, src, data):
+        x, y = args
+        if self.ssr:
+            self.ssr.set_listener_position(x, y)
+
+    def _handle_set_listener_orientation(self, path, args, types, src, data):
+        orientation = args[0]
+        if self.ssr:
+            self.ssr.set_listener_orientation(orientation)
+
+    def _handle_place_segment(self, path, args, types, src, data):
+        segment_id, x, y, duration = args
+        segment = self.segments_by_id[segment_id]
+        if self.ssr:
+            sound_source_id = segment["sound_source_id"]
+            if sound_source_id is not None:
+                self.ssr.place_source(sound_source_id, x, y, duration)
 
 def warn(logger, message):
     logger.debug(message)

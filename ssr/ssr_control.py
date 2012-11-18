@@ -18,6 +18,8 @@ class SsrControl:
         self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
         self._add_sources_if_needed()
+        self.set_listener_position(0, 0)
+        self.set_listener_orientation(90)
 
     def enable_smooth_movement(self):
         self.scene.smooth_movement_enabled = True

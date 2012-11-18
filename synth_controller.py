@@ -11,8 +11,11 @@ class SynthController:
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
 
-    def play_segment(self, segment_id, sound_id, begin, end, period, duration, channel, pan):
-        self._send("/play", segment_id, sound_id, begin, end, period, duration, channel, pan)
+    def play_segment(self, segment_id, sound_id, begin, end, period_duration, looped_duration, channel, pan):
+        if looped_duration:
+            self._send("/loop", segment_id, sound_id, begin, end, period_duration, looped_duration, channel, pan)
+        else:
+            self._send("/play", segment_id, sound_id, begin, end, period_duration, channel, pan)
 
     def pan(self, segment_id, pan):
         self._send("/pan", segment_id, pan)

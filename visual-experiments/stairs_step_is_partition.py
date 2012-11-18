@@ -400,9 +400,9 @@ class Stairs(visualizer.Visualizer):
 
     def pan_segment(self, segment):
         x = WALL_X + STAIRS_WIDTH/2
-        self.place_source(segment.sound_source_id,
-                          segment.step.z, x,
-                          segment.duration)
+        self.place_segment(segment.id,
+                           segment.step.z, x,
+                           segment.duration)
 
     def render(self):
         glEnable(GL_DEPTH_TEST)

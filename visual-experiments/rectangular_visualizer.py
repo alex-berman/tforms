@@ -28,6 +28,6 @@ class Visualizer(visualizer.Visualizer):
 
     def pan_segment(self, segment):
         relative_x = segment.pan
-        space_y = self.space.NEAREST_DISTANCE_TO_LISTENER
-        space_x = (relative_x - 0.5) * self.space.ROOM_RADIUS * 2
-        self.ssr.place_source(segment.sound_source_id, space_x, space_y, segment.duration)
+        space_y = 3
+        space_x = (relative_x - 0.5) * 5
+        self.orchestra.place_segment(segment.id, space_x, space_y, segment.duration)
