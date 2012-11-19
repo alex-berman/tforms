@@ -1,2 +1,3 @@
 #!/bin/sh
-./play.py --predecode --visualizer="python visual-experiments/waves.py" sessions/*TDL4-slow --max-pause-within-segment=3 --looped-duration=8
+./play.py --predecode --visualizer="python visual-experiments/waves.py" sessions/*TDL4 -z 0.025 --looped-duration=10 --start 60 --output=jack
+
