@@ -274,8 +274,7 @@ class Puzzle(visualizer.Visualizer):
         if FORCE_DIRECTED_PLACEMENT:
             self.force_directed_placer = ForceDirectedPlacer(self)
             self.centralizer = Centralizer(self)
-        if self.ssr_enabled:
-            self.ssr.enable_smooth_movement()
+        self.orchestra.enable_smooth_movement()
 
     def render(self):
         glEnable(GL_LINE_SMOOTH)
@@ -313,8 +312,7 @@ class Puzzle(visualizer.Visualizer):
         return float(unscaled) / 640 * self.width
 
     def pan_segment(self, segment):
-        self.ssr.start_source_movement(
-            segment.sound_source_id, segment.peer.trajectory, duration=segment.duration)
+        self.start_segment_movement_from_peer(segment.id, segment.duration)
 
 class ForceDirectedPlacer:
     def __init__(self, visualizer):

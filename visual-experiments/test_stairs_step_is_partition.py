@@ -33,7 +33,6 @@ class Args:
     show_fps = False
     export = False
     osc_log = None
-    ssr_enabled = False
     waveform_gain = 1
     camera_script = None
 

@@ -14,6 +14,7 @@ from osc_sender import OscSender
 from interpret import Interpreter
 from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
+from space import Space
 
 PORT = 51233
 VISUALIZER_PORT = 51234
@@ -26,6 +27,9 @@ class Player:
         self.id = _id
         self.enabled = True
         self._previous_chunk_time = None
+        self.spatial_position = orchestra.space.new_peer()
+        self.trajectory = orchestra.space.parabolic_trajectory_to_listener(
+            self.spatial_position.bearing)
 
     def visualize(self, chunk):
         self.orchestra.visualize_chunk(chunk, self)
@@ -113,6 +117,7 @@ class Orchestra:
         self._playing = False
         self._quitting = False
         self._informed_visualizer_about_torrent = False
+        self.space = Space()
 
         if ff_to_start:
             self._ff_to_time = start_time
@@ -179,6 +184,8 @@ class Orchestra:
         self.server.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
         self.server.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
         self.server.add_method("/place_segment", "ifff", self._handle_place_segment)
+        self.server.add_method("/enable_smooth_movement", "", self._handle_enable_smooth_movement)
+        self.server.add_method("/start_segment_movement_from_peer", "if", self._handle_start_segment_movement_from_peer)
         self.server.start()
         self._visualizer_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
@@ -530,7 +537,10 @@ class Orchestra:
     def _create_player(self):
         count = len(self.players)
         logger.debug("creating player number %d" % count)
-        return self._player_class(self, count)
+        player = self._player_class(self, count)
+        if self.visualizer:
+            self.visualizer.send("/peer", player.id, player.spatial_position.bearing)
+        return player
 
     def set_time_cursor(self, log_time):
         assert not self.realtime
@@ -564,22 +574,36 @@ class Orchestra:
             self.visualizer.send("/shutdown")
 
     def _handle_set_listener_position(self, path, args, types, src, data):
-        x, y = args
         if self.ssr:
+            x, y = args
             self.ssr.set_listener_position(x, y)
 
     def _handle_set_listener_orientation(self, path, args, types, src, data):
-        orientation = args[0]
         if self.ssr:
+            orientation = args[0]
             self.ssr.set_listener_orientation(orientation)
 
     def _handle_place_segment(self, path, args, types, src, data):
-        segment_id, x, y, duration = args
-        segment = self.segments_by_id[segment_id]
         if self.ssr:
+            segment_id, x, y, duration = args
+            segment = self.segments_by_id[segment_id]
             sound_source_id = segment["sound_source_id"]
             if sound_source_id is not None:
                 self.ssr.place_source(sound_source_id, x, y, duration)
+
+    def _handle_enable_smooth_movement(self, path, args, types, src, data):
+        if self.ssr:
+            self.ssr.enable_smooth_movement()
+
+    def _handle_start_segment_movement_from_peer(self, path, args, types, src, data):
+        segment_id, duration = args
+        if self.ssr:
+            segment = self.segments_by_id[segment_id]
+            sound_source_id = segment["sound_source_id"]
+            if sound_source_id is not None:
+                player = self.get_player_for_segment(segment)
+                self.ssr.start_source_movement(
+                    sound_source_id, player.trajectory, duration)
 
 def warn(logger, message):
     logger.debug(message)

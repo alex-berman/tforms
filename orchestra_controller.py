@@ -20,5 +20,11 @@ class OrchestraController:
     def place_segment(self, segment_id, x, y, duration):
         self._send("/place_segment", segment_id, x, y, duration)
 
+    def enable_smooth_movement(self):
+        self._send("/enable_smooth_movement")
+
+    def start_segment_movement_from_peer(self, segment_id, duration):
+        self._send("/start_segment_movement_from_peer", segment_id, duration)
+
     def _send(self, command, *args):
         liblo.send(self.target, command, *args)

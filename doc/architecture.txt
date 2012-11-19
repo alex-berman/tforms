@@ -10,8 +10,10 @@ Orchestra.handle_segment(segment)
 Visualizer.handle_segment_message()
   Visualizer.add_segment(segment)
     Visualizer.pan_segment(segment) [in subclass]
-      subclass.place_segment(segment.id, x, y, duration) [expected behaviour]
+      subclass.orchestra.place_segment(segment.id, x, y, duration) [expected behaviour]
         OSC send /place_segment
+      OR subclass.orchestra.start_segment_movement_from_peer(segment.id, duration)
+
     Visualizer.File.add_segment(segment) [in subclass]
       subclass.File.playing_segment(segment) [expected behaviour]
         Visualizer.playing_segment(segment)

@@ -17,7 +17,6 @@ from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 from osc_receiver import OscReceiver
 from stopwatch import Stopwatch
-from space import Space
 import traceback_printer
 from camera_script_interpreter import CameraScriptInterpreter
 
@@ -135,8 +134,9 @@ class Segment(Chunk):
             self.id, self.begin, self.end, self.torrent_begin, self.torrent_end, self.filenum, self.duration)
 
 class Peer:
-    def __init__(self, visualizer):
+    def __init__(self, visualizer, bearing):
         self.visualizer = visualizer
+        self.bearing = bearing
 
     def add_segment(self, segment):
         pass
@@ -169,7 +169,6 @@ class Visualizer:
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
-        self.space = Space()
         self._segments_by_id = {}
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
@@ -255,9 +254,11 @@ class Visualizer:
         else:
             print "ignoring segment from undeclared file %s" % filenum
 
+    def handle_peer_message(self, path, args, types, src, data):
+        peer_id, bearing = args
+        self.peers[peer_id] = self.peer_class(self, bearing)
+
     def add_segment(self, segment):
-        if not segment.peer_id in self.peers:
-            self.peers[segment.peer_id] = self.peer_class(self)
         peer = self.peers[segment.peer_id]
         segment.peer = peer
 
@@ -306,6 +307,7 @@ class Visualizer:
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
+        self.server.add_method("/peer", "if", self.handle_peer_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.add_method("/amp", "if", self.handle_amp_message)
         self.server.add_method("/waveform", "if", self.handle_waveform_message)
@@ -566,7 +568,6 @@ def run(visualizer_class):
     parser.add_argument('-osc-log', dest='osc_log')
     parser.add_argument('-export', dest='export', action='store_true')
     parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
-    parser.add_argument("-no-ssr", dest="ssr_enabled", action="store_false", default=True)
     parser.add_argument("-waveform", dest="waveform", action='store_true')
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     parser.add_argument("-camera-script", dest="camera_script", type=str)
