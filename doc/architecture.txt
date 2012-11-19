@@ -1,0 +1,32 @@
+ARCHITECTURE WITH VISUALIZER AND SSR
+
+Orchestra.handle_segment(segment)
+  Orchestra.Player.play(segment, pan=0.5) [pan ignored?]
+    Orchestra.play_segment(segment, player)
+      Orchestra.visualize_segment(segment, player)
+        SsrControl.allocate_source()
+	OSC send /segment
+
+Visualizer.handle_segment_message()
+  Visualizer.add_segment(segment)
+    Visualizer.pan_segment(segment) [in subclass]
+      subclass.place_segment(segment.id, x, y, duration) [expected behaviour]
+        OSC send /place_segment
+    Visualizer.File.add_segment(segment) [in subclass]
+      subclass.File.playing_segment(segment) [expected behaviour]
+        Visualizer.playing_segment(segment)
+          OSC send /visualizing
+
+Orchestra._handle_visualizing_message
+  Orchestra._ask_synth_to_play_segment(segment, channel=segment["sound_source_id"]-1, pan=None)
+    SynthController.play_segment(...)
+      OSC send /play or /loop
+        SuperCollider [GENERATES AUDIO]
+    schedule call to stopped_playing(segment)
+
+Orchestra._handle_place_segment
+  SsrControl.place_source()
+    SSR [PANS AUDIO]
+
+Orchestra.stopped_playing(segment)
+  SsrControl.free_source()
