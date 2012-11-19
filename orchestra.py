@@ -584,12 +584,15 @@ class Orchestra:
             self.ssr.set_listener_orientation(orientation)
 
     def _handle_place_segment(self, path, args, types, src, data):
+        segment_id, x, y, duration = args
         if self.ssr:
-            segment_id, x, y, duration = args
             segment = self.segments_by_id[segment_id]
             sound_source_id = segment["sound_source_id"]
             if sound_source_id is not None:
                 self.ssr.place_source(sound_source_id, x, y, duration)
+        else:
+            pan = self._spatial_position_to_stereo_pan(x, y)
+            self.synth.pan(segment_id, pan)
 
     def _handle_enable_smooth_movement(self, path, args, types, src, data):
         if self.ssr:
@@ -604,6 +607,11 @@ class Orchestra:
                 player = self.get_player_for_segment(segment)
                 self.ssr.start_source_movement(
                     sound_source_id, player.trajectory, duration)
+
+    def _spatial_position_to_stereo_pan(self, x, y):
+        # compare rectangular_visualizer.Visualizer.pan_segment
+        # NOTE: assumes default listener position and orientation!
+        return float(x) / 5 + 0.5
 
 def warn(logger, message):
     logger.debug(message)
