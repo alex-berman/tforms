@@ -77,7 +77,8 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 
 SynthDef(\loop, {arg buffer = 0, segment_id, begin, end, period, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir, amp;
-	pointer = LFSaw.ar(freq:1.0/period, iphase:1);
+	var period_line = Line.kr(period, period*5, duration);
+	pointer = begin + ((end - begin) * LFSaw.ar(freq:1.0/period_line, iphase:1));
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 0.001],
 		[0.005*duration, 0.995*duration], 'exp'), doneAction: 2);
