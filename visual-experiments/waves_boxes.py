@@ -11,7 +11,9 @@ import math
 WAVEFORM_SIZE = 60
 WAVEFORM_FRAMES_TO_FILE = 10
 WAVEFORM_MAGNITUDE = 30
-MARGIN = 0.4
+FILE_MARGIN_X = 0.3
+FILE_MARGIN_Y = 0.1
+CURVE_MARGIN_Y = 0.3
 GATHERED_COLOR = Vector3d(0.9, 0.9, 0.9)
 OUTLINE_COLOR = Vector3d(0.9, 0.9, 0.9)
 WAVEFORM_COLOR = Vector3d(0.0, 0.0, 0.0)
@@ -141,7 +143,10 @@ class Peer(visualizer.Peer):
             x = 0
         else:
             x = self.visualizer.width
-        self.position = Vector2d(x, random.uniform(0, self.visualizer.height))
+        self.position = Vector2d(
+            x,
+            CURVE_MARGIN_Y * self.visualizer.height + \
+                random.uniform(0, (1-CURVE_MARGIN_Y*2) * self.visualizer.height))
 
     def add_segment(self, segment):
         if self.departure_position is None:
@@ -245,12 +250,13 @@ class Waves(visualizer.Visualizer):
 
     def ReSizeGLScene(self, *args):
         visualizer.Visualizer.ReSizeGLScene(self, *args)
-        margin = MARGIN * min(self.width, self.height)
-        self.x1 = margin
-        self.y1 = margin
-        self.x2 = self.width-margin
-        self.y2 = self.height-margin
-        self.waveform_length_to_file = margin
+        margin_x = FILE_MARGIN_X * self.width
+        margin_y = FILE_MARGIN_Y * self.height
+        self.x1 = margin_x
+        self.y1 = margin_y
+        self.x2 = self.width - margin_x
+        self.y2 = self.height - margin_y
+        self.waveform_length_to_file = margin_x
         self.waveform_length_in_file = self.x2 - self.x1
 
 visualizer.run(Waves)
