@@ -11,8 +11,7 @@ import math
 WAVEFORM_SIZE = 60
 WAVEFORM_FRAMES_TO_FILE = 10
 WAVEFORM_MAGNITUDE = 30
-WAVEFORM_WIDTH = 5.0
-MARGIN = 0.2
+MARGIN = 0.4
 GATHERED_COLOR = Vector3d(0.9, 0.9, 0.9)
 OUTLINE_COLOR = Vector3d(0.9, 0.9, 0.9)
 WAVEFORM_COLOR = Vector3d(0.0, 0.0, 0.0)
@@ -31,6 +30,12 @@ class Segment(visualizer.Segment):
         self.amp = 0
         self.pan = 0.5
 
+    def add_to_waveform(self, value):
+        if self.peer.rightward:
+            self.waveform.appendleft(value)
+        else:
+            self.waveform.append(value)
+
     def target_position(self):
         return self.branch_file_crossing()
 
@@ -38,7 +43,12 @@ class Segment(visualizer.Segment):
         return not self.is_playing()
 
     def branch_file_crossing(self):
-        return Vector2d(self.visualizer.x1, self.visualizer.byte_to_py(self.torrent_begin))
+        y = self.visualizer.byte_to_py(self.torrent_begin)
+        if self.peer.rightward:
+            x = self.visualizer.x1
+        else:
+            x = self.visualizer.x2
+        return Vector2d(x, y)
 
     def draw_playing(self):
         glEnable(GL_LINE_SMOOTH)
@@ -82,7 +92,7 @@ class Segment(visualizer.Segment):
             stretch_angle = bearing + self.HALF_PI
             w = self.waveform[
                 int(relative_n * WAVEFORM_FRAMES_TO_FILE)]
-            stretch = w * WAVEFORM_WIDTH * relative_n
+            stretch = w * WAVEFORM_MAGNITUDE * relative_n
             v = (x2 + stretch * math.cos(stretch_angle),
                  y2 + stretch * math.sin(stretch_angle))
             result.append(v)
@@ -126,7 +136,12 @@ class Peer(visualizer.Peer):
         self.departure_position = None
         self.smoothed_branching_position = Smoother()
         self.segments = {}
-        self.position = Vector2d(0, random.uniform(0, self.visualizer.height))
+        self.rightward = random.choice([True, False])
+        if self.rightward:
+            x = 0
+        else:
+            x = self.visualizer.width
+        self.position = Vector2d(x, random.uniform(0, self.visualizer.height))
 
     def add_segment(self, segment):
         if self.departure_position is None:
@@ -187,7 +202,7 @@ class Waves(visualizer.Visualizer):
         self.gatherer.add(segment)
 
     def render(self):
-        self.draw_outline()
+        #self.draw_outline()
         self.draw_gathered_segments()
         for peer in self.peers.values():
             peer.update()
@@ -226,7 +241,7 @@ class Waves(visualizer.Visualizer):
         return float(byte) / self.torrent_length
 
     def handle_segment_waveform_value(self, segment, value):
-        segment.waveform.appendleft(value)
+        segment.add_to_waveform(value)
 
     def ReSizeGLScene(self, *args):
         visualizer.Visualizer.ReSizeGLScene(self, *args)
