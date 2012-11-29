@@ -17,7 +17,7 @@ class Segment(visualizer.Segment):
         self.waveform.extend([0.0] * WAVEFORM_SIZE)
         self.amp = 0
         self.pan = 0.5
-        self.y = self.f.byte_to_py(self.begin)
+        self.y = self.visualizer.byte_to_py(self.torrent_begin)
 
     def render(self):
         amp = max([abs(value) for value in self.waveform])
@@ -37,15 +37,19 @@ class Segment(visualizer.Segment):
         return weak_color + (strong_color - weak_color) * pow(amp, 0.25)
 
 class File(visualizer.File):
-    def __init__(self, *args):
-        visualizer.File.__init__(self, *args)
-        self.playing_segments = collections.OrderedDict()
-        self.gatherer = Gatherer()
-
     def add_segment(self, segment):
         self.visualizer.playing_segment(segment)
-        self.playing_segments[segment.id] = segment
+        self.visualizer.playing_segments[segment.id] = segment
         segment.gathered = False
+
+class Waves(visualizer.Visualizer):
+    def __init__(self, args):
+        visualizer.Visualizer.__init__(self, args,
+                                       file_class=File,
+                                       segment_class=Segment)
+        self.subscribe_to_waveform()
+        self.playing_segments = collections.OrderedDict()
+        self.gatherer = Gatherer()
 
     def update(self):
         for segment in self.playing_segments.values():
@@ -59,6 +63,7 @@ class File(visualizer.File):
             del self.playing_segments[segment_id]
 
     def render(self):
+        self.update()
         self.draw_gathered_segments()
         self.draw_playing_segments()
 
@@ -75,10 +80,10 @@ class File(visualizer.File):
         glColor3f(*GATHERED_COLOR)
         glBegin(GL_QUADS)
         x1 = MARGIN
-        x2 = self.visualizer.width - MARGIN
+        x2 = self.width - MARGIN
         for segment in self.gatherer.pieces():
-            y1 = self.byte_to_py(segment.begin)
-            y2 = self.byte_to_py(segment.end)
+            y1 = self.byte_to_py(segment.torrent_begin)
+            y2 = self.byte_to_py(segment.torrent_end)
             if y2 == y1:
                 y2 += 1
             glVertex2f(x1, y1)
@@ -88,22 +93,10 @@ class File(visualizer.File):
         glEnd()
 
     def byte_to_py(self, byte):
-        return MARGIN + int(self.byte_to_relative_y(byte) * (self.visualizer.height - 2*MARGIN))
+        return MARGIN + int(self.byte_to_relative_y(byte) * (self.height - 2*MARGIN))
 
     def byte_to_relative_y(self, byte):
-        return float(byte) / self.length
-
-class Waves(visualizer.Visualizer):
-    def __init__(self, args):
-        visualizer.Visualizer.__init__(self, args,
-                                       file_class=File,
-                                       segment_class=Segment)
-        self.subscribe_to_waveform()
-
-    def render(self):
-        for f in self.files.values():
-            f.update()
-            f.render()
+        return float(byte) / self.torrent_length
 
     def handle_segment_waveform_value(self, segment, value):
         segment.waveform.appendleft(value)
