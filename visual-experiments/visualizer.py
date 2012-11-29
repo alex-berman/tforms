@@ -204,7 +204,9 @@ class Visualizer:
         glutInit(sys.argv)
         glutInitDisplayMode(self.gl_display_mode)
         glutInitWindowSize(window_width, window_height)
-        glutInitWindowPosition(0, 0)
+        glutInitWindowPosition(
+            (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2,
+            (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2)
         glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
         glutIdleFunc(self.DrawGLScene)
