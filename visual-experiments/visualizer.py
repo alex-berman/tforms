@@ -326,8 +326,8 @@ class Visualizer:
         if _height == 0:
             _height = 1
         glViewport(0, 0, _width, _height)
-        self._window_width = _width
-        self._window_height = _height
+        self.width = _width
+        self.height = _height
         self._aspect_ratio = float(_width) / _height
         if not self._3d_enabled:
             glMatrixMode(GL_PROJECTION)
@@ -510,11 +510,11 @@ class Visualizer:
         left = -right
         xwsize = right - left
         ywsize = top - bottom
-        # dx = -(pixdx*xwsize/self._window_width + eyedx*self.near/focus)
-        # dy = -(pixdy*ywsize/self._window_height + eyedy*self.near/focus)
+        # dx = -(pixdx*xwsize/self.width + eyedx*self.near/focus)
+        # dy = -(pixdy*ywsize/self.height + eyedy*self.near/focus)
         # I don't understand why this modification solved the problem (focus was 1.0)
-        dx = -(pixdx*xwsize/self._window_width)
-        dy = -(pixdy*ywsize/self._window_height)
+        dx = -(pixdx*xwsize/self.width)
+        dy = -(pixdy*ywsize/self.height)
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
