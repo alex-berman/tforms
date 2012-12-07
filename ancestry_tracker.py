@@ -1,5 +1,6 @@
 import sys
 import copy
+import math
 
 class Piece:
     def __init__(self, id, t, begin, end, parents={}, growth=[]):
@@ -77,6 +78,8 @@ class AncestryTracker:
 class AncestryPlotter:
     LINE = "line"
     CURVE = "curve"
+    RECT = "rect"
+    CIRCLE = "circle"
 
     def __init__(self, chunks, options):
         self._chunks = chunks
@@ -93,11 +96,22 @@ class AncestryPlotter:
         elif options.edge_style == self.CURVE:
             self._edge_plot_method = self._draw_curve
 
-    def _time_to_x(self, t):
-        return t / self._time_end * self._options.width
+        if options.geometry == self.RECT:
+            self._position = self._rect_position
+        elif options.geometry == self.CIRCLE:
+            self._position = self._circle_position
 
-    def _byte_to_y(self, byte_pos):
-        return float(byte_pos) / self._total_size * self._options.height
+    def _rect_position(self, t, byte_pos):
+        x = t / self._time_end * self._options.width
+        y = float(byte_pos) / self._total_size * self._options.height
+        return x, y
+
+    def _circle_position(self, t, byte_pos):
+        angle = float(byte_pos) / self._total_size * 2*math.pi
+        magnitude = (1 - t / self._time_end) * self._options.width / 2
+        x = self._options.width / 2 + magnitude * math.cos(angle)
+        y = self._options.width / 2 + magnitude * math.sin(angle)
+        return x, y
 
     def plot(self, svg_output=None):
         self._svg_output = svg_output
@@ -142,10 +156,8 @@ class AncestryPlotter:
             self._follow_piece(parent)
 
     def _connect_child_and_parent(self, t1, b1, t2, b2):
-        x1 = self._time_to_x(t1)
-        x2 = self._time_to_x(t2)
-        y1 = self._byte_to_y(b1)
-        y2 = self._byte_to_y(b2)
+        x1, y1 = self._position(t1, b1)
+        x2, y2 = self._position(t2, b2)
         self._edge_plot_method(x1, y1, x2, y2)
 
     def _write_svg(self, line):
@@ -153,13 +165,11 @@ class AncestryPlotter:
             print >>self._svg_output, line
 
     def _draw_path(self, points):
-        t1, b1 = points[0]
+        t0, b0 = points[0]
+        x0, y0 = self._position(t0, b0)
         self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%f,%f' % (
-                self._options.stroke_width,
-                self._time_to_x(t1),
-                self._byte_to_y(b1)))
+                self._options.stroke_width, x0, y0))
         for (t, b) in points[1:]:
-            self._write_svg(' L%f,%f' % (
-                    self._time_to_x(t),
-                    self._byte_to_y(b)))
+            x, y = self._position(t, b)
+            self._write_svg(' L%f,%f' % (x, y))
         self._write_svg('" />')

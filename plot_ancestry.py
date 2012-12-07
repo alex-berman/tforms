@@ -17,6 +17,9 @@ parser.add_argument("-o", dest="output_filename")
 parser.add_argument("--edge-style",
                     choices=[AncestryPlotter.LINE, AncestryPlotter.CURVE],
                     default=AncestryPlotter.CURVE)
+parser.add_argument("--geometry",
+                    choices=[AncestryPlotter.RECT, AncestryPlotter.CIRCLE],
+                    default=AncestryPlotter.RECT)
 options = parser.parse_args()
 
 output_filename = options.output_filename
