@@ -266,6 +266,7 @@ class Visualizer:
 
         f = self.files[segment.filenum]
         segment.f = f
+        segment.pan = 0.5
         f.add_segment(segment)
 
         self.pan_segment(segment)
