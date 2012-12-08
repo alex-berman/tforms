@@ -2,7 +2,7 @@
 
 from tr_log_reader import *
 from argparse import ArgumentParser
-from ancestry_tracker import *
+from ancestry_plotter import AncestryPlotter
 import sys
 
 parser = ArgumentParser()
