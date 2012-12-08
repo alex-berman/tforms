@@ -18,8 +18,7 @@ class AncestryTracker:
         self._pieces = dict()
         self._counter = 1
 
-    def add(self, chunk):
-        new_piece = Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"])
+    def add(self, new_piece):
         overlapping_pieces = self._overlapping_pieces(new_piece)
         if len(overlapping_pieces) > 0:
             if len(overlapping_pieces) > 1:

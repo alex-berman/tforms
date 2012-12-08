@@ -1,4 +1,4 @@
-from ancestry_tracker import AncestryTracker
+from ancestry_tracker import AncestryTracker, Piece
 import sys
 import math
 
@@ -13,7 +13,7 @@ class AncestryPlotter:
         self._options = options
         self._tracker = AncestryTracker()
         for chunk in chunks:
-            self._tracker.add(chunk)
+            self._tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
 
         self._total_size = max([chunk["end"] for chunk in chunks])
         self._time_end = max([piece.t for piece in self._tracker.last_pieces()])

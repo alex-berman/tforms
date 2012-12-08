@@ -32,6 +32,7 @@ parser.add_argument("--max-passivity", dest="max_passivity", type=float)
 parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
 parser.add_argument("--looped-duration", dest="looped_duration", type=float)
 parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.SSR)
+parser.add_argument("--include-non-playable", action="store_true")
 options = parser.parse_args()
 
 if options.realtime:
@@ -71,7 +72,8 @@ orchestra = Orchestra(sessiondir,
                       max_passivity=options.max_passivity,
                       max_pause_within_segment=options.max_pause_within_segment,
                       looped_duration=options.looped_duration,
-                      output=options.output)
+                      output=options.output,
+                      include_non_playable=options.include_non_playable)
 
 if not options.realtime and len(orchestra.chunks) == 0:
     raise Exception("No chunks to play. Unsupported file format?")

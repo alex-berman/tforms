@@ -3,7 +3,7 @@ import orchestra
 
 class OrchestraController:
     def __init__(self):
-        self.target = liblo.Address(orchestra.PORT)
+        self.target = liblo.Address("localhost", orchestra.PORT, liblo.TCP)
 
     def register(self):
         self._send("/register")

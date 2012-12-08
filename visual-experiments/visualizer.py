@@ -63,19 +63,22 @@ class File:
 
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, peer_id,
+                 filenum, f, peer_id,
                  arrival_time, visualizer):
         self.id = chunk_id
         self.begin = begin
         self.end = end
         self.byte_size = byte_size
         self.filenum = filenum
+        self.f = f
         self.peer_id = peer_id
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
         self.duration = FAKE_CHUNK_DURATION
         self.last_updated = visualizer.current_time()
+        self.torrent_begin = self.begin + f.offset
+        self.torrent_end = self.end + f.offset
 
     def append(self, other):
         self.end = other.end
@@ -108,12 +111,9 @@ class Segment(Chunk):
                  filenum, f, peer_id, duration,
                  arrival_time, visualizer):
         Chunk.__init__(self, chunk_id, begin, end, byte_size,
-                 filenum, peer_id,
+                 filenum, f, peer_id,
                  arrival_time, visualizer)
         self.duration = duration
-        self.f = f
-        self.torrent_begin = self.begin + f.offset
-        self.torrent_end = self.end + f.offset
 
     def playback_byte_cursor(self):
         return self.begin + min(self.relative_age(), 1) * self.byte_size
@@ -229,12 +229,14 @@ class Visualizer:
             self.added_all_files()
 
     def handle_chunk_message(self, path, args, types, src, data):
+        self.logger.debug("handling chunk message")
         (chunk_id, torrent_position, byte_size, filenum, peer_id) = args
         if filenum in self.files:
-            begin = torrent_position - self.files[filenum].offset
+            f = self.files[filenum]
+            begin = torrent_position - f.offset
             end = begin + byte_size
             chunk = self.chunk_class(
-                chunk_id, begin, end, byte_size, filenum,
+                chunk_id, begin, end, byte_size, filenum, f,
                 peer_id, self.current_time(), self)
             self.files[filenum].add_chunk(chunk)
         else:
@@ -340,6 +342,7 @@ class Visualizer:
 
     def DrawGLScene(self):
         if self.exiting:
+            self.server.stop()
             sys.exit()
 
         try:

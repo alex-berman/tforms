@@ -5,11 +5,11 @@ import traceback_printer
 
 class OscReceiver(liblo.Server):
     def __init__(self, port, log_filename=None):
-        liblo.Server.__init__(self, port)
+        liblo.Server.__init__(self, port, liblo.TCP)
         if log_filename:
             self.read_log(log_filename)
             self.log = True
-            self.sender = liblo.Address(port)
+            self.sender = liblo.Address("localhost", port, liblo.TCP)
         else:
             self.log = False
             self._queue = []
@@ -27,6 +27,9 @@ class OscReceiver(liblo.Server):
             serve_thread = threading.Thread(target=self._serve)
             serve_thread.daemon = True
             serve_thread.start()
+
+    def stop(self):
+        self.free()
 
     def _serve(self):
         while True:

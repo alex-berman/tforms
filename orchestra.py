@@ -87,7 +87,8 @@ class Orchestra:
                  max_passivity,
                  max_pause_within_segment,
                  looped_duration,
-                 output):
+                 output,
+                 include_non_playable):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = realtime
@@ -100,6 +101,7 @@ class Orchestra:
         self._max_passivity = max_passivity
         self.looped_duration = looped_duration
         self.output = output
+        self.include_non_playable = include_non_playable
 
         self.playback_enabled = True
         self.fast_forwarding = False
@@ -110,7 +112,16 @@ class Orchestra:
         self._create_players()
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
-        self.chunks = self._filter_playable_chunks(tr_log.chunks)
+        self.playable_chunks = self._filter_playable_chunks(tr_log.chunks)
+
+        if self.include_non_playable:
+            self.chunks = tr_log.chunks
+        else:
+            self.chunks = self.playable_chunks
+        logger.debug("total num chunks: %s" % len(tr_log.chunks))
+        logger.debug("num playable chunks: %s" % len(self.playable_chunks))
+        logger.debug("num selected chunks: %s" % len(self.chunks))
+
         self._interpret_chunks_to_score(max_pause_within_segment)
         self._chunks_by_id = {}
         self.segments_by_id = {}
@@ -143,7 +154,7 @@ class Orchestra:
 
 
     def _interpret_chunks_to_score(self, max_pause_within_segment):
-        self.score = Interpreter(max_pause_within_segment).interpret(self.chunks, self.tr_log.files)
+        self.score = Interpreter(max_pause_within_segment).interpret(self.playable_chunks, self.tr_log.files)
         if self._max_passivity:
             self._reduce_max_passivity_in_score()
         for segment in self.score:
@@ -165,7 +176,7 @@ class Orchestra:
 
     def _chunk_is_playable(self, chunk):
         file_info = self.tr_log.files[chunk["filenum"]]
-        return "playable_file_index" in file_info
+        return file_info["playable_file_index"] != -1
 
     def _run_scheduler_thread(self):
         self._scheduler_thread = threading.Thread(target=self._process_scheduled_events)
@@ -262,7 +273,7 @@ class Orchestra:
     def _load_sounds(self):
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
-            if "playable_file_index" in file_info:
+            if file_info["playable_file_index"] != -1:
                 self.synth.load_sound(filenum, file_info["decoded_name"])
 
     def _get_wav_files_info(self):
@@ -270,6 +281,7 @@ class Orchestra:
         estimated_mem_size = 0
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
+            file_info["playable_file_index"] = -1
             if "decoded_name" in file_info:
                 file_info["duration"] = self._get_file_duration(file_info)
                 if file_info["duration"] > 0:
@@ -502,7 +514,7 @@ class Orchestra:
         self.visualizer.send("/torrent", self._num_playable_files)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
-            if "playable_file_index" in file_info:
+            if self.include_non_playable or file_info["playable_file_index"] != -1:
                 self.visualizer.send("/file",
                                      file_info["playable_file_index"],
                                      file_info["offset"],
