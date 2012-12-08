@@ -26,6 +26,11 @@ class Space:
                           (local.x, local.y)]
         bezier = make_bezier(control_points)
         return bezier(self.TRAJECTORY_PRECISION)
+        # to test simplier movement along one dimension:
+        # control_points = [(0, -20),
+        #                   (0, 2)]
+        # bezier = make_bezier(control_points)
+        # return bezier(self.TRAJECTORY_PRECISION)
 
 class Peer:
     def __init__(self, space):
