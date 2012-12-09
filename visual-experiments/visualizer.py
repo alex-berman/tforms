@@ -12,7 +12,6 @@ if dirname:
     sys.path.append(dirname + "/..")
 else:
     sys.path.append("..")
-from orchestra import VISUALIZER_PORT
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 from osc_receiver import OscReceiver
@@ -160,6 +159,7 @@ class Visualizer:
         self.export = args.export
         self.osc_log = args.osc_log
         self.waveform_gain = args.waveform_gain
+        self.orchestra_port = args.port
 
         self.logger = logging.getLogger("visualizer")
         self.files = {}
@@ -185,7 +185,7 @@ class Visualizer:
             self.previous_shown_fps_time = None
 
         self.setup_osc(self.osc_log)
-        self.orchestra.register()
+        self.orchestra.register(self.server.port)
 
         if self.export:
             self.export_fps = args.export_fps
@@ -306,8 +306,8 @@ class Visualizer:
         pass
 
     def setup_osc(self, log_filename):
-        self.orchestra = OrchestraController()
-        self.server = OscReceiver(VISUALIZER_PORT, log_filename)
+        self.orchestra = OrchestraController(self.orchestra_port)
+        self.server = OscReceiver(log_filename=log_filename)
         self.server.add_method("/torrent", "i", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
@@ -342,7 +342,6 @@ class Visualizer:
 
     def DrawGLScene(self):
         if self.exiting:
-            self.server.stop()
             sys.exit()
 
         try:
@@ -551,10 +550,10 @@ class Visualizer:
         glAccum(GL_RETURN, 1.0)
 
     def subscribe_to_amp(self):
-        self.synth.subscribe_to_amp(VISUALIZER_PORT)
+        self.synth.subscribe_to_amp(self.waveform_server.port)
 
     def subscribe_to_waveform(self):
-        self.synth.subscribe_to_waveform(VISUALIZER_PORT)
+        self.synth.subscribe_to_waveform(self.waveform_server.port)
 
     def _move_camera_by_script(self):
         position, orientation = self._camera_script.position_and_orientation(
@@ -566,6 +565,7 @@ def run(visualizer_class):
     print "Hit ESC key to quit."
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-port', type=int)
     parser.add_argument('-sync', action='store_true')
     parser.add_argument('-width', dest='width', type=int, default=640)
     parser.add_argument('-height', dest='height', type=int, default=480)

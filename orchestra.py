@@ -16,8 +16,6 @@ from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
 
-PORT = 51233
-VISUALIZER_PORT = 51234
 MAX_MEM_SIZE_KB = 1100000
 BYTES_PER_SAMPLE = 4
 
@@ -81,6 +79,7 @@ class Orchestra:
                  quiet,
                  predecoded,
                  file_location,
+                 visualizer_command_line,
                  visualizer_enabled,
                  loop,
                  osc_log,
@@ -98,6 +97,7 @@ class Orchestra:
         self.file_location = file_location
         self._visualizer_enabled = visualizer_enabled
         self._loop = loop
+        self._osc_log = osc_log
         self._max_passivity = max_passivity
         self.looped_duration = looped_duration
         self.output = output
@@ -140,11 +140,11 @@ class Orchestra:
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
+        self.visualizer = None
         if self._visualizer_enabled:
-            self.visualizer = OscSender(VISUALIZER_PORT, osc_log)
             self._setup_osc()
-        else:
-            self.visualizer = None
+            if visualizer_command_line:
+                self._spawn_visualizer(visualizer_command_line)
 
         if self.output == self.SSR:
             self.ssr = SsrControl()
@@ -152,6 +152,9 @@ class Orchestra:
         else:
             self.ssr = None
 
+    def _spawn_visualizer(self, command_line):
+        command_line_with_port = "%s -port %d" % (command_line, self.server.port)
+        visualizer_process = subprocess.Popen(command_line_with_port, shell=True, stdin=None)
 
     def _interpret_chunks_to_score(self, max_pause_within_segment):
         self.score = Interpreter(max_pause_within_segment).interpret(self.playable_chunks, self.tr_log.files)
@@ -189,9 +192,9 @@ class Orchestra:
             time.sleep(0.01)
 
     def _setup_osc(self):
-        self.server = OscReceiver(PORT)
+        self.server = OscReceiver()
         self.server.add_method("/visualizing", "i", self._handle_visualizing_message)
-        self.server.add_method("/register", "", self._handle_register)
+        self.server.add_method("/register", "i", self._handle_register)
         self.server.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
         self.server.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
         self.server.add_method("/place_segment", "ifff", self._handle_place_segment)
@@ -242,6 +245,8 @@ class Orchestra:
             self.stopped_playing, [segment])
 
     def _handle_register(self, path, args, types, src, data):
+        visualizer_port = args[0]
+        self.visualizer = OscSender(visualizer_port, self._osc_log)
         self._visualizer_registered = True
 
     def _check_which_files_are_audio(self):

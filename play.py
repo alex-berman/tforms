@@ -22,7 +22,7 @@ parser.add_argument("--gui", action="store_true", dest="gui_enabled")
 parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
 parser.add_argument("--download-location", dest="download_location", default="../../Downloads")
 parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
-parser.add_argument("--visualizer", dest="visualizer")
+parser.add_argument("--visualizer", dest="visualizer_command_line")
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
 parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
@@ -66,7 +66,8 @@ orchestra = Orchestra(sessiondir,
                       quiet=options.quiet,
                       predecoded=options.predecode,
                       file_location=options.download_location,
-                      visualizer_enabled=(options.visualizer_enabled or options.visualizer),
+                      visualizer_command_line=options.visualizer_command_line,
+                      visualizer_enabled=(options.visualizer_enabled or options.visualizer_command_line),
                       loop=options.loop,
                       osc_log=options.osc_log,
                       max_passivity=options.max_passivity,
@@ -123,9 +124,6 @@ def wait_for_play_completion_or_interruption():
     global orchestra_thread
     while orchestra_thread.is_alive() or not options.quit_at_end:
         time.sleep(0.1)
-
-if options.visualizer:
-    visualizer_process = subprocess.Popen(options.visualizer, shell=True, stdin=None)
 
 if options.realtime:
     run_realtime()

@@ -2,11 +2,11 @@ import liblo
 import orchestra
 
 class OrchestraController:
-    def __init__(self):
-        self.target = liblo.Address("localhost", orchestra.PORT, liblo.TCP)
+    def __init__(self, port):
+        self.target = liblo.Address("localhost", port, liblo.TCP)
 
-    def register(self):
-        self._send("/register")
+    def register(self, port):
+        self._send("/register", port)
 
     def visualizing_segment(self, segment_id):
         self._send("/visualizing", segment_id)
