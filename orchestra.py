@@ -116,8 +116,10 @@ class Orchestra:
 
         if self.include_non_playable:
             self.chunks = tr_log.chunks
+            self._num_selected_files = len(self.tr_log.files)
         else:
             self.chunks = self.playable_chunks
+            self._num_selected_files = self._num_playable_files
         logger.debug("total num chunks: %s" % len(tr_log.chunks))
         logger.debug("num playable chunks: %s" % len(self.playable_chunks))
         logger.debug("num selected chunks: %s" % len(self.chunks))
@@ -287,6 +289,7 @@ class Orchestra:
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             file_info["playable_file_index"] = -1
+
             if "decoded_name" in file_info:
                 file_info["duration"] = self._get_file_duration(file_info)
                 if file_info["duration"] > 0:
@@ -297,6 +300,11 @@ class Orchestra:
                     estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) \
                         * file_info["num_channels"] * BYTES_PER_SAMPLE
                     playable_file_index += 1
+
+            if self.include_non_playable:
+                file_info["index"] = filenum
+            else:
+                file_info["index"] = file_info["playable_file_index"]
         self._num_playable_files = playable_file_index
 
         estimated_mem_size_kb = estimated_mem_size / 1024
@@ -380,7 +388,9 @@ class Orchestra:
             return self.chunks[self.current_chunk_index]
 
     def _get_next_segment(self):
-        if self.current_segment_index < len(self.score):
+        if len(self.score) == 0:
+            return None
+        elif self.current_segment_index < len(self.score):
             return self.score[self.current_segment_index]
 
     def _handle_event(self, event):
@@ -471,7 +481,7 @@ class Orchestra:
                                  chunk["id"],
                                  chunk["begin"],
                                  chunk["end"] - chunk["begin"],
-                                 file_info["playable_file_index"],
+                                 file_info["index"],
                                  player.id,
                                  chunk["t"])
 
@@ -491,7 +501,7 @@ class Orchestra:
                                  segment["id"],
                                  segment["begin"],
                                  segment["end"] - segment["begin"],
-                                 file_info["playable_file_index"],
+                                 file_info["index"],
                                  player.id,
                                  segment["t"],
                                  segment["playback_duration"])
@@ -518,15 +528,16 @@ class Orchestra:
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
+        torrent_size = sum([f["length"] for f in self.tr_log.files])
         self.visualizer.send("/torrent",
-                             self._num_playable_files,
+                             self._num_selected_files,
                              self.tr_log.lastchunktime(),
-                             self.tr_log.totalsize)
+                             torrent_size)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:
                 self.visualizer.send("/file",
-                                     file_info["playable_file_index"],
+                                     file_info["index"],
                                      file_info["offset"],
                                      file_info["length"])
 

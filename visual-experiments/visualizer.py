@@ -228,6 +228,7 @@ class Visualizer:
         self.torrent_length += length
         self.added_file(f)
         if len(self.files) == self.num_files:
+            self.logger.debug("added all files")
             self.added_all_files()
 
     def handle_chunk_message(self, path, args, types, src, data):
