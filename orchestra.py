@@ -518,7 +518,10 @@ class Orchestra:
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
-        self.visualizer.send("/torrent", self._num_playable_files, self.tr_log.lastchunktime())
+        self.visualizer.send("/torrent",
+                             self._num_playable_files,
+                             self.tr_log.lastchunktime(),
+                             self.tr_log.totalsize)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:

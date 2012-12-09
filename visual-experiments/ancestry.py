@@ -33,7 +33,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.updated = False
 
     def added_all_files(self):
-        AncestryPlotter.__init__(self, self.torrent_length, self.download_duration, self.args)
+        AncestryPlotter.__init__(self, self.total_size, self.download_duration, self.args)
         self._initialized = True
 
     def render(self):
