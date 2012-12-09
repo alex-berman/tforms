@@ -4,8 +4,8 @@ import threading
 import traceback_printer
 
 class OscReceiver(liblo.Server):
-    def __init__(self, port=None, log_filename=None):
-        liblo.Server.__init__(self, port, liblo.TCP)
+    def __init__(self, port=None, log_filename=None, proto=liblo.TCP):
+        liblo.Server.__init__(self, port, proto)
         if log_filename:
             self.read_log(log_filename)
             self.log = True

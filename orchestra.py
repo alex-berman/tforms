@@ -140,17 +140,17 @@ class Orchestra:
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
-        self.visualizer = None
-        if self._visualizer_enabled:
-            self._setup_osc()
-            if visualizer_command_line:
-                self._spawn_visualizer(visualizer_command_line)
-
         if self.output == self.SSR:
             self.ssr = SsrControl()
             self._warned_about_max_sources = False
         else:
             self.ssr = None
+
+        self.visualizer = None
+        if self._visualizer_enabled:
+            self._setup_osc()
+            if visualizer_command_line:
+                self._spawn_visualizer(visualizer_command_line)
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)

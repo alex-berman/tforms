@@ -6,6 +6,7 @@ import argparse
 import collections
 import logging
 import math
+import liblo
 
 dirname = os.path.dirname(__file__)
 if dirname:
@@ -314,9 +315,14 @@ class Visualizer:
         self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
         self.server.add_method("/peer", "if", self.handle_peer_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
-        self.server.add_method("/amp", "if", self.handle_amp_message)
-        self.server.add_method("/waveform", "if", self.handle_waveform_message)
         self.server.start()
+        self.waveform_server = None
+
+    def setup_waveform_server(self):
+        self.waveform_server = OscReceiver(proto=liblo.UDP)
+        self.waveform_server.add_method("/amp", "if", self.handle_amp_message)
+        self.waveform_server.add_method("/waveform", "if", self.handle_waveform_message)
+        self.waveform_server.start()
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -387,6 +393,8 @@ class Visualizer:
             self.server.serve_from_log_until(self.now)
         else:
             self.server.serve()
+            if self.waveform_server:
+                self.waveform_server.serve()
 
     def update_fps_history(self):
         fps = 1.0 / self.time_increment
@@ -550,9 +558,13 @@ class Visualizer:
         glAccum(GL_RETURN, 1.0)
 
     def subscribe_to_amp(self):
+        if not self.waveform_server:
+            self.setup_waveform_server()
         self.synth.subscribe_to_amp(self.waveform_server.port)
 
     def subscribe_to_waveform(self):
+        if not self.waveform_server:
+            self.setup_waveform_server()
         self.synth.subscribe_to_waveform(self.waveform_server.port)
 
     def _move_camera_by_script(self):
