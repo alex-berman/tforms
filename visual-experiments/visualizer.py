@@ -574,6 +574,10 @@ class Visualizer:
         self._set_camera_position(position)
         self._set_camera_orientation(orientation.y, orientation.x)
 
+    @staticmethod
+    def add_parser_arguments(parser):
+        pass
+
 def run(visualizer_class):
     print "Hit ESC key to quit."
 
@@ -590,6 +594,7 @@ def run(visualizer_class):
     parser.add_argument("-waveform", dest="waveform", action='store_true')
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     parser.add_argument("-camera-script", dest="camera_script", type=str)
+    visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
 
     visualizer_class(args).run()

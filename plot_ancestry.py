@@ -2,7 +2,7 @@
 
 from tr_log_reader import *
 from argparse import ArgumentParser
-from ancestry_plotter import AncestryPlotter
+from ancestry_plotter import AncestrySvgPlotter
 import sys
 
 parser = ArgumentParser()
@@ -14,28 +14,28 @@ parser.add_argument("-height", type=int, default=500)
 parser.add_argument("-stroke_width", type=float, default=1)
 parser.add_argument("-f", "--force", action="store_true")
 parser.add_argument("-o", dest="output_filename")
-parser.add_argument("--edge-style",
-                    choices=[AncestryPlotter.LINE, AncestryPlotter.CURVE],
-                    default=AncestryPlotter.CURVE)
-parser.add_argument("--geometry",
-                    choices=[AncestryPlotter.RECT, AncestryPlotter.CIRCLE],
-                    default=AncestryPlotter.RECT)
-options = parser.parse_args()
+AncestrySvgPlotter.add_parser_arguments(parser)
+args = parser.parse_args()
 
-output_filename = options.output_filename
+output_filename = args.output_filename
 if not output_filename:
-    output_filename = "%s/ancestry.svg" % options.sessiondir
+    output_filename = "%s/ancestry.svg" % args.sessiondir
 
-if os.path.exists(output_filename) and not options.force:
+if os.path.exists(output_filename) and not args.force:
     print >>sys.stderr, "%s already exists. Skipping." % output_filename
     sys.exit(-1)
 
-logfilename = "%s/session.log" % options.sessiondir
-log = TrLogReader(logfilename, options.torrentname, options.filenum).get_log()
+logfilename = "%s/session.log" % args.sessiondir
+log = TrLogReader(logfilename, args.torrentname, args.filenum).get_log()
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
 log.ignore_non_downloaded_files()
 
 output = open(output_filename, "w")
-AncestryPlotter(log.chunks, options).plot(output)
+plotter = AncestrySvgPlotter(log.totalsize, log.lastchunktime(), args)
+plotter.set_size(args.width, args.height)
+for chunk in log.chunks:
+    plotter.add_piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"])
+plotter.plot(output)
+
 output.close()
 print "plot: %s" % output_filename

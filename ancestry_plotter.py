@@ -8,64 +8,59 @@ class AncestryPlotter:
     RECT = "rect"
     CIRCLE = "circle"
 
-    def __init__(self, chunks, options):
-        self._chunks = chunks
-        self._options = options
+    def __init__(self, total_size, duration, args):
+        self._total_size = total_size
+        self._duration = duration
+        self._args = args
         self._tracker = AncestryTracker()
-        for chunk in chunks:
-            self._tracker.add(Piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"]))
+        self._num_pieces = 0
 
-        self._total_size = max([chunk["end"] for chunk in chunks])
-        self._time_end = max([piece.t for piece in self._tracker.last_pieces()])
+        if args.edge_style == self.LINE:
+            self._edge_plot_method = self.draw_line
+        elif args.edge_style == self.CURVE:
+            self._edge_plot_method = self.draw_curve
 
-        if options.edge_style == self.LINE:
-            self._edge_plot_method = self._draw_line
-        elif options.edge_style == self.CURVE:
-            self._edge_plot_method = self._draw_curve
-
-        if options.geometry == self.RECT:
+        if args.geometry == self.RECT:
             self._position = self._rect_position
-        elif options.geometry == self.CIRCLE:
+        elif args.geometry == self.CIRCLE:
             self._position = self._circle_position
 
+    def set_size(self, width, height):
+        self._width = width
+        self._height = height
+
+    @staticmethod
+    def add_parser_arguments(parser):
+        parser.add_argument("--edge-style",
+                            choices=[AncestryPlotter.LINE, AncestryPlotter.CURVE],
+                            default=AncestryPlotter.CURVE)
+        parser.add_argument("--geometry",
+                            choices=[AncestryPlotter.RECT, AncestryPlotter.CIRCLE],
+                            default=AncestryPlotter.RECT)
+
+    def add_piece(self, piece_id, t, begin, end):
+        self._tracker.add(Piece(piece_id, t, begin, end))
+        self._num_pieces += 1
+
     def _rect_position(self, t, byte_pos):
-        x = t / self._time_end * self._options.width
-        y = float(byte_pos) / self._total_size * self._options.height
+        x = t / self._duration * self._width
+        y = float(byte_pos) / self._total_size * self._height
         return x, y
 
     def _circle_position(self, t, byte_pos):
         angle = float(byte_pos) / self._total_size * 2*math.pi
-        magnitude = (1 - t / self._time_end) * self._options.width / 2
-        x = self._options.width / 2 + magnitude * math.cos(angle)
-        y = self._options.width / 2 + magnitude * math.sin(angle)
+        magnitude = (1 - t / self._duration) * self._width / 2
+        x = self._width / 2 + magnitude * math.cos(angle)
+        y = self._width / 2 + magnitude * math.sin(angle)
         return x, y
 
-    def plot(self, svg_output=None):
-        self._svg_output = svg_output
-        self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
-        self._write_svg('<g>')
-        self._write_svg('<rect width="%f" height="%f" fill="white" />' % (
-            self._options.width, self._options.height))
+    def plot(self):
         self._override_recursion_limit()
         for piece in self._tracker.last_pieces():
             self._follow_piece(piece)
-        self._write_svg('</g>')
-        self._write_svg('</svg>')
 
     def _override_recursion_limit(self):
-        sys.setrecursionlimit(len(self._chunks))
-
-    def _draw_line(self, x1, y1, x2, y2, color="black"):
-        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
-                x1, y1, x2, y2, color, self._options.stroke_width))
-
-    def _draw_curve(self, x1, y1, x2, y2):
-        self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
-                self._options.stroke_width,
-                x1, y1,
-                x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35,
-                x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65,
-                x2, y2))
+        sys.setrecursionlimit(max(self._num_pieces, sys.getrecursionlimit()))
 
     def _follow_piece(self, piece):
         if len(piece.growth) > 0:
@@ -74,7 +69,7 @@ class AncestryPlotter:
             for older_version in reversed(piece.growth):
                 path.append((older_version.t,
                              (older_version.begin + older_version.end) / 2))
-            self._draw_path(path)
+            self.draw_path(path)
 
         for parent in piece.parents.values():
             self._connect_child_and_parent(
@@ -87,16 +82,40 @@ class AncestryPlotter:
         x2, y2 = self._position(t2, b2)
         self._edge_plot_method(x1, y1, x2, y2)
 
-    def _write_svg(self, line):
-        if self._svg_output:
-            print >>self._svg_output, line
 
-    def _draw_path(self, points):
+class AncestrySvgPlotter(AncestryPlotter):
+    def plot(self, svg_output=None):
+        self._svg_output = svg_output
+        self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
+        self._write_svg('<g>')
+        self._write_svg('<rect width="%f" height="%f" fill="white" />' % (
+            self._width, self._height))
+        AncestryPlotter.plot(self)
+        self._write_svg('</g>')
+        self._write_svg('</svg>')
+
+    def draw_line(self, x1, y1, x2, y2, color="black"):
+        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
+                x1, y1, x2, y2, color, self._args.stroke_width))
+
+    def draw_curve(self, x1, y1, x2, y2):
+        self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
+                self._args.stroke_width,
+                x1, y1,
+                x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35,
+                x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65,
+                x2, y2))
+
+    def draw_path(self, points):
         t0, b0 = points[0]
         x0, y0 = self._position(t0, b0)
         self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%f,%f' % (
-                self._options.stroke_width, x0, y0))
+                self._args.stroke_width, x0, y0))
         for (t, b) in points[1:]:
             x, y = self._position(t, b)
             self._write_svg(' L%f,%f' % (x, y))
         self._write_svg('" />')
+
+    def _write_svg(self, line):
+        if self._svg_output:
+            print >>self._svg_output, line
