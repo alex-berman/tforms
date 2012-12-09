@@ -17,6 +17,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.__init__(self, args, file_class=File)
         self.updated = False
         self.list = 1
+        self._initialized = False
 
     @staticmethod
     def add_parser_arguments(parser):
@@ -33,11 +34,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def added_all_files(self):
         AncestryPlotter.__init__(self, self.torrent_length, self.download_duration, self.args)
+        self._initialized = True
 
     def render(self):
         if self.updated:
             self.draw()
-        else:
+        elif self._initialized:
             self.update_and_draw()
 
     def update_and_draw(self):
