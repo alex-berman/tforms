@@ -28,7 +28,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         AncestryPlotter.set_size(self, self._size, self._size)
 
     def add_chunk(self, chunk):
-        AncestryPlotter.add_piece(self, chunk.id, chunk.t, chunk.begin, chunk.end)
+        AncestryPlotter.add_piece(self, chunk.id, chunk.t, chunk.torrent_begin, chunk.torrent_end)
         self.updated = False
 
     def added_all_files(self):
