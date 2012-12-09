@@ -63,7 +63,7 @@ class File:
 
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id,
+                 filenum, f, peer_id, t,
                  arrival_time, visualizer):
         self.id = chunk_id
         self.begin = begin
@@ -72,6 +72,7 @@ class Chunk:
         self.filenum = filenum
         self.f = f
         self.peer_id = peer_id
+        self.t = t
         self.arrival_time = arrival_time
         self.visualizer = visualizer
         self.playing = False
@@ -108,10 +109,10 @@ class Chunk:
 
 class Segment(Chunk):
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id, duration,
+                 filenum, f, peer_id, t, duration,
                  arrival_time, visualizer):
         Chunk.__init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id,
+                 filenum, f, peer_id, t,
                  arrival_time, visualizer)
         self.duration = duration
 
@@ -218,7 +219,7 @@ class Visualizer:
         glutMainLoop()
 
     def handle_torrent_message(self, path, args, types, src, data):
-        self.num_files = args[0]
+        self.num_files, self.download_duration = args
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
@@ -231,28 +232,28 @@ class Visualizer:
 
     def handle_chunk_message(self, path, args, types, src, data):
         self.logger.debug("handling chunk message")
-        (chunk_id, torrent_position, byte_size, filenum, peer_id) = args
+        (chunk_id, torrent_position, byte_size, filenum, peer_id, t) = args
         if filenum in self.files:
             f = self.files[filenum]
             begin = torrent_position - f.offset
             end = begin + byte_size
             chunk = self.chunk_class(
                 chunk_id, begin, end, byte_size, filenum, f,
-                peer_id, self.current_time(), self)
+                peer_id, t, self.current_time(), self)
             self.files[filenum].add_chunk(chunk)
         else:
             print "ignoring chunk from undeclared file %s" % filenum
 
     def handle_segment_message(self, path, args, types, src, data):
         (segment_id, torrent_position, byte_size, filenum,
-         peer_id, duration) = args
+         peer_id, t, duration) = args
         if filenum in self.files:
             f = self.files[filenum]
             begin = torrent_position - f.offset
             end = begin + byte_size
             segment = self.segment_class(
                 segment_id, begin, end, byte_size, filenum, f,
-                peer_id, duration, self.current_time(), self)
+                peer_id, t, duration, self.current_time(), self)
             self._segments_by_id[segment_id] = segment
 
             self.add_segment(segment)
@@ -309,10 +310,10 @@ class Visualizer:
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_port)
         self.server = OscReceiver(log_filename=log_filename)
-        self.server.add_method("/torrent", "i", self.handle_torrent_message)
+        self.server.add_method("/torrent", "if", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
-        self.server.add_method("/chunk", "iiiii", self.handle_chunk_message)
-        self.server.add_method("/segment", "iiiiif", self.handle_segment_message)
+        self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
+        self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
         self.server.add_method("/peer", "if", self.handle_peer_message)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.start()

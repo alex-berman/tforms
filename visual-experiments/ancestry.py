@@ -22,7 +22,7 @@ class Ancestry(visualizer.Visualizer):
     def add_chunk(self, chunk):
         chunk.parents = {}
         chunk.growth = []
-        self.ancestry_tracker.add(Piece(chunk.id, chunk.arrival_time, chunk.torrent_begin, chunk.torrent_end))
+        self.ancestry_tracker.add(Piece(chunk.id, chunk.t, chunk.torrent_begin, chunk.torrent_end))
         self.chunks.append(chunk)
         self.updated = False
 
@@ -36,6 +36,10 @@ class Ancestry(visualizer.Visualizer):
         glNewList(self.list, GL_COMPILE_AND_EXECUTE)
         self._override_recursion_limit()
         glLineWidth(1)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(0,0,0)
         for piece in self.ancestry_tracker.last_pieces():
             self._follow_piece(piece)
@@ -74,7 +78,7 @@ class Ancestry(visualizer.Visualizer):
         glEnd()
 
     def _position(self, t, byte_pos):
-        x = t / self.current_time() * self.width
+        x = t / self.download_duration * self.width
         y = float(byte_pos) / self.torrent_length * self.height
         return x, y
 

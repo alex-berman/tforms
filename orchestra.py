@@ -472,7 +472,8 @@ class Orchestra:
                                  chunk["begin"],
                                  chunk["end"] - chunk["begin"],
                                  file_info["playable_file_index"],
-                                 player.id)
+                                 player.id,
+                                 chunk["t"])
 
     def visualize_segment(self, segment, player):
         if self.visualizer:
@@ -492,6 +493,7 @@ class Orchestra:
                                  segment["end"] - segment["begin"],
                                  file_info["playable_file_index"],
                                  player.id,
+                                 segment["t"],
                                  segment["playback_duration"])
         else:
             self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
@@ -516,7 +518,7 @@ class Orchestra:
 
     def _send_torrent_info_to_visualizer(self):
         self._informed_visualizer_about_torrent = True
-        self.visualizer.send("/torrent", self._num_playable_files)
+        self.visualizer.send("/torrent", self._num_playable_files, self.tr_log.lastchunktime())
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:
