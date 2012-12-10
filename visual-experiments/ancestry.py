@@ -65,19 +65,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
-    def draw_curve(self, points):
-        glBegin(GL_LINE_STRIP)
-        for x, y in points:
-            glVertex2f(x, y)
-        glEnd()
-
-    def _connect_child_and_parent(self, t1, b1, t2, b2):
-        x1, y1 = self._position(t1, b1)
-        x2, y2 = self._position(t2, b2)
-        curve = self._curve(x1, y1, x2, y2)
-        self.draw_curve(curve)
-
-    def _curve(self, x1, y1, x2, y2):
+    def draw_curve(self, x1, y1, x2, y2):
         control_points = [
             Vector2d(x1, y1),
             Vector2d(x1 + (x2 - x1) * 0.3, y1),
@@ -85,6 +73,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             Vector2d(x2, y2)
             ]
         bezier = make_bezier([(p.x, p.y) for p in control_points])
-        return bezier(CURVE_PRECISION)
+        points = bezier(CURVE_PRECISION)
+        glBegin(GL_LINE_STRIP)
+        for x, y in points:
+            glVertex2f(x, y)
+        glEnd()
 
 visualizer.run(Ancestry)
