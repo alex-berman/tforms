@@ -80,8 +80,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def _curve(self, x1, y1, x2, y2):
         control_points = [
             Vector2d(x1, y1),
-            Vector2d(x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35),
-            Vector2d(x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65),
+            Vector2d(x1 + (x2 - x1) * 0.3, y1),
+            Vector2d(x1 + (x2 - x1) * 0.7, y2),
             Vector2d(x2, y2)
             ]
         bezier = make_bezier([(p.x, p.y) for p in control_points])
