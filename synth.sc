@@ -117,14 +117,16 @@ OSCresponder.new(nil, "/load",
   { arg t, r, msg;
 	  var sound_id = msg[1];
 	  var filename = msg[2];
-	  if(~filenames[sound_id] != filename, {
-		  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {
-			  "loaded ".post; filename.postln;
-			  if(~info_subscriber != nil,
-				  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames) }, {});
+	  if(~filenames[sound_id] == filename,
+		  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames); },
+		  {
+			  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {
+				  "loaded ".post; filename.postln;
+				  if(~info_subscriber != nil,
+					  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames) }, {});
+				  ~filenames[sound_id] = filename;
+			  });
 		  });
-		  ~filenames[sound_id] = filename;
-	  }, {});
   }).add;
 
 OSCresponder.new(nil, "/free",
