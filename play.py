@@ -12,27 +12,7 @@ from logger import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
-parser.add_argument("--rt", action="store_true", dest="realtime")
-parser.add_argument("-t", "--torrent", dest="torrentname", default="")
-parser.add_argument("-z", "--timefactor", dest="timefactor", type=float, default=1)
-parser.add_argument("--start", dest="start_time", type=float, default=0)
-parser.add_argument("-q", "--quiet", action="store_true", dest="quiet")
-parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
-parser.add_argument("--gui", action="store_true", dest="gui_enabled")
-parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
-parser.add_argument("--download-location", dest="download_location", default="../../Downloads")
-parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
-parser.add_argument("--visualizer", dest="visualizer_command_line")
-parser.add_argument("--fast-forward", action="store_true", dest="ff")
-parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
-parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
-parser.add_argument("--loop", dest="loop", action="store_true")
-parser.add_argument("--osc-log", dest="osc_log")
-parser.add_argument("--max-passivity", dest="max_passivity", type=float)
-parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
-parser.add_argument("--looped-duration", dest="looped_duration", type=float)
-parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.SSR)
-parser.add_argument("--include-non-playable", action="store_true")
+Orchestra.add_parser_arguments(parser)
 options = parser.parse_args()
 
 if options.realtime:
@@ -52,29 +32,7 @@ tr_log = TrLogReader(logfilename, options.torrentname,
                      realtime=options.realtime,
                      pretend_sequential=options.pretend_sequential).get_log()
 
-if options.predecode:
-    from predecode import Predecoder
-    predecoder = Predecoder(tr_log, options.download_location, Orchestra.SAMPLE_RATE)
-    predecoder.decode()
-
-orchestra = Orchestra(sessiondir,
-                      tr_log,
-                      realtime=options.realtime,
-                      timefactor=options.timefactor,
-                      start_time=options.start_time,
-                      ff_to_start=options.ff_to_start,
-                      quiet=options.quiet,
-                      predecoded=options.predecode,
-                      file_location=options.download_location,
-                      visualizer_command_line=options.visualizer_command_line,
-                      visualizer_enabled=(options.visualizer_enabled or options.visualizer_command_line),
-                      loop=options.loop,
-                      osc_log=options.osc_log,
-                      max_passivity=options.max_passivity,
-                      max_pause_within_segment=options.max_pause_within_segment,
-                      looped_duration=options.looped_duration,
-                      output=options.output,
-                      include_non_playable=options.include_non_playable)
+orchestra = Orchestra(sessiondir, tr_log, options)
 
 if not options.realtime and len(orchestra.chunks) == 0:
     raise Exception("No chunks to play. Unsupported file format?")

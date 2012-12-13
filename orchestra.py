@@ -15,6 +15,7 @@ from interpret import Interpreter
 from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
+from predecode import Predecoder
 
 MAX_MEM_SIZE_KB = 1100000
 BYTES_PER_SAMPLE = 4
@@ -67,41 +68,51 @@ class Orchestra:
     JACK = "jack"
     SSR = "ssr"
 
+    @staticmethod
+    def add_parser_arguments(parser):
+        parser.add_argument("--rt", action="store_true", dest="realtime")
+        parser.add_argument("-t", "--torrent", dest="torrentname", default="")
+        parser.add_argument("-z", "--timefactor", dest="timefactor", type=float, default=1)
+        parser.add_argument("--start", dest="start_time", type=float, default=0)
+        parser.add_argument("-q", "--quiet", action="store_true", dest="quiet")
+        parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
+        parser.add_argument("--gui", action="store_true", dest="gui_enabled")
+        parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
+        parser.add_argument("--file-location", dest="file_location", default="../../Downloads")
+        parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
+        parser.add_argument("--visualizer", dest="visualizer_command_line")
+        parser.add_argument("--fast-forward", action="store_true", dest="ff")
+        parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
+        parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
+        parser.add_argument("--loop", dest="loop", action="store_true")
+        parser.add_argument("--osc-log", dest="osc_log")
+        parser.add_argument("--max-passivity", dest="max_passivity", type=float)
+        parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
+        parser.add_argument("--looped-duration", dest="looped_duration", type=float)
+        parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.SSR)
+        parser.add_argument("--include-non-playable", action="store_true")
+
     _extension_re = re.compile('\.(\w+)$')
 
-    def __init__(self,
-                 sessiondir,
-                 tr_log,
-                 realtime,
-                 timefactor,
-                 start_time,
-                 ff_to_start,
-                 quiet,
-                 predecoded,
-                 file_location,
-                 visualizer_command_line,
-                 visualizer_enabled,
-                 loop,
-                 osc_log,
-                 max_passivity,
-                 max_pause_within_segment,
-                 looped_duration,
-                 output,
-                 include_non_playable):
+    def __init__(self, sessiondir, tr_log, options):
         self.sessiondir = sessiondir
         self.tr_log = tr_log
-        self.realtime = realtime
-        self.timefactor = timefactor
-        self.quiet = quiet
-        self.predecoded = predecoded
-        self.file_location = file_location
-        self._visualizer_enabled = visualizer_enabled
-        self._loop = loop
-        self._osc_log = osc_log
-        self._max_passivity = max_passivity
-        self.looped_duration = looped_duration
-        self.output = output
-        self.include_non_playable = include_non_playable
+        self.realtime = options.realtime
+        self.timefactor = options.timefactor
+        self.quiet = options.quiet
+        self.predecode = options.predecode
+        self.file_location = options.file_location
+        self._loop = options.loop
+        self._osc_log = options.osc_log
+        self._max_passivity = options.max_passivity
+        self.looped_duration = options.looped_duration
+        self.output = options.output
+        self.include_non_playable = options.include_non_playable
+        self._visualizer_enabled = (options.visualizer_enabled or options.visualizer_command_line)
+
+        if options.predecode:
+            predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
+            predecoder.decode()
 
         self.playback_enabled = True
         self.fast_forwarding = False
@@ -124,7 +135,7 @@ class Orchestra:
         logger.debug("num playable chunks: %s" % len(self.playable_chunks))
         logger.debug("num selected chunks: %s" % len(self.chunks))
 
-        self._interpret_chunks_to_score(max_pause_within_segment)
+        self._interpret_chunks_to_score(options.max_pause_within_segment)
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -132,12 +143,12 @@ class Orchestra:
         self._informed_visualizer_about_torrent = False
         self.space = Space()
 
-        if ff_to_start:
-            self._ff_to_time = start_time
+        if options.ff_to_start:
+            self._ff_to_time = options.start_time
             self.set_time_cursor(0)
         else:
             self._ff_to_time = None
-            self.set_time_cursor(start_time)
+            self.set_time_cursor(options.start_time)
 
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
@@ -151,8 +162,8 @@ class Orchestra:
         self.visualizer = None
         if self._visualizer_enabled:
             self._setup_osc()
-            if visualizer_command_line:
-                self._spawn_visualizer(visualizer_command_line)
+            if options.visualizer_command_line:
+                self._spawn_visualizer(options.visualizer_command_line)
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)
@@ -271,7 +282,7 @@ class Orchestra:
         self._player_for_peer = dict()
 
     def _prepare_playable_files(self):
-        if self.predecoded:
+        if self.predecode:
             self._get_wav_files_info()
             self._load_sounds()
         else:
