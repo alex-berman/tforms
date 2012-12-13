@@ -9,6 +9,9 @@ CURVE_PRECISION = 50
 MARGIN = 20
 
 class File(visualizer.File):
+    def add_segment(self, segment):
+        self.visualizer.playing_segment(segment)
+
     def add_chunk(self, chunk):
         self.visualizer.add_chunk(chunk)
 
