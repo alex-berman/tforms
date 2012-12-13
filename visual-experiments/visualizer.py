@@ -164,18 +164,15 @@ class Visualizer:
         self.orchestra_port = args.port
 
         self.logger = logging.getLogger("visualizer")
-        self.files = {}
-        self.peers = {}
+        self.reset()
         self.first_frame = True
         self.synth = SynthController()
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
-        self._segments_by_id = {}
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._3d_enabled = False
-        self.torrent_length = 0
 
         if args.camera_script:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
@@ -196,6 +193,12 @@ class Visualizer:
             shutil.rmtree(EXPORT_DIR)
             os.mkdir(EXPORT_DIR)
             self.exporter = Exporter(EXPORT_DIR, self.margin, self.margin, self.width, self.height)
+
+    def reset(self):
+        self.files = {}
+        self.peers = {}
+        self._segments_by_id = {}
+        self.torrent_length = 0
 
     def enable_3d(self):
         self._3d_enabled = True
@@ -292,6 +295,9 @@ class Visualizer:
     def handle_shutdown(self, path, args, types, src, data):
         self.exiting = True
 
+    def handle_reset(self, *args):
+        self.reset()
+
     def handle_amp_message(self, path, args, types, src, data):
         (segment_id, amp) = args
         segment = self._segments_by_id[segment_id]
@@ -316,6 +322,7 @@ class Visualizer:
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
         self.server.add_method("/peer", "if", self.handle_peer_message)
+        self.server.add_method("/reset", "", self.handle_reset)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.start()
         self.waveform_server = None

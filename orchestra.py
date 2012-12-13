@@ -20,6 +20,74 @@ from predecode import Predecoder
 MAX_MEM_SIZE_KB = 1100000
 BYTES_PER_SAMPLE = 4
 
+class Server(OscReceiver):
+    @staticmethod
+    def add_parser_arguments(parser):
+        parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
+        parser.add_argument("--visualizer", dest="visualizer_command_line")
+        parser.add_argument("--osc-log", dest="osc_log")
+
+    def __init__(self, options):
+        self.options = options
+        self.visualizer = None
+        if options.visualizer_enabled or options.visualizer_command_line:
+            self._setup_osc()
+            if options.visualizer_command_line:
+                self._spawn_visualizer(options.visualizer_command_line)
+            self._wait_for_visualizer_to_register()
+
+    def _spawn_visualizer(self, command_line):
+        command_line_with_port = "%s -port %d" % (command_line, self.port)
+        visualizer_process = subprocess.Popen(command_line_with_port, shell=True, stdin=None)
+
+    def _setup_osc(self):
+        OscReceiver.__init__(self)
+        self.add_method("/register", "i", self._handle_register)
+        self.add_method("/visualizing", "i", self._handle_visualizing_message)
+        self.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
+        self.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
+        self.add_method("/place_segment", "ifff", self._handle_place_segment)
+        self.add_method("/enable_smooth_movement", "", self._handle_enable_smooth_movement)
+        self.add_method("/start_segment_movement_from_peer", "if", self._handle_start_segment_movement_from_peer)
+        self.start()
+        self._visualizer_registered = False
+        server_thread = threading.Thread(target=self._serve_osc)
+        server_thread.daemon = True
+        server_thread.start()
+
+    def _serve_osc(self):
+        while True:
+            self.serve()
+            time.sleep(0.01)
+
+    def _wait_for_visualizer_to_register(self):
+        print "waiting for visualizer to register"
+        while not self._visualizer_registered:
+            time.sleep(0.1)
+        print "OK"
+
+    def set_orchestra(self, orchestra):
+        self.orchestra = orchestra
+        orchestra.server = self
+        orchestra.visualizer = self.visualizer
+
+    def _handle_register(self, path, args, types, src, data):
+        visualizer_port = args[0]
+        self.visualizer = OscSender(visualizer_port, self.options.osc_log)
+        self._visualizer_registered = True
+
+    def _handle_visualizing_message(self, *args): self.orchestra._handle_visualizing_message(*args)
+    def _handle_set_listener_position(self, *args): self.orchestra._handle_set_listener_position(*args)
+    def _handle_set_listener_orientation(self, *args): self.orchestra._handle_set_listener_orientation(*args)
+    def _handle_place_segment(self, *args): self.orchestra._handle_place_segment(*args)
+    def _handle_enable_smooth_movement(self, *args): self.orchestra._handle_enable_smooth_movement(*args)
+    def _handle_start_segment_movement_from_peer(self, *args): self.orchestra._handle_start_segment_movement_from_peer(*args)
+
+    def shutdown(self):
+        if self.visualizer:
+            self.visualizer.send("/shutdown")
+
+
 class Player:
     def __init__(self, orchestra, _id):
         self.orchestra = orchestra
@@ -79,13 +147,10 @@ class Orchestra:
         parser.add_argument("--gui", action="store_true", dest="gui_enabled")
         parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
         parser.add_argument("--file-location", dest="file_location", default="../../Downloads")
-        parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
-        parser.add_argument("--visualizer", dest="visualizer_command_line")
         parser.add_argument("--fast-forward", action="store_true", dest="ff")
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
         parser.add_argument("--loop", dest="loop", action="store_true")
-        parser.add_argument("--osc-log", dest="osc_log")
         parser.add_argument("--max-passivity", dest="max_passivity", type=float)
         parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
         parser.add_argument("--looped-duration", dest="looped_duration", type=float)
@@ -103,7 +168,6 @@ class Orchestra:
         self.predecode = options.predecode
         self.file_location = options.file_location
         self._loop = options.loop
-        self._osc_log = options.osc_log
         self._max_passivity = options.max_passivity
         self.looped_duration = options.looped_duration
         self.output = options.output
@@ -159,16 +223,6 @@ class Orchestra:
         else:
             self.ssr = None
 
-        self.visualizer = None
-        if self._visualizer_enabled:
-            self._setup_osc()
-            if options.visualizer_command_line:
-                self._spawn_visualizer(options.visualizer_command_line)
-
-    def _spawn_visualizer(self, command_line):
-        command_line_with_port = "%s -port %d" % (command_line, self.server.port)
-        visualizer_process = subprocess.Popen(command_line_with_port, shell=True, stdin=None)
-
     def _interpret_chunks_to_score(self, max_pause_within_segment):
         self.score = Interpreter(max_pause_within_segment).interpret(self.playable_chunks, self.tr_log.files)
         if self._max_passivity:
@@ -204,32 +258,6 @@ class Orchestra:
             self.scheduler.run()
             time.sleep(0.01)
 
-    def _setup_osc(self):
-        self.server = OscReceiver()
-        self.server.add_method("/visualizing", "i", self._handle_visualizing_message)
-        self.server.add_method("/register", "i", self._handle_register)
-        self.server.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
-        self.server.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
-        self.server.add_method("/place_segment", "ifff", self._handle_place_segment)
-        self.server.add_method("/enable_smooth_movement", "", self._handle_enable_smooth_movement)
-        self.server.add_method("/start_segment_movement_from_peer", "if", self._handle_start_segment_movement_from_peer)
-        self.server.start()
-        self._visualizer_registered = False
-        server_thread = threading.Thread(target=self._serve_osc)
-        server_thread.daemon = True
-        server_thread.start()
-
-    def _serve_osc(self):
-        while True:
-            self.server.serve()
-            time.sleep(0.01)
-
-    def _wait_for_visualizer_to_register(self):
-        print "waiting for visualizer to register"
-        while not self._visualizer_registered:
-            time.sleep(0.1)
-        print "OK"
-
     def _handle_visualizing_message(self, path, args, types, src, data):
         segment_id = args[0]
         segment = self.segments_by_id[segment_id]
@@ -256,11 +284,6 @@ class Orchestra:
         self.scheduler.enter(
             segment["playback_duration"], 1,
             self.stopped_playing, [segment])
-
-    def _handle_register(self, path, args, types, src, data):
-        visualizer_port = args[0]
-        self.visualizer = OscSender(visualizer_port, self._osc_log)
-        self._visualizer_registered = True
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
@@ -351,8 +374,6 @@ class Orchestra:
 
     def play_non_realtime(self, quit_on_end=False):
         logger.debug("entering play_non_realtime")
-        if self._visualizer_enabled:
-            self._wait_for_visualizer_to_register()
         if self._loop:
             while True:
                 self._play_until_end()
@@ -612,10 +633,6 @@ class Orchestra:
             index += 1
         return len(self.score) - 1
 
-    def shutdown(self):
-        if self.visualizer:
-            self.visualizer.send("/shutdown")
-
     def _handle_set_listener_position(self, path, args, types, src, data):
         if self.ssr:
             x, y = args
@@ -655,6 +672,10 @@ class Orchestra:
         # compare rectangular_visualizer.Visualizer.pan_segment
         # NOTE: assumes default listener position and orientation!
         return float(x) / 5 + 0.5
+
+    def reset(self):
+        if self.visualizer:
+            self.visualizer.send("/reset")
 
 def warn(logger, message):
     logger.debug(message)

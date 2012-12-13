@@ -5,13 +5,14 @@ from argparse import ArgumentParser
 import Queue
 import threading
 import time
-from orchestra import Orchestra
+from orchestra import Orchestra, Server
 from session import Session
 from logger import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", action="append")
 parser.add_argument("--pause", type=float, default=1.0)
+Server.add_parser_arguments(parser)
 Orchestra.add_parser_arguments(parser)
 options = parser.parse_args()
 
@@ -39,17 +40,19 @@ def wait_for_play_completion_or_interruption():
     while orchestra_thread.is_alive():
         time.sleep(0.1)
 
+server = Server(options)
 count = 0
 while True:
     sessiondir = options.sessiondirs[count % len(options.sessiondirs)]
     logfilename = "%s/session.log" % sessiondir
-    print "playing session %s" % sessiondir
+    print "playing %s" % sessiondir
 
     tr_log = TrLogReader(logfilename, options.torrentname,
                          realtime=options.realtime,
                          pretend_sequential=options.pretend_sequential).get_log()
 
     orchestra = Orchestra(sessiondir, tr_log, options)
+    server.set_orchestra(orchestra)
 
     if not options.realtime and len(orchestra.chunks) == 0:
         raise Exception("No chunks to play. Unsupported file format?")
@@ -59,6 +62,6 @@ while True:
 
     print "completed playback"
 
-    orchestra.shutdown()
     time.sleep(options.pause)
+    orchestra.reset()
     count += 1

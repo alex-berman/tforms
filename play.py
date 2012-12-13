@@ -5,13 +5,14 @@ from argparse import ArgumentParser
 import Queue
 import threading
 import time
-from orchestra import Orchestra
+from orchestra import Orchestra, Server
 from session import Session
 import subprocess
 from logger import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
+Server.add_parser_arguments(parser)
 Orchestra.add_parser_arguments(parser)
 options = parser.parse_args()
 
@@ -32,7 +33,9 @@ tr_log = TrLogReader(logfilename, options.torrentname,
                      realtime=options.realtime,
                      pretend_sequential=options.pretend_sequential).get_log()
 
+server = Server(options)
 orchestra = Orchestra(sessiondir, tr_log, options)
+server.set_orchestra(orchestra)
 
 if not options.realtime and len(orchestra.chunks) == 0:
     raise Exception("No chunks to play. Unsupported file format?")
@@ -88,4 +91,4 @@ if options.realtime:
 else:
     run_offline()
 
-orchestra.shutdown()
+server.shutdown()

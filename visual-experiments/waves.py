@@ -48,6 +48,9 @@ class Waves(visualizer.Visualizer):
                                        file_class=File,
                                        segment_class=Segment)
         self.subscribe_to_waveform()
+
+    def reset(self):
+        visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
 
