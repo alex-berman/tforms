@@ -16,6 +16,9 @@ class TrLog:
     def averagechunklength(self):
         return sum(map(lambda x: x["end"] - x["begin"], self.chunks)) / len(self.chunks)
 
+    def total_file_size(self):
+        return sum([f["length"] for f in self.files])
+
     @staticmethod
     def sort_chunks_sequentially(chunks):
         times = map(lambda x: x["t"], chunks)

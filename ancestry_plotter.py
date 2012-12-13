@@ -85,6 +85,16 @@ class AncestryPlotter:
 
 
 class AncestrySvgPlotter(AncestryPlotter):
+    def set_size(self, width, height):
+        if width is None:
+            width = 500
+        if height is None:
+            if self._args.geometry == self.RECT:
+                height = int(width * self._total_size / self._duration * 0.000005)
+            else:
+                height = width
+        AncestryPlotter.set_size(self, width, height)
+
     def plot(self, svg_output=None):
         self._svg_output = svg_output
         self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
