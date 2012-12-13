@@ -7,6 +7,7 @@ class AncestryPlotter:
     CURVE = "curve"
     RECT = "rect"
     CIRCLE = "circle"
+    GEOMETRIES = [RECT, CIRCLE]
 
     def __init__(self, total_size, duration, args):
         self._total_size = total_size
@@ -35,8 +36,8 @@ class AncestryPlotter:
                             choices=[AncestryPlotter.LINE, AncestryPlotter.CURVE],
                             default=AncestryPlotter.CURVE)
         parser.add_argument("--geometry",
-                            choices=[AncestryPlotter.RECT, AncestryPlotter.CIRCLE],
-                            default=AncestryPlotter.RECT)
+                            choices=AncestryPlotter.GEOMETRIES,
+                            default=AncestryPlotter.GEOMETRIES[0])
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))
