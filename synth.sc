@@ -127,6 +127,13 @@ OSCresponder.new(nil, "/load",
 	  }, {});
   }).add;
 
+OSCresponder.new(nil, "/free",
+  { arg t, r, msg;
+	  var sound_id = msg[1];
+	  ~sounds[sound_id].free;
+	  ~filenames[sound_id] = nil;
+  }).add;
+
 OSCresponder.new(nil, "/play",
   { arg t, r, msg;
 	  var segment_id = msg[1];

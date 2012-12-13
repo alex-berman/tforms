@@ -34,6 +34,9 @@ class SynthController:
         sound_id, result = args
         self._load_results[sound_id] = result
 
+    def free_sound(self, sound_id):
+        self._send("/free", sound_id)
+
     def play_segment(self, segment_id, sound_id, begin, end, period_duration, looped_duration, channel, pan):
         if looped_duration:
             self._send("/loop", segment_id, sound_id, begin, end, period_duration, looped_duration, channel, pan)

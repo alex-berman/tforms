@@ -676,8 +676,15 @@ class Orchestra:
         return float(x) / 5 + 0.5
 
     def reset(self):
+        self._free_sounds()
         if self.visualizer:
             self.visualizer.send("/reset")
+
+    def _free_sounds(self):
+        for filenum in range(len(self.tr_log.files)):
+            file_info = self.tr_log.files[filenum]
+            if file_info["playable_file_index"] != -1:
+                self.synth.free_sound(filenum)
 
 def warn(logger, message):
     logger.debug(message)
