@@ -315,7 +315,9 @@ class Orchestra:
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if file_info["playable_file_index"] != -1:
-                self.synth.load_sound(filenum, file_info["decoded_name"])
+                logger.debug("load_sound(%s)" % file_info["decoded_name"])
+                result = self.synth.load_sound(filenum, file_info["decoded_name"])
+                logger.debug("result: %s" % result)
 
     def _get_wav_files_info(self):
         playable_file_index = 0

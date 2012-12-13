@@ -44,8 +44,15 @@ SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
 //WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
 	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
 
+~info_subscriber = nil;
 ~amp_subscriber = nil;
 ~waveform_subscriber = nil;
+
+OSCresponder.new(nil, "/info_subscribe",
+  { arg t, r, msg;
+	  var port = msg[1];
+	  ~info_subscriber = NetAddr.new("127.0.0.1", port);
+  }).add;
 
 OSCresponder.new(nil, "/amp_subscribe",
   { arg t, r, msg;
@@ -111,7 +118,11 @@ OSCresponder.new(nil, "/load",
 	  var sound_id = msg[1];
 	  var filename = msg[2];
 	  if(~filenames[sound_id] != filename, {
-		  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {"loaded ".post; filename.postln;});
+		  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {
+			  "loaded ".post; filename.postln;
+			  if(~info_subscriber != nil,
+				  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames) }, {});
+		  });
 		  ~filenames[sound_id] = filename;
 	  }, {});
   }).add;
