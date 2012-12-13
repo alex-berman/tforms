@@ -7,8 +7,8 @@ from gatherer import Gatherer
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30
 MARGIN = 100
-GATHERED_COLOR = Vector3d(0.9, 0.9, 0.9)
-WAVEFORM_COLOR = Vector3d(0.0, 0.0, 0.0)
+GATHERED_COLOR = Vector3d(0.1, 0.1, 0.1)
+WAVEFORM_COLOR = Vector3d(1.0, 1.0, 1.0)
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -53,6 +53,10 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
+
+    def InitGL(self):
+        visualizer.Visualizer.InitGL(self)
+        glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def update(self):
         for segment in self.playing_segments.values():
