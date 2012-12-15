@@ -85,6 +85,7 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 SynthDef(\loop, {arg buffer = 0, segment_id, begin, end, period, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir, amp;
 	var period_line = Line.kr(period, period*5, duration);
+	//pan = SinOsc.ar(freq: 2 + 0.5.rand, phase: 3.rand) * Line.kr(0.45, 0, duration); // panning designed for waves visuals
 	pointer = begin + ((end - begin) * LFSaw.ar(freq:1.0/period_line, iphase:1));
 	pitch = 1.0;
 	env = EnvGen.kr(Env([0.001, 1, 0.001],
@@ -177,7 +178,7 @@ OSCresponder.new(nil, "/pan",
 	  var segment_id = msg[1];
 	  var pan = msg[2] * 2 - 1;
 	  var synth = ~synths[segment_id];
-	  synth.set(\pan, pan);
+	  //synth.set(\pan, pan); // TEMP!
   }).add;
 
 
