@@ -17,9 +17,6 @@ from ssr.ssr_control import SsrControl
 from space import Space
 from predecode import Predecoder
 
-MAX_MEM_SIZE_KB = 1100000
-BYTES_PER_SAMPLE = 4
-
 class Server(OscReceiver):
     @staticmethod
     def add_parser_arguments(parser):
@@ -261,6 +258,7 @@ class Orchestra:
     def _handle_visualizing_message(self, path, args, types, src, data):
         segment_id = args[0]
         segment = self.segments_by_id[segment_id]
+        logger.debug("visualizing segment %s" % segment)
         if self.output == self.SSR:
             if segment["sound_source_id"]:
                 channel = segment["sound_source_id"] - 1
@@ -321,7 +319,6 @@ class Orchestra:
 
     def _get_wav_files_info(self):
         playable_file_index = 0
-        estimated_mem_size = 0
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             file_info["playable_file_index"] = -1
@@ -333,8 +330,6 @@ class Orchestra:
                     file_info["playable_file_index"] = playable_file_index
                     logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
-                    estimated_mem_size += int(file_info["duration"] * self.SAMPLE_RATE) \
-                        * file_info["num_channels"] * BYTES_PER_SAMPLE
                     playable_file_index += 1
 
             if self.include_non_playable:
@@ -342,12 +337,6 @@ class Orchestra:
             else:
                 file_info["index"] = file_info["playable_file_index"]
         self._num_playable_files = playable_file_index
-
-        estimated_mem_size_kb = estimated_mem_size / 1024
-        logger.debug("estimated memory usage for sounds: %s kb" % estimated_mem_size_kb)
-        if estimated_mem_size_kb > MAX_MEM_SIZE_KB:
-            print >>sys.stderr, "WARNING: estimated mem size of %s exceeds max (%s)" % (
-                estimated_mem_size_kb, MAX_MEM_SIZE_KB)
 
     def _get_file_duration(self, file_info):
         if "decoded_name" in file_info:
