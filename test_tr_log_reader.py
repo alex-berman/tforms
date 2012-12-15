@@ -132,3 +132,4 @@ class TrLogTests(unittest.TestCase):
             ]
         log.ignore_non_downloaded_files()
         self.assertEquals(expected_result, log.chunks)
+        self.assertEquals(2000, log.total_file_size())

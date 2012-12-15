@@ -7,6 +7,9 @@ import copy
 from logger import logger
 
 class TrLog:
+    def __init__(self):
+        self._ignoring_non_downloaded_files = False
+
     def lastchunktime(self):
         return self.chunks[-1]["t"]
 
@@ -17,7 +20,11 @@ class TrLog:
         return sum(map(lambda x: x["end"] - x["begin"], self.chunks)) / len(self.chunks)
 
     def total_file_size(self):
-        return sum([f["length"] for f in self.files])
+        if self._ignoring_non_downloaded_files:
+            files = filter(lambda f: f["downloaded"], self.files)
+        else:
+            files = self.files
+        return sum([f["length"] for f in files])
 
     @staticmethod
     def sort_chunks_sequentially(chunks):
@@ -71,8 +78,10 @@ class TrLog:
         self.chunks = result
 
     def ignore_non_downloaded_files(self):
+        self._ignoring_non_downloaded_files = True
         for filenum in reversed(range(len(self.files))):
-            if not self._file_was_downloaded(filenum):
+            self.files[filenum]["downloaded"] = self._file_was_downloaded(filenum)
+            if not self.files[filenum]["downloaded"]:
                 self._ignore_non_downloaded_file(self.files[filenum])
 
     def _file_was_downloaded(self, filenum):
