@@ -50,9 +50,8 @@ class AncestryPlotter:
 
     def _circle_position(self, t, byte_pos):
         angle = float(byte_pos) / self._total_size * 2*math.pi
-        magnitude = (1 - t / self._duration) * self._width / 2
-        x = self._width / 2 + magnitude * math.cos(angle)
-        y = self._width / 2 + magnitude * math.sin(angle)
+        x = self._width / 2 + (1 - t / self._duration) * self._width / 2 * math.cos(angle)
+        y = self._height / 2 + (1 - t / self._duration) * self._height / 2 * math.sin(angle)
         return x, y
 
     def plot(self):
@@ -105,12 +104,13 @@ class AncestrySvgPlotter(AncestryPlotter):
         self._write_svg('</g>')
         self._write_svg('</svg>')
 
-    def draw_line(self, x1, y1, x2, y2, color="black"):
+    def draw_line(self, x1, y1, x2, y2):
         self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
-                x1, y1, x2, y2, color, self._args.stroke_width))
+                x1, y1, x2, y2, self._args.stroke_color, self._args.stroke_width))
 
     def draw_curve(self, x1, y1, x2, y2):
-        self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
+        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
+                self._args.stroke_color,
                 self._args.stroke_width,
                 x1, y1,
                 x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35,
@@ -120,8 +120,10 @@ class AncestrySvgPlotter(AncestryPlotter):
     def draw_path(self, points):
         t0, b0 = points[0]
         x0, y0 = self._position(t0, b0)
-        self._write_svg('<path style="stroke:black;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%f,%f' % (
-                self._args.stroke_width, x0, y0))
+        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%f,%f' % (
+                self._args.stroke_color,
+                self._args.stroke_width,
+                x0, y0))
         for (t, b) in points[1:]:
             x, y = self._position(t, b)
             self._write_svg(' L%f,%f' % (x, y))
