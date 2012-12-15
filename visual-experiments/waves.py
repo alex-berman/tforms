@@ -6,7 +6,6 @@ from gatherer import Gatherer
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30
-MARGIN = 100
 GATHERED_COLOR = Vector3d(0.1, 0.1, 0.1)
 WAVEFORM_COLOR = Vector3d(1.0, 1.0, 1.0)
 
@@ -27,7 +26,7 @@ class Segment(visualizer.Segment):
         glBegin(GL_LINE_STRIP)
         n = 0
         for value in self.waveform:
-            x = MARGIN + n * (self.visualizer.width - 2*MARGIN) / (WAVEFORM_SIZE-1)
+            x = n * self.visualizer.width / (WAVEFORM_SIZE-1)
             y = self.y + value * WAVEFORM_MAGNITUDE
             glVertex2f(x, y)
             n += 1
@@ -86,8 +85,8 @@ class Waves(visualizer.Visualizer):
     def draw_gathered_segments(self):
         glColor3f(*GATHERED_COLOR)
         glBegin(GL_QUADS)
-        x1 = MARGIN
-        x2 = self.width - MARGIN
+        x1 = 0
+        x2 = self.width
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
             y2 = self.byte_to_py(segment.torrent_end)
@@ -100,7 +99,7 @@ class Waves(visualizer.Visualizer):
         glEnd()
 
     def byte_to_py(self, byte):
-        return MARGIN + int(self.byte_to_relative_y(byte) * (self.height - 2*MARGIN))
+        return int(self.byte_to_relative_y(byte) * self.height)
 
     def byte_to_relative_y(self, byte):
         return float(byte) / self.torrent_length
