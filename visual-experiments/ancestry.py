@@ -11,9 +11,7 @@ MARGIN = 20
 class File(visualizer.File):
     def add_segment(self, segment):
         self.visualizer.playing_segment(segment)
-
-    def add_chunk(self, chunk):
-        self.visualizer.add_chunk(chunk)
+        self.visualizer.added_segment(segment)
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, args):
@@ -31,8 +29,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
 
-    def add_chunk(self, chunk):
-        AncestryPlotter.add_piece(self, chunk.id, chunk.t, chunk.torrent_begin, chunk.torrent_end)
+    def added_segment(self, segment):
+        AncestryPlotter.add_piece(self, segment.id, segment.t, segment.torrent_begin, segment.torrent_end)
         self.updated = False
 
     def added_all_files(self):
