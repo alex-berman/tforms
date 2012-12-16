@@ -342,17 +342,17 @@ class Visualizer:
         glutMotionFunc(self._mouse_moved)
         glutSpecialFunc(self._special_key_pressed)
 
-    def ReSizeGLScene(self, _width, _height):
-        if _height == 0:
-            _height = 1
-        glViewport(0, 0, _width, _height)
-        self.width = _width
-        self.height = _height
-        self._aspect_ratio = float(_width) / _height
+    def ReSizeGLScene(self, window_width, window_height):
+        if window_height == 0:
+            window_height = 1
+        glViewport(0, 0, window_width, window_height)
+        self.width = window_width - 2*self.margin
+        self.height = window_height - 2*self.margin
+        self._aspect_ratio = float(window_width) / window_height
         if not self._3d_enabled:
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
-            glOrtho(0.0, _width, _height, 0.0, -1.0, 1.0)
+            glOrtho(0.0, window_width, window_height, 0.0, -1.0, 1.0)
             glMatrixMode(GL_MODELVIEW)
 
     def DrawGLScene(self):
@@ -385,7 +385,8 @@ class Visualizer:
         else:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(self.margin, self.margin, 0)
-            self.draw_border()
+            if self.args.border:
+                self.draw_border()
             self.handle_incoming_messages()
             self.render()
             if self.show_fps:
@@ -424,6 +425,7 @@ class Visualizer:
         x1 = y1 = -1
         x2 = self.width
         y2 = self.height
+        glDisable(GL_LINE_SMOOTH)
         glLineWidth(1)
         glColor3f(BORDER_OPACITY, BORDER_OPACITY, BORDER_OPACITY)
         glBegin(GL_LINE_LOOP)
@@ -602,6 +604,7 @@ def run(visualizer_class):
     parser.add_argument("-waveform", dest="waveform", action='store_true')
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     parser.add_argument("-camera-script", dest="camera_script", type=str)
+    parser.add_argument("-border", action="store_true")
     visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
 
