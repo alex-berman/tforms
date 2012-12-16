@@ -5,11 +5,11 @@ from vector import Vector3d
 from gatherer import Gatherer
 
 WAVEFORM_SIZE = 60
-WAVEFORM_MAGNITUDE = 30
+WAVEFORM_MAGNITUDE = 30.0 / 480
 GATHERED_COLOR = Vector3d(0.4, 0.4, 0.4)
 WAVEFORM_COLOR = Vector3d(1.0, 1.0, 1.0)
-GATHERED_LINE_WIDTH = 2.0
-WAVEFORM_LINE_WIDTH = 3.0
+GATHERED_LINE_WIDTH = 2.0 / 480
+WAVEFORM_LINE_WIDTH = 3.0 / 480
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -31,7 +31,7 @@ class Segment(visualizer.Segment):
         n = 0
         for value in self.waveform:
             x = n * self.visualizer.width / (WAVEFORM_SIZE-1)
-            y = self.y + value * WAVEFORM_MAGNITUDE
+            y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer.height
             glVertex2f(x, y)
             n += 1
         glEnd()
@@ -40,7 +40,7 @@ class Segment(visualizer.Segment):
         return weak_color + (strong_color - weak_color) * pow(amp, 0.25)
 
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
-        return weak_line_width + (strong_line_width - weak_line_width)
+        return (weak_line_width + (strong_line_width - weak_line_width) * amp) * self.visualizer.height
 
 class File(visualizer.File):
     def add_segment(self, segment):
@@ -97,7 +97,7 @@ class Waves(visualizer.Visualizer):
         x2 = self.width
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
-            y2 = max(self.byte_to_py(segment.torrent_end), y1 + GATHERED_LINE_WIDTH)
+            y2 = max(self.byte_to_py(segment.torrent_end), y1 + GATHERED_LINE_WIDTH * self.height)
             glVertex2f(x1, y1)
             glVertex2f(x1, y2)
             glVertex2f(x2, y2)
