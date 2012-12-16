@@ -24,6 +24,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def add_parser_arguments(parser):
         AncestryPlotter.add_parser_arguments(parser)
 
+    def InitGL(self):
+        visualizer.Visualizer.InitGL(self)
+        glClearColor(0.0, 0.0, 0.0, 0.0)
+
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
         self._size = min(width, height) - 2*MARGIN
@@ -51,7 +55,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor3f(0,0,0)
+        glColor3f(1,1,1)
         self.plot()
         glEndList()
         self.updated = True
