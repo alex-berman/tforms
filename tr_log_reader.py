@@ -98,6 +98,33 @@ class TrLog:
                 chunk["begin"] -= file_length
                 chunk["end"] -= file_length
 
+    def select_files(self, selected_filenums):
+        for filenum in reversed(range(len(self.files))):
+            if filenum not in selected_filenums:
+                self._remove_file(filenum)
+
+    def _remove_file(self, filenum):
+        f = self.files[filenum]
+        file_begin = f["offset"]
+        file_length = f["length"]
+        file_end = file_begin + file_length
+        chunks_to_delete = []
+        for index in range(len(self.chunks)):
+            chunk = self.chunks[index]
+            if chunk["filenum"] == filenum:
+                chunks_to_delete.append(index)
+            elif chunk["filenum"] > filenum:
+                chunk["begin"] -= file_length
+                chunk["end"] -= file_length
+                chunk["filenum"] -= 1
+        for index in reversed(chunks_to_delete):
+            del self.chunks[index]
+
+        for index in range(filenum+1, len(self.files)):
+            f = self.files[index]
+            f["offset"] -= file_length
+        del self.files[filenum]
+
 class TrLogReader:
     NO_MORE_CHUNKS = {}
 

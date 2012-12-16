@@ -153,6 +153,7 @@ class Orchestra:
         parser.add_argument("--looped-duration", dest="looped_duration", type=float)
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
+        parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -174,6 +175,9 @@ class Orchestra:
         if options.predecode:
             predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
             predecoder.decode()
+
+        if options.selected_files:
+            tr_log.select_files(options.selected_files)
 
         self.playback_enabled = True
         self.fast_forwarding = False

@@ -133,3 +133,34 @@ class TrLogTests(unittest.TestCase):
         log.ignore_non_downloaded_files()
         self.assertEquals(expected_result, log.chunks)
         self.assertEquals(2000, log.total_file_size())
+
+    def test_select_files(self):
+        log = TrLog()
+        log.files = [
+            {'offset': 0,    'length': 1000},
+            {'offset': 1000, 'length': 2000}, # selected
+            {'offset': 3000, 'length': 3000},
+            {'offset': 6000, 'length': 4000}, # selected
+            ]
+        log.chunks = [
+            {'filenum': 1, 'begin': 1200, 'end': 1300},
+            {'filenum': 1, 'begin': 1400, 'end': 1500},
+            {'filenum': 2, 'begin': 3200, 'end': 3300},
+            {'filenum': 3, 'begin': 6200, 'end': 6300},
+            {'filenum': 3, 'begin': 6400, 'end': 6500},
+            ]
+
+        log.select_files([1, 3])
+        expected_files = [
+            {'offset': 0,    'length': 2000},
+            {'offset': 2000, 'length': 4000},
+            ]
+        expected_chunks = [
+            {'filenum': 0, 'begin': 200, 'end': 300},
+            {'filenum': 0, 'begin': 400, 'end': 500},
+            {'filenum': 1, 'begin': 2200, 'end': 2300},
+            {'filenum': 1, 'begin': 2400, 'end': 2500},
+            ]
+        self.assertEquals(expected_files, log.files)
+        self.assertEquals(expected_chunks, log.chunks)
+        self.assertEquals(6000, log.total_file_size())
