@@ -15,6 +15,7 @@ from vector import Vector2d
 
 CURVE_PRECISION = 50
 MARGIN = 20
+LINE_WIDTH = 2.0 / 640
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, args):
@@ -42,7 +43,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def render(self):
         glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
-        glLineWidth(1)
+        glLineWidth(LINE_WIDTH * self.width)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
