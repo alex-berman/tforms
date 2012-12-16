@@ -1,6 +1,7 @@
 import liblo
 import threading
 from osc_receiver import OscReceiver
+import time
 
 class SynthController:
     PORT = 57120
@@ -29,6 +30,7 @@ class SynthController:
                 del self._load_results[sound_id]
                 return result
             self._sc_listener.serve()
+            time.sleep(0.01)
 
     def _handle_loaded(self,path, args, types, src, data):
         sound_id, result = args
