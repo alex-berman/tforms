@@ -52,6 +52,28 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.plot()
         self.updated = True
 
+    def _follow_piece(self, piece):
+        if len(piece.growth) > 0:
+            path = [(piece.t,
+                    (piece.begin + piece.end) / 2)]
+            for older_version in reversed(piece.growth):
+                if older_version.t > self.min_t:
+                    path.append((older_version.t,
+                                 (older_version.begin + older_version.end) / 2))
+            self.draw_path(path)
+
+        for parent in piece.parents.values():
+            if parent.t > self.min_t:
+                self._connect_child_and_parent(
+                    piece.t, (piece.begin + piece.end) / 2,
+                    parent.t, (parent.begin + parent.end) / 2)
+                self._follow_piece(parent)
+            else:
+                t = self.min_t - pow(self.min_t - parent.t, 0.7)
+                self._connect_child_and_parent(
+                    piece.t, (piece.begin + piece.end) / 2,
+                    t, (parent.begin + parent.end) / 2)
+
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)
         for (t, b) in points:

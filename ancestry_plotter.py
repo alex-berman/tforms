@@ -15,7 +15,6 @@ class AncestryPlotter:
         self._args = args
         self._tracker = AncestryTracker()
         self._num_pieces = 0
-        self.min_t = 0
 
         if args.edge_style == self.LINE:
             self._edge_plot_method = self.draw_line
@@ -68,17 +67,15 @@ class AncestryPlotter:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
-                if older_version.t > self.min_t:
-                    path.append((older_version.t,
-                                 (older_version.begin + older_version.end) / 2))
+                path.append((older_version.t,
+                             (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
 
         for parent in piece.parents.values():
-            if parent.t > self.min_t:
-                self._connect_child_and_parent(
-                    piece.t, (piece.begin + piece.end) / 2,
-                    parent.t, (parent.begin + parent.end) / 2)
-                self._follow_piece(parent)
+            self._connect_child_and_parent(
+                piece.t, (piece.begin + piece.end) / 2,
+                parent.t, (parent.begin + parent.end) / 2)
+            self._follow_piece(parent)
 
     def _connect_child_and_parent(self, t1, b1, t2, b2):
         x1, y1 = self._position(t1, b1)
