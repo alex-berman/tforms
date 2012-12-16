@@ -89,8 +89,6 @@ class Waves(visualizer.Visualizer):
             segment.render()
 
     def draw_gathered_segments(self):
-        glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glColor3f(*GATHERED_COLOR)
         glBegin(GL_QUADS)
         x1 = 0
