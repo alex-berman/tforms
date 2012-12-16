@@ -21,7 +21,6 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
         self.updated = False
-        self.list = 1
         for chunk in tr_log.chunks:
             self.add_piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"])
 
@@ -29,6 +28,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def add_parser_arguments(parser):
         AncestryPlotter.add_parser_arguments(parser)
         visualizer.Visualizer.add_parser_arguments(parser)
+        parser.add_argument("-z", dest="timefactor", type=float, default=1.0)
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
@@ -38,15 +38,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
+        self.updated = False
 
     def render(self):
-        if self.updated:
-            self.draw()
-        else:
-            self.update_and_draw()
-
-    def update_and_draw(self):
-        glNewList(self.list, GL_COMPILE_AND_EXECUTE)
         glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
         glLineWidth(1)
         glEnable(GL_LINE_SMOOTH)
@@ -54,12 +48,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(1,1,1)
+        self.min_t = self._duration - (self.current_time() * self.args.timefactor) % self._duration
         self.plot()
-        glEndList()
         self.updated = True
-
-    def draw(self):
-        glCallList(self.list)
 
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)
