@@ -151,7 +151,7 @@ class Orchestra:
         parser.add_argument("--max-passivity", dest="max_passivity", type=float)
         parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
         parser.add_argument("--looped-duration", dest="looped_duration", type=float)
-        parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.SSR)
+        parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
