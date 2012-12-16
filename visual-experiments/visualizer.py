@@ -208,11 +208,16 @@ class Visualizer:
         window_height = self.height + self.margin*2
         glutInit(sys.argv)
         glutInitDisplayMode(self.gl_display_mode)
-        glutInitWindowSize(window_width, window_height)
-        glutInitWindowPosition(
-            (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2,
-            (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2)
-        glutCreateWindow("")
+        if self.args.fullscreen:
+            glutGameModeString("%dx%d:32@75" % (window_width, window_height))
+            glutEnterGameMode()
+            glutSetCursor(GLUT_CURSOR_NONE)
+        else:
+            glutInitWindowSize(window_width, window_height)
+            glutInitWindowPosition(
+                (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2,
+                (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2)
+            glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
         glutIdleFunc(self.DrawGLScene)
         glutReshapeFunc(self.ReSizeGLScene)
@@ -435,10 +440,12 @@ class Visualizer:
         glVertex2i(x1, y1)
         glEnd()
 
-    def keyPressed(self, *args):
-        if args[0] == ESCAPE:
+    def keyPressed(self, key, x, y):
+        if key == ESCAPE:
             self.synth.stop_all()
             self.exiting = True
+        elif key == 'f':
+            self._toggle_fullscreen()
 
     def playing_segment(self, segment):
         self.orchestra.visualizing_segment(segment.id)
@@ -605,6 +612,7 @@ def run(visualizer_class):
     parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
     parser.add_argument("-camera-script", dest="camera_script", type=str)
     parser.add_argument("-border", action="store_true")
+    parser.add_argument("-fullscreen", action="store_true")
     visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
 
