@@ -1,3 +1,11 @@
+#!/usr/bin/python
+
+from tr_log_reader import TrLogReader
+from argparse import ArgumentParser
+from session import Session
+
+import sys
+sys.path.append("visual-experiments")
 import rectangular_visualizer as visualizer
 from OpenGL.GL import *
 import sys
@@ -8,17 +16,14 @@ from vector import Vector2d
 CURVE_PRECISION = 50
 MARGIN = 20
 
-class File(visualizer.File):
-    def add_segment(self, segment):
-        self.visualizer.playing_segment(segment)
-        self.visualizer.added_segment(segment)
-
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
-    def __init__(self, args):
-        visualizer.Visualizer.__init__(self, args, file_class=File)
+    def __init__(self, tr_log, args):
+        visualizer.Visualizer.__init__(self, args)
+        AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
         self.updated = False
         self.list = 1
-        self._initialized = False
+        for chunk in tr_log.chunks:
+            self.add_piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"])
 
     @staticmethod
     def add_parser_arguments(parser):
@@ -34,18 +39,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
 
-    def added_segment(self, segment):
-        AncestryPlotter.add_piece(self, segment.id, segment.t, segment.torrent_begin, segment.torrent_end)
-        self.updated = False
-
-    def added_all_files(self):
-        AncestryPlotter.__init__(self, self.total_size, self.download_duration, self.args)
-        self._initialized = True
-
     def render(self):
         if self.updated:
             self.draw()
-        elif self._initialized:
+        else:
             self.update_and_draw()
 
     def update_and_draw(self):
@@ -85,4 +82,26 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
-visualizer.run(Ancestry)
+
+parser = ArgumentParser()
+parser.add_argument("sessiondir")
+parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
+parser.add_argument("-t", "--torrent", dest="torrentname", default="")
+Ancestry.add_parser_arguments(parser)
+options = parser.parse_args()
+options.standalone = True
+
+sessiondir = options.sessiondir
+logfilename = "%s/session.log" % sessiondir
+
+print "session: %s" % sessiondir
+
+tr_log = TrLogReader(logfilename, options.torrentname,
+                     realtime=False,
+                     pretend_sequential=False).get_log()
+if options.selected_files:
+    tr_log.select_files(options.selected_files)
+print >> sys.stderr, "found %d chunks" % len(tr_log.chunks)
+tr_log.ignore_non_downloaded_files()
+
+Ancestry(tr_log, options).run()

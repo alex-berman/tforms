@@ -7,6 +7,7 @@ import sys
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir", type=str)
+parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-n", "--filenum", dest="filenum", type=int)
 parser.add_argument("-width", type=int)
@@ -28,6 +29,8 @@ if os.path.exists(output_filename) and not args.force:
 
 logfilename = "%s/session.log" % args.sessiondir
 log = TrLogReader(logfilename, args.torrentname, args.filenum).get_log()
+if args.selected_files:
+    log.select_files(args.selected_files)
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
 log.ignore_non_downloaded_files()
 

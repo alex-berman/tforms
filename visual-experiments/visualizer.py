@@ -161,7 +161,6 @@ class Visualizer:
         self.export = args.export
         self.osc_log = args.osc_log
         self.waveform_gain = args.waveform_gain
-        self.orchestra_port = args.port
 
         self.logger = logging.getLogger("visualizer")
         self.reset()
@@ -183,8 +182,10 @@ class Visualizer:
             self.fps_history = collections.deque(maxlen=10)
             self.previous_shown_fps_time = None
 
-        self.setup_osc(self.osc_log)
-        self.orchestra.register(self.server.port)
+        if not args.standalone:
+            self.orchestra_port = args.port
+            self.setup_osc(self.osc_log)
+            self.orchestra.register(self.server.port)
 
         if self.export:
             self.export_fps = args.export_fps
@@ -404,12 +405,13 @@ class Visualizer:
             self.exporter.export_frame()
 
     def handle_incoming_messages(self):
-        if self.osc_log:
-            self.server.serve_from_log_until(self.now)
-        else:
-            self.server.serve()
-            if self.waveform_server:
-                self.waveform_server.serve()
+        if not self.args.standalone:
+            if self.osc_log:
+                self.server.serve_from_log_until(self.now)
+            else:
+                self.server.serve()
+                if self.waveform_server:
+                    self.waveform_server.serve()
 
     def update_fps_history(self):
         fps = 1.0 / self.time_increment
@@ -593,26 +595,26 @@ class Visualizer:
 
     @staticmethod
     def add_parser_arguments(parser):
-        pass
+        parser.add_argument('-port', type=int)
+        parser.add_argument('-sync', action='store_true')
+        parser.add_argument('-width', dest='width', type=int, default=640)
+        parser.add_argument('-height', dest='height', type=int, default=480)
+        parser.add_argument('-margin', dest='margin', type=int, default=0)
+        parser.add_argument('-show-fps', dest='show_fps', action='store_true')
+        parser.add_argument('-osc-log', dest='osc_log')
+        parser.add_argument('-export', dest='export', action='store_true')
+        parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
+        parser.add_argument("-waveform", dest="waveform", action='store_true')
+        parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
+        parser.add_argument("-camera-script", dest="camera_script", type=str)
+        parser.add_argument("-border", action="store_true")
+        parser.add_argument("-fullscreen", action="store_true")
+        parser.add_argument("-standalone", action="store_true")
 
 def run(visualizer_class):
     print "Hit ESC key to quit."
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-port', type=int)
-    parser.add_argument('-sync', action='store_true')
-    parser.add_argument('-width', dest='width', type=int, default=640)
-    parser.add_argument('-height', dest='height', type=int, default=480)
-    parser.add_argument('-margin', dest='margin', type=int, default=0)
-    parser.add_argument('-show-fps', dest='show_fps', action='store_true')
-    parser.add_argument('-osc-log', dest='osc_log')
-    parser.add_argument('-export', dest='export', action='store_true')
-    parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
-    parser.add_argument("-waveform", dest="waveform", action='store_true')
-    parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
-    parser.add_argument("-camera-script", dest="camera_script", type=str)
-    parser.add_argument("-border", action="store_true")
-    parser.add_argument("-fullscreen", action="store_true")
     visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
 
