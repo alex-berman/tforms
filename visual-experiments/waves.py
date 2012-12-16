@@ -6,8 +6,10 @@ from gatherer import Gatherer
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30
-GATHERED_COLOR = Vector3d(0.1, 0.1, 0.1)
+GATHERED_COLOR = Vector3d(0.4, 0.4, 0.4)
 WAVEFORM_COLOR = Vector3d(1.0, 1.0, 1.0)
+GATHERED_LINE_WIDTH = 2.0
+WAVEFORM_LINE_WIDTH = 3.0
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -20,6 +22,8 @@ class Segment(visualizer.Segment):
 
     def render(self):
         amp = max([abs(value) for value in self.waveform])
+        glLineWidth(self.amp_controlled_line_width(
+                GATHERED_LINE_WIDTH, WAVEFORM_LINE_WIDTH, amp))
         self.visualizer.set_color(self.amp_controlled_color(
                 GATHERED_COLOR, WAVEFORM_COLOR, amp))
 
@@ -34,6 +38,9 @@ class Segment(visualizer.Segment):
 
     def amp_controlled_color(self, weak_color, strong_color, amp):
         return weak_color + (strong_color - weak_color) * pow(amp, 0.25)
+
+    def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
+        return weak_line_width + (strong_line_width - weak_line_width)
 
 class File(visualizer.File):
     def add_segment(self, segment):
@@ -78,20 +85,19 @@ class Waves(visualizer.Visualizer):
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glLineWidth(1.0)
         for segment in self.playing_segments.values():
             segment.render()
 
     def draw_gathered_segments(self):
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glColor3f(*GATHERED_COLOR)
         glBegin(GL_QUADS)
         x1 = 0
         x2 = self.width
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
-            y2 = self.byte_to_py(segment.torrent_end)
-            if y2 == y1:
-                y2 += 1
+            y2 = max(self.byte_to_py(segment.torrent_end), y1 + GATHERED_LINE_WIDTH)
             glVertex2f(x1, y1)
             glVertex2f(x1, y2)
             glVertex2f(x2, y2)
