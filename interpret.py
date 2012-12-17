@@ -14,7 +14,7 @@ class Interpreter:
             max_pause_within_segment = MAX_PAUSE_WITHIN_SEGMENT
         self.max_pause_within_segment = max_pause_within_segment
 
-    def interpret(self, chunks, files):
+    def interpret(self, chunks, files=None):
         self._files = files
         segments = []
         peers = defaultdict(Peer)
@@ -37,22 +37,25 @@ class Interpreter:
             chunk["begin"] == segment["end"] and
             chunk["peeraddr"] == segment["peeraddr"] and
             chunk["filenum"] == segment["filenum"] and
-            ((chunk["t"] - (segment["onset"]+segment["duration"])) < self.max_pause_within_segment) and
-            (chunk["t"] - segment["onset"]) < MAX_SEGMENT_DURATION)
+            (not self._files or (
+                    ((chunk["t"] - (segment["onset"]+segment["duration"])) < self.max_pause_within_segment) and
+                    (chunk["t"] - segment["onset"]) < MAX_SEGMENT_DURATION)))
 
     def _new_segment(self, chunk):
         segment = copy.copy(chunk)
         segment["onset"] = chunk["t"]
-        segment["duration"] = self._duration_with_unadjusted_rate(chunk)
+        if self._files:
+            segment["duration"] = self._duration_with_unadjusted_rate(chunk)
         segment["id"] = chunk["segment_id"] = chunk["id"]
         return segment
 
     def _append_chunk_to_segment(self, chunk, segment):
         segment["end"] = chunk["end"]
-        duration = chunk["t"] - segment["onset"]
-        if duration == 0:
-            duration = self._duration_with_unadjusted_rate(segment)
-        segment["duration"] = duration
+        if self._files:
+            duration = chunk["t"] - segment["onset"]
+            if duration == 0:
+                duration = self._duration_with_unadjusted_rate(segment)
+            segment["duration"] = duration
         chunk["segment_id"] = segment["id"]
 
     def _duration_with_unadjusted_rate(self, chunk):

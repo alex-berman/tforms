@@ -159,9 +159,22 @@ class InterpretTestCase(unittest.TestCase):
               "begin": 0, "end": 2000,
               "duration": 2.0*0.2}])
 
+    def test_without_file_info(self):
+        self.given_chunks(
+            [{"t": 0,
+              "begin": 0, "end": 1000},
+             {"t": 0.3,
+              "begin": 1000, "end": 2000},
+             {"t": 0.5,
+              "begin": 2000, "end": 3000}])
+        self.assert_interpretation(
+            [{"onset": 0,
+              "begin": 0, "end": 3000}])
+
 
     def setUp(self):
         self.interpreter = interpret.Interpreter()
+        self.files = None
 
     def given_files(self, files):
         self.files = files
@@ -182,10 +195,15 @@ class InterpretTestCase(unittest.TestCase):
         return chunk
 
     def assert_interpretation(self, expected_score):
-        actual_score = self.interpreter.interpret(self.chunks, self.files)
+        if self.files:
+            actual_score = self.interpreter.interpret(self.chunks, self.files)
+        else:
+            actual_score = self.interpreter.interpret(self.chunks)
+
         self.assertEquals(len(expected_score), len(actual_score),
                           "Score length mismatch: actual score is %s" % actual_score)
-        map(self._replace_duration_with_float_comparable_instance, expected_score)
+        if self.files:
+            map(self._replace_duration_with_float_comparable_instance, expected_score)
         expected_score = map(self._fill_potential_gaps_with_actual_values,
                              zip(expected_score, actual_score))
         self.assertEquals(expected_score, actual_score)

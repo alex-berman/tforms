@@ -3,6 +3,7 @@
 from tr_log_reader import TrLogReader
 from argparse import ArgumentParser
 from session import Session
+from interpret import Interpreter
 
 import sys
 sys.path.append("visual-experiments")
@@ -18,12 +19,12 @@ MARGIN = 20
 LINE_WIDTH = 2.0 / 640
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
-    def __init__(self, tr_log, args):
+    def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
         self.updated = False
-        for chunk in tr_log.chunks:
-            self.add_piece(chunk["id"], chunk["t"], chunk["begin"], chunk["end"])
+        for piece in pieces:
+            self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
     @staticmethod
     def add_parser_arguments(parser):
@@ -77,7 +78,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
-        y = t / self._duration * self._height
+        y = (1 - t / self._duration) * self._height
         return x, y
 
     def draw_path(self, points):
@@ -106,6 +107,7 @@ parser = ArgumentParser()
 parser.add_argument("sessiondir")
 parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
+parser.add_argument("-interpret", action="store_true")
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
@@ -123,4 +125,9 @@ if options.selected_files:
 print >> sys.stderr, "found %d chunks" % len(tr_log.chunks)
 tr_log.ignore_non_downloaded_files()
 
-Ancestry(tr_log, options).run()
+if options.interpret:
+    pieces = Interpreter().interpret(tr_log.chunks)
+else:
+    pieces = tr_log.chunks
+
+Ancestry(tr_log, pieces, options).run()
