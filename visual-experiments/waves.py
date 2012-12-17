@@ -3,7 +3,7 @@ import collections
 from OpenGL.GL import *
 from vector import Vector3d
 from gatherer import Gatherer
-import math
+from math_tools import sigmoid
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30.0 / 480
@@ -39,13 +39,10 @@ class Segment(visualizer.Segment):
         glEnd()
 
     def amp_controlled_color(self, weak_color, strong_color, amp):
-        return weak_color + (strong_color - weak_color) * self._sigmoid(pow(amp, 0.25))
+        return weak_color + (strong_color - weak_color) * sigmoid(pow(amp, 0.25))
 
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
         return (weak_line_width + (strong_line_width - weak_line_width) * amp) * self.visualizer.height
-
-    def _sigmoid(self, v):
-        return 1.0 / (1.0 + math.exp((-v + .5) * 20))
 
 class File(visualizer.File):
     def add_segment(self, segment):

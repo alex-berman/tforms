@@ -1,5 +1,6 @@
 from vector import Vector
 import math
+from math_tools import sigmoid
 
 class CameraScriptInterpreter:
     def __init__(self, script_filename):
@@ -28,7 +29,7 @@ class CameraScriptInterpreter:
                 n2 = n1 + 1
                 t1 = self._script[n1]["t"]
                 t2 = self._script[n2]["t"]
-                opacity2 = self._sigmoid((t - t1) / (t2 - t1))
+                opacity2 = sigmoid((t - t1) / (t2 - t1))
 
                 position1 = self._script[n1]["position"]
                 position2 = self._script[n2]["position"]
