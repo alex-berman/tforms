@@ -42,7 +42,7 @@ class Segment(visualizer.Segment):
         return weak_color + (strong_color - weak_color) * sigmoid(pow(amp, 0.25))
 
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
-        return (weak_line_width + (strong_line_width - weak_line_width) * amp) * self.visualizer.height
+        return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.height
 
 class File(visualizer.File):
     def add_segment(self, segment):
