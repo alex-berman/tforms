@@ -48,7 +48,6 @@ class File(visualizer.File):
     def add_segment(self, segment):
         self.visualizer.playing_segment(segment)
         self.visualizer.playing_segments[segment.id] = segment
-        segment.gathered = False
 
 class Waves(visualizer.Visualizer):
     def __init__(self, args):
@@ -71,14 +70,13 @@ class Waves(visualizer.Visualizer):
     def update(self):
         outdated = []
         for segment in self.playing_segments.values():
-            if not segment.gathered and not segment.is_playing():
+            if not segment.is_playing():
                 self.gatherer.add(segment)
-                segment.gathered = True
                 outdated.append(segment.id)
-                self._updated = False
 
-        for segment_id in outdated:
-            del self.playing_segments[segment_id]
+        if len(outdated) > 0:
+            for segment_id in outdated:
+                del self.playing_segments[segment_id]
             self._updated = False
 
     def render(self):
