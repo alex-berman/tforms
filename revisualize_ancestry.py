@@ -75,6 +75,11 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                     piece.t, (piece.begin + piece.end) / 2,
                     t, (parent.begin + parent.end) / 2)
 
+    def _rect_position(self, t, byte_pos):
+        x = float(byte_pos) / self._total_size * self._width
+        y = t / self._duration * self._height
+        return x, y
+
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)
         for (t, b) in points:
