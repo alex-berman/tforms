@@ -17,7 +17,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, file_class=File)
         self.updated = False
-        self.list = 1
+        self._display_list = 1
         self._initialized = False
 
     @staticmethod
@@ -33,6 +33,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
+        self.updated = False
 
     def added_segment(self, segment):
         AncestryPlotter.add_piece(self, segment.id, segment.t, segment.torrent_begin, segment.torrent_end)
@@ -49,7 +50,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self.update_and_draw()
 
     def update_and_draw(self):
-        glNewList(self.list, GL_COMPILE_AND_EXECUTE)
+        glNewList(self._display_list, GL_COMPILE_AND_EXECUTE)
         glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
         glLineWidth(1)
         glEnable(GL_LINE_SMOOTH)
@@ -62,7 +63,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.updated = True
 
     def draw(self):
-        glCallList(self.list)
+        glCallList(self._display_list)
 
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)
