@@ -4,6 +4,7 @@ from tr_log_reader import TrLogReader
 from argparse import ArgumentParser
 from session import Session
 from interpret import Interpreter
+import math
 
 import sys
 sys.path.append("visual-experiments")
@@ -13,6 +14,7 @@ import sys
 from bezier import make_bezier
 from ancestry_plotter import AncestryPlotter
 from vector import Vector2d
+from smoother import Smoother
 
 CURVE_PRECISION = 50
 MARGIN = 20
@@ -25,6 +27,11 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.updated = False
         for piece in pieces:
             self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
+
+        self._autozoom = (args.geometry == self.CIRCLE and self.args.autozoom)
+        if self._autozoom:
+            self._max_pxy = 0
+            self._zoom_smoother = Smoother()
 
     @staticmethod
     def add_parser_arguments(parser):
@@ -50,9 +57,25 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(1,1,1)
+
         self.min_t = self._duration - (self.current_time() * self.args.timefactor) % self._duration
+
+        if self._autozoom:
+            self._zoom = self._zoom_smoother.value()
+            if self._zoom is None:
+                self._zoom = 0.0
+        else:
+            self._zoom = 1.0
+
         self.plot()
         self.updated = True
+
+        if self._autozoom:
+            if self._max_pxy == 0:
+                zoom = 0.5
+            else:
+                zoom = 0.5 + self.min_t/self._duration * 0.5 / self._max_pxy
+            self._zoom_smoother.smooth(zoom, self.time_increment)
 
     def _follow_piece(self, piece):
         if len(piece.growth) > 0:
@@ -79,6 +102,17 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
         y = (1 - t / self._duration) * self._height
+        return x, y
+
+    def _circle_position(self, t, byte_pos):
+        angle = float(byte_pos) / self._total_size * 2*math.pi
+        rel_t = 1 - t / self._duration
+        px = rel_t * math.cos(angle)
+        py = rel_t * math.sin(angle)
+        x = self._width / 2 + (px * self._zoom) * self._width / 2
+        y = self._height / 2 + (py * self._zoom) * self._height / 2
+        if self._autozoom:
+            self._max_pxy = max([self._max_pxy, abs(px), abs(py)])
         return x, y
 
     def draw_path(self, points):
@@ -108,6 +142,7 @@ parser.add_argument("sessiondir")
 parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
+parser.add_argument("-autozoom", action="store_true")
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True

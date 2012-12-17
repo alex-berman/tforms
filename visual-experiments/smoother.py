@@ -7,7 +7,7 @@ class Smoother:
     def smooth(self, new_value, time_increment):
         if self._current_value:
             self._current_value += (new_value - self._current_value) * \
-                self.RESPONSE_FACTOR * time_increment
+                self.RESPONSE_FACTOR * min(time_increment, 1.0)
         else:
             self._current_value = new_value
 
