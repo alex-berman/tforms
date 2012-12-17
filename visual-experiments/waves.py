@@ -69,14 +69,14 @@ class Waves(visualizer.Visualizer):
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def update(self):
+        outdated = []
         for segment in self.playing_segments.values():
             if not segment.gathered and not segment.is_playing():
                 self.gatherer.add(segment)
                 segment.gathered = True
+                outdated.append(segment.id)
                 self._updated = False
 
-        outdated = filter(lambda segment_id: self.playing_segments[segment_id].relative_age() > 1,
-                          self.playing_segments)
         for segment_id in outdated:
             del self.playing_segments[segment_id]
             self._updated = False
