@@ -1,5 +1,6 @@
 import re
 import gps
+import os
 
 class World:
     def __init__(self, width, height):
@@ -9,7 +10,7 @@ class World:
         self._load()
 
     def _load(self):
-        f = open('world.dat', 'r')
+        f = open('%s/world.dat' % os.path.dirname(__file__), 'r')
 
         self.paths = []
         self._path = []
