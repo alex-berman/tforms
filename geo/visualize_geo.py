@@ -44,16 +44,20 @@ class Geography(visualizer.Visualizer):
         n = 0
         while n < 10000:
             addr = ".".join([str(random.randint(0,255)) for i in range(4)])
-            gir = self._geo_ip.record_by_addr(addr)
-            if gir:
-                x = self._gps.x(gir['longitude'])
-                y = self._gps.y(gir['latitude'])
-                nx = int(LOCATION_PRECISION * x/WORLD_WIDTH)
-                ny = int(LOCATION_PRECISION * y/WORLD_HEIGHT)
-                self._locations.append((x, y))
-                self._grid[ny, nx] += 1
+            if self._add_ip(addr):
                 n += 1
         self._location_max_value = numpy.max(self._grid)
+
+    def _add_ip(self, addr):
+        gir = self._geo_ip.record_by_addr(addr)
+        if gir:
+            x = self._gps.x(gir['longitude'])
+            y = self._gps.y(gir['latitude'])
+            nx = int(LOCATION_PRECISION * x/WORLD_WIDTH)
+            ny = int(LOCATION_PRECISION * y/WORLD_HEIGHT)
+            self._locations.append((x, y))
+            self._grid[ny, nx] += 1
+            return True
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
