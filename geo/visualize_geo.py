@@ -32,6 +32,11 @@ class Geography(visualizer.Visualizer):
 
     def _render_world(self):
         glColor3f(*LAND_COLOR)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
         for path in self._world.paths:
             self._render_land(path)
 
