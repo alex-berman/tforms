@@ -111,17 +111,23 @@ class Geography(visualizer.Visualizer):
 
     def _render_bar_grid(self):
         glBegin(GL_LINES)
-        glColor4f(1, 1, 1, 0.2)
         ny = 0
         for row in self._grid:
             y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
             nx = 0
             for value in row:
                 if value > 0:
-                    h = pow(float(value) / self._location_max_value, 0.2)
+                    strength = pow(float(value) / self._location_max_value, 0.2)
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
-                    glVertex3f(x, BARS_TOP - h*BARS_TOP, y)
+
+                    glColor4f(1, 1, 1, 0.5 * strength)
                     glVertex3f(x, BARS_TOP, y)
+                    glColor4f(1, 1, 1, 0.05)
+                    glVertex3f(x, BARS_BOTTOM, y)
+
+                    # glColor4f(1, 1, 1, 0.2)
+                    # glVertex3f(x, BARS_TOP, y)
+                    # glVertex3f(x, BARS_TOP - strength*BARS_TOP, y)
                 nx += 1
             ny += 1
         glEnd()
