@@ -27,33 +27,33 @@ WORLD_WIDTH = 20
 WORLD_HEIGHT = 20
 LOCATION_PRECISION = 200
 
-gi = GeoIP.open("%s/GeoLiteCity.dat" % os.path.dirname(__file__), GeoIP.GEOIP_STANDARD)
-gps = GPS(WORLD_WIDTH, WORLD_HEIGHT)
-locations = []
-grid = numpy.zeros((LOCATION_PRECISION, LOCATION_PRECISION), int)
-
-n = 0
-while n < 10000:
-    addr = ".".join([str(random.randint(0,255)) for i in range(4)])
-    gir = gi.record_by_addr(addr)
-    if gir:
-        x = gps.x(gir['longitude'])
-        y = gps.y(gir['latitude'])
-        nx = int(LOCATION_PRECISION * x/WORLD_WIDTH)
-        ny = int(LOCATION_PRECISION * y/WORLD_HEIGHT)
-        locations.append((x, y))
-        grid[ny, nx] += 1
-        n += 1
-location_max_value = numpy.max(grid)
-print location_max_value
-
 class Geography(visualizer.Visualizer):
     def __init__(self, args):
+        self._geo_ip = GeoIP.open("%s/GeoLiteCity.dat" % os.path.dirname(__file__), GeoIP.GEOIP_STANDARD)
+        self._gps = GPS(WORLD_WIDTH, WORLD_HEIGHT)
+        self._load_locations()
         visualizer.Visualizer.__init__(self, args)
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
         self._world = world.World(WORLD_WIDTH, WORLD_HEIGHT)
         self.enable_3d()
+
+    def _load_locations(self):
+        self._locations = []
+        self._grid = numpy.zeros((LOCATION_PRECISION, LOCATION_PRECISION), int)
+        n = 0
+        while n < 10000:
+            addr = ".".join([str(random.randint(0,255)) for i in range(4)])
+            gir = self._geo_ip.record_by_addr(addr)
+            if gir:
+                x = self._gps.x(gir['longitude'])
+                y = self._gps.y(gir['latitude'])
+                nx = int(LOCATION_PRECISION * x/WORLD_WIDTH)
+                ny = int(LOCATION_PRECISION * y/WORLD_HEIGHT)
+                self._locations.append((x, y))
+                self._grid[ny, nx] += 1
+                n += 1
+        self._location_max_value = numpy.max(self._grid)
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
@@ -85,7 +85,7 @@ class Geography(visualizer.Visualizer):
     def _render_locations(self):
         glColor4f(1, 1, 1, .01)
         glBegin(GL_LINES)
-        for x,y in locations:
+        for x,y in self._locations:
             glVertex3f(x, BARS_BOTTOM, y)
             glVertex3f(x, BARS_TOP, y)
         glEnd()
@@ -94,12 +94,12 @@ class Geography(visualizer.Visualizer):
         glBegin(GL_LINES)
         glColor4f(1, 1, 1, 0.2)
         ny = 0
-        for row in grid:
+        for row in self._grid:
             y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
             nx = 0
             for value in row:
                 if value > 0:
-                    h = pow(float(value) / location_max_value, 0.2)
+                    h = pow(float(value) / self._location_max_value, 0.2)
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
                     glVertex3f(x, BARS_TOP - h*BARS_TOP, y)
                     glVertex3f(x, BARS_TOP, y)
@@ -113,12 +113,12 @@ class Geography(visualizer.Visualizer):
         glBegin(GL_POINTS)
         glColor4f(1, 1, 1, 0.5)
         ny = 0
-        for row in grid:
+        for row in self._grid:
             y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
             nx = 0
             for value in row:
                 if value > 0:
-                    h = pow(float(value) / location_max_value, 0.2)
+                    h = pow(float(value) / self._location_max_value, 0.2)
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
                     glVertex3f(x, BARS_TOP, y)
                 nx += 1
