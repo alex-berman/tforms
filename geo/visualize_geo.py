@@ -19,17 +19,14 @@ class Geography(visualizer.Visualizer):
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
         self._world = world.World(20.0, 20.0)
-        self.enable_accum()
         self.enable_3d()
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
-        visualizer.NUM_ACCUM_SAMPLES = 1
         #glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def render(self):
-        self.accum(self._render_world)
-        #self._render_world()
+        self._render_world()
 
     def _render_world(self):
         glColor3f(0,0,0)

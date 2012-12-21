@@ -161,6 +161,7 @@ class Visualizer:
         self.export = args.export
         self.osc_log = args.osc_log
         self.waveform_gain = args.waveform_gain
+        self._standalone = args.standalone
 
         self.logger = logging.getLogger("visualizer")
         self.reset()
@@ -171,7 +172,11 @@ class Visualizer:
         self.stopwatch = Stopwatch()
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
+        self._accum_enabled = False
         self._3d_enabled = False
+        self.fovy = 45
+        self.near = 0.1
+        self.far = 100.0
 
         if args.camera_script:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
@@ -394,6 +399,10 @@ class Visualizer:
             if self.args.border:
                 self.draw_border()
             self.handle_incoming_messages()
+            if not self._accum_enabled:
+                self.set_perspective(
+                    0, 0,
+                    -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
             self.render()
             if self.show_fps:
                 self.update_fps_history()
@@ -477,8 +486,10 @@ class Visualizer:
     def _mouse_clicked(self, button, state, x, y):
         if button == GLUT_LEFT_BUTTON:
             self._dragging_orientation = (state == GLUT_DOWN)
-        elif button == GLUT_RIGHT_BUTTON:
-            self._dragging_y_position = (state == GLUT_DOWN)
+        else:
+            self._dragging_orientation = False
+            if button == GLUT_RIGHT_BUTTON:
+                self._dragging_y_position = (state == GLUT_DOWN)
         if state == GLUT_DOWN:
             self._drag_x_previous = x
             self._drag_y_previous = y
@@ -525,12 +536,14 @@ class Visualizer:
 
     def _set_camera_position(self, position):
         self._camera_position = position
-        self.set_listener_position(position.z, position.x)
+        if not self._standalone:
+            self.set_listener_position(position.z, position.x)
 
     def _set_camera_orientation(self, y_orientation, x_orientation):
         self._camera_y_orientation = y_orientation
         self._camera_x_orientation = x_orientation
-        self.set_listener_orientation(y_orientation)
+        if not self._standalone:
+            self.set_listener_orientation(y_orientation)
 
     def set_perspective(self,
                        pixdx, pixdy,
@@ -560,10 +573,8 @@ class Visualizer:
         glTranslatef(self._camera_position.x, self._camera_position.y, self._camera_position.z)
 
     def enable_accum(self):
-        self.fovy = 45
-        self.near = 0.1
-        self.far = 100.0
         self.gl_display_mode |= GLUT_ACCUM
+        self._accum_enabled = True
 
     def accum(self, render_method):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_ACCUM_BUFFER_BIT)
