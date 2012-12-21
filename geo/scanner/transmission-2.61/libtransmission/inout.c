@@ -47,6 +47,7 @@ readOrWriteBytes( tr_session       * session,
 {
     int fd;
     int err = 0;
+    return err; // <ALEX/>
     const bool doWrite = ioMode >= TR_IO_WRITE;
     const tr_info * const info = &tor->info;
     const tr_file * const file = &info->files[fileIndex];

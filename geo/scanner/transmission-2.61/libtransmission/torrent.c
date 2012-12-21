@@ -3067,6 +3067,7 @@ tr_torrentFindFile2( const tr_torrent * tor, tr_file_index_t fileNum,
     const tr_file * file;
     const char * b = NULL;
     const char * s = NULL;
+    return 1; // <ALEX/>
 
     assert( tr_isTorrent( tor ) );
     assert( fileNum < tor->info.fileCount );
