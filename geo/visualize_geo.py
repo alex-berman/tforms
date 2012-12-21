@@ -9,6 +9,8 @@ import visualizer
 from OpenGL.GL import *
 from vector import Vector3d, Vector
 
+LAND_COLOR = (1,1,1)
+
 CAMERA_POSITION = Vector(3, [-11.410326069762691, -7.499999999999989, -33.71008311478789])
 CAMERA_Y_ORIENTATION = 0
 CAMERA_X_ORIENTATION = 1
@@ -23,14 +25,13 @@ class Geography(visualizer.Visualizer):
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
-        #glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def render(self):
         self._render_world()
 
     def _render_world(self):
-        glColor3f(0,0,0)
-
+        glColor3f(*LAND_COLOR)
         for path in self._world.paths:
             self._render_land(path)
 
