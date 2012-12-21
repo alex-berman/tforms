@@ -4,6 +4,7 @@ import world
 import sys
 from argparse import ArgumentParser
 import numpy
+import re
 
 import GeoIP
 import random
@@ -15,15 +16,15 @@ import visualizer
 from OpenGL.GL import *
 from vector import Vector3d, Vector
 
-LAND_COLOR = (1,1,1)
-BARS_TOP = 10
+LAND_COLOR = (.5, .5, .5)
+BARS_TOP = 5
 BARS_BOTTOM = 0
 
-CAMERA_POSITION = Vector(3, [-11.410326069762691, -14.999999999999963, -33.71008311478789])
-CAMERA_Y_ORIENTATION = 2
-CAMERA_X_ORIENTATION = 19
+CAMERA_POSITION = Vector(3, [-17.237835534835536, -14.099999999999966, -24.48634534467994])
+CAMERA_Y_ORIENTATION = -1
+CAMERA_X_ORIENTATION = 38
 
-WORLD_WIDTH = 20
+WORLD_WIDTH = 30
 WORLD_HEIGHT = 20
 LOCATION_PRECISION = 200
 
@@ -41,12 +42,26 @@ class Geography(visualizer.Visualizer):
     def _load_locations(self):
         self._locations = []
         self._grid = numpy.zeros((LOCATION_PRECISION, LOCATION_PRECISION), int)
+        #self._add_random_locations()
+        self._add_peers_from_log()
+        self._location_max_value = numpy.max(self._grid)
+
+    def _add_peers_from_log(self):
+        f = open("%s/scanner/peers.log" % os.path.dirname(__file__), "r")
+        r = re.compile('^peer \[([0-9.]+)\]')
+        for line in f:
+            m = r.search(line)
+            if m:
+                addr = m.group(1)
+                self._add_ip(addr)
+        f.close()
+
+    def _add_random_locations(self):
         n = 0
         while n < 10000:
             addr = ".".join([str(random.randint(0,255)) for i in range(4)])
             if self._add_ip(addr):
                 n += 1
-        self._location_max_value = numpy.max(self._grid)
 
     def _add_ip(self, addr):
         gir = self._geo_ip.record_by_addr(addr)
