@@ -1,14 +1,20 @@
 from ancestry_tracker import AncestryTracker, Piece
 import sys
 import math
+from bezier import make_bezier
+from vector import Vector2d
+
+CURVE_PRECISION = 50
+
+LINE = "line"
+CURVE = "curve"
+RECT = "rect"
+CIRCLE = "circle"
+GEOMETRIES = [RECT, CIRCLE]
+PLAIN = "plain"
+SHRINKING = "shrinking"
 
 class AncestryPlotter:
-    LINE = "line"
-    CURVE = "curve"
-    RECT = "rect"
-    CIRCLE = "circle"
-    GEOMETRIES = [RECT, CIRCLE]
-
     def __init__(self, total_size, duration, args):
         self._total_size = total_size
         self._duration = duration
@@ -16,14 +22,22 @@ class AncestryPlotter:
         self._tracker = AncestryTracker()
         self._num_pieces = 0
 
-        if args.edge_style == self.LINE:
+        if args.edge_style == LINE:
             self._edge_plot_method = self.draw_line
-        elif args.edge_style == self.CURVE:
-            self._edge_plot_method = self.draw_curve
+        elif args.edge_style == CURVE:
+            if args.stroke_style == SHRINKING:
+                self._edge_plot_method = self.draw_shrinking_curve
+            else:
+                self._edge_plot_method = self.draw_curve
 
-        if args.geometry == self.RECT:
+        if args.stroke_style == SHRINKING:
+            self._path_plot_method = self._draw_shrinking_path
+        else:
+            self._path_plot_method = self.draw_path
+
+        if args.geometry == RECT:
             self._position = self._rect_position
-        elif args.geometry == self.CIRCLE:
+        elif args.geometry == CIRCLE:
             self._position = self._circle_position
 
     def set_size(self, width, height):
@@ -33,11 +47,14 @@ class AncestryPlotter:
     @staticmethod
     def add_parser_arguments(parser):
         parser.add_argument("--edge-style",
-                            choices=[AncestryPlotter.LINE, AncestryPlotter.CURVE],
-                            default=AncestryPlotter.CURVE)
+                            choices=[LINE, CURVE],
+                            default=CURVE)
         parser.add_argument("--geometry",
-                            choices=AncestryPlotter.GEOMETRIES,
-                            default=AncestryPlotter.GEOMETRIES[0])
+                            choices=GEOMETRIES,
+                            default=GEOMETRIES[0])
+        parser.add_argument("--stroke-style",
+                            choices=[PLAIN,
+                                     SHRINKING])
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))
@@ -69,7 +86,7 @@ class AncestryPlotter:
             for older_version in reversed(piece.growth):
                 path.append((older_version.t,
                              (older_version.begin + older_version.end) / 2))
-            self.draw_path(path)
+            self._path_plot_method(path)
 
         for parent in piece.parents.values():
             self._connect_child_and_parent(
@@ -80,6 +97,8 @@ class AncestryPlotter:
     def _connect_child_and_parent(self, t1, b1, t2, b2):
         x1, y1 = self._position(t1, b1)
         x2, y2 = self._position(t2, b2)
+        self._stroke_width1 = self._stroke_width_at_time(t1)
+        self._stroke_width2 = self._stroke_width_at_time(t2)
         self._edge_plot_method(x1, y1, x2, y2)
 
 
@@ -88,7 +107,7 @@ class AncestrySvgPlotter(AncestryPlotter):
         if width is None:
             width = 500
         if height is None:
-            if self._args.geometry == self.RECT:
+            if self._args.geometry == RECT:
                 height = int(width * self._total_size / self._duration * 0.000005)
             else:
                 height = width
@@ -117,6 +136,57 @@ class AncestrySvgPlotter(AncestryPlotter):
                 x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65,
                 x2, y2))
 
+    def draw_shrinking_curve(self, x1, y1, x2, y2):
+        control_points = [
+            Vector2d(x1, y1),
+            Vector2d(x1 + (x2 - x1) * 0.3, y1),
+            Vector2d(x1 + (x2 - x1) * 0.7, y2),
+            Vector2d(x2, y2)
+            ]
+        bezier = make_bezier([(p.x, p.y) for p in control_points])
+        stroke_points = bezier(CURVE_PRECISION)
+        self._draw_shrinking_path_xy(stroke_points)
+
+    def _draw_shrinking_path_xy(self, stroke_points):
+        outline_pairs = self._outline(stroke_points)
+        x0, y0 = stroke_points[0]
+        self._write_svg('<path style="fill:%s;stroke:none;" d="M%f,%f' % (
+                self._args.stroke_color,
+                x0, y0))
+        for pair in outline_pairs:
+            x, y = pair[0]
+            self._write_svg(' L%f,%f' % (x, y))
+        for pair in reversed(outline_pairs):
+            x, y = pair[1]
+            self._write_svg(' L%f,%f' % (x, y))
+        self._write_svg('" />')
+
+    def _outline(self, stroke_points):
+        return [self._outline_pair(stroke_points, n) for n in range(len(stroke_points))]
+
+    def _outline_pair(self, stroke_points, n):
+        angle = self._stroke_angle(stroke_points, n)
+        angle1 = angle + math.pi/2
+        angle2 = angle - math.pi/2
+        x, y = stroke_points[n]
+        width = self._stroke_width1 + (self._stroke_width2 - self._stroke_width1) * \
+            (float(n) / (len(stroke_points)-1))
+        p1 = (x + math.cos(angle1) * width,
+              y + math.sin(angle1) * width)
+        p2 = (x + math.cos(angle2) * width,
+              y + math.sin(angle2) * width)
+        return (p1, p2)
+
+    def _stroke_width_at_time(self, t):
+        return self._args.stroke_width * (1 - pow(t/self._duration, 0.6))
+
+    def _stroke_angle(self, stroke_points, n):
+        n1 = max(0, n-1)
+        n2 = min(len(stroke_points)-1, n+1)
+        x1, y1 = stroke_points[n1]
+        x2, y2 = stroke_points[n2]
+        return math.atan2(y1-y2, x1-x2)
+
     def draw_path(self, points):
         t0, b0 = points[0]
         x0, y0 = self._position(t0, b0)
@@ -128,6 +198,14 @@ class AncestrySvgPlotter(AncestryPlotter):
             x, y = self._position(t, b)
             self._write_svg(' L%f,%f' % (x, y))
         self._write_svg('" />')
+
+    def _draw_shrinking_path(self, path):
+        t1 = path[0][0]
+        t2 = path[-1][0]
+        self._stroke_width1 = self._stroke_width_at_time(t1)
+        self._stroke_width2 = self._stroke_width_at_time(t2)
+        path_xy = [self._position(t, b) for (t, b) in path]
+        self._draw_shrinking_path_xy(path_xy)
 
     def _write_svg(self, line):
         if self._svg_output:
