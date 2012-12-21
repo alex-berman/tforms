@@ -60,16 +60,18 @@ class Geography(visualizer.Visualizer):
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def render(self):
-        self._render_world()
-        self._render_bar_grid()
-        #self._render_locations()
-
-    def _render_world(self):
-        glColor3f(*LAND_COLOR)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        self._render_world()
+        self._render_bar_grid()
+        self._render_surface_points()
+        #self._render_locations()
+
+    def _render_world(self):
+        glColor3f(*LAND_COLOR)
 
         for path in self._world.paths:
             self._render_land(path)
@@ -100,6 +102,24 @@ class Geography(visualizer.Visualizer):
                     h = pow(float(value) / location_max_value, 0.2)
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
                     glVertex3f(x, BARS_TOP - h*BARS_TOP, y)
+                    glVertex3f(x, BARS_TOP, y)
+                nx += 1
+            ny += 1
+        glEnd()
+
+    def _render_surface_points(self):
+        glEnable(GL_POINT_SMOOTH)
+        glPointSize(3.0)
+        glBegin(GL_POINTS)
+        glColor4f(1, 1, 1, 0.5)
+        ny = 0
+        for row in grid:
+            y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
+            nx = 0
+            for value in row:
+                if value > 0:
+                    h = pow(float(value) / location_max_value, 0.2)
+                    x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
                     glVertex3f(x, BARS_TOP, y)
                 nx += 1
             ny += 1
