@@ -27,6 +27,7 @@ class Server(OscReceiver):
     def __init__(self, options):
         self.options = options
         self.visualizer = None
+        self._orchestra = None
         if options.visualizer_enabled or options.visualizer_command_line:
             self._setup_osc()
             if options.visualizer_command_line:
@@ -38,14 +39,15 @@ class Server(OscReceiver):
         visualizer_process = subprocess.Popen(command_line_with_port, shell=True, stdin=None)
 
     def _setup_osc(self):
+        self._orchestra_queue = []
         OscReceiver.__init__(self)
         self.add_method("/register", "i", self._handle_register)
-        self.add_method("/visualizing", "i", self._handle_visualizing_message)
-        self.add_method("/set_listener_position", "ff", self._handle_set_listener_position)
-        self.add_method("/set_listener_orientation", "f", self._handle_set_listener_orientation)
-        self.add_method("/place_segment", "ifff", self._handle_place_segment)
-        self.add_method("/enable_smooth_movement", "", self._handle_enable_smooth_movement)
-        self.add_method("/start_segment_movement_from_peer", "if", self._handle_start_segment_movement_from_peer)
+        self.add_method("/visualizing", "i", self._handle, "_handle_visualizing_message")
+        self.add_method("/set_listener_position", "ff", self._handle, "_handle_set_listener_position")
+        self.add_method("/set_listener_orientation", "f", self._handle, "_handle_set_listener_orientation")
+        self.add_method("/place_segment", "ifff", self._handle, "_handle_place_segment")
+        self.add_method("/enable_smooth_movement", "", self._handle, "_handle_enable_smooth_movement")
+        self.add_method("/start_segment_movement_from_peer", "if", self._handle, "_handle_start_segment_movement_from_peer")
         self.start()
         self._visualizer_registered = False
         server_thread = threading.Thread(target=self._serve_osc)
@@ -64,21 +66,27 @@ class Server(OscReceiver):
         print "OK"
 
     def set_orchestra(self, orchestra):
-        self.orchestra = orchestra
+        self._orchestra = orchestra
         orchestra.server = self
         orchestra.visualizer = self.visualizer
+        for args in self._orchestra_queue:
+            self._dispatch(*args)
+        self._orchestra_queue = []
 
     def _handle_register(self, path, args, types, src, data):
         visualizer_port = args[0]
         self.visualizer = OscSender(visualizer_port, self.options.osc_log)
         self._visualizer_registered = True
 
-    def _handle_visualizing_message(self, *args): self.orchestra._handle_visualizing_message(*args)
-    def _handle_set_listener_position(self, *args): self.orchestra._handle_set_listener_position(*args)
-    def _handle_set_listener_orientation(self, *args): self.orchestra._handle_set_listener_orientation(*args)
-    def _handle_place_segment(self, *args): self.orchestra._handle_place_segment(*args)
-    def _handle_enable_smooth_movement(self, *args): self.orchestra._handle_enable_smooth_movement(*args)
-    def _handle_start_segment_movement_from_peer(self, *args): self.orchestra._handle_start_segment_movement_from_peer(*args)
+    def _handle(self, *args):
+        if self._orchestra:
+            self._dispatch(*args)
+        else:
+            self._orchestra_queue.append(args)
+
+    def _dispatch(self, path, args, types, src, method_name):
+        user_data = None
+        getattr(self._orchestra, method_name)(path, args, types, src, user_data)
 
     def shutdown(self):
         if self.visualizer:

@@ -15,12 +15,13 @@ class OscReceiver(liblo.Server):
             self._queue = []
             self._lock = threading.Lock()
 
-    def add_method(self, path, typespec, callback_func):
-        liblo.Server.add_method(self, path, typespec, self._callback, callback_func)
+    def add_method(self, path, typespec, callback_func, user_data=None):
+        liblo.Server.add_method(self, path, typespec, self._callback,
+                                (callback_func, user_data))
 
-    def _callback(self, path, args, types, src, callback_func):
+    def _callback(self, path, args, types, src, (callback_func, user_data)):
         with self._lock:
-            self._queue.append((path, args, types, src, callback_func))
+            self._queue.append((path, args, types, src, callback_func, user_data))
 
     def start(self):
         if not self.log:
@@ -34,9 +35,9 @@ class OscReceiver(liblo.Server):
 
     def serve(self):
         with self._lock:
-            for path, args, types, src, callback_func in self._queue:
+            for path, args, types, src, callback_func, user_data in self._queue:
                 self._fire_callback_with_exception_handler(
-                    path, args, types, src, callback_func)
+                    path, args, types, src, callback_func, user_data)
             self._queue = []
 
     def read_log(self, filename):
@@ -62,10 +63,9 @@ class OscReceiver(liblo.Server):
             else:
                 return
 
-    def _fire_callback_with_exception_handler(self, path, args, types, src, callback):
-        data = None
+    def _fire_callback_with_exception_handler(self, path, args, types, src, callback, user_data):
         try:
-            callback(path, args, types, src, data)
+            callback(path, args, types, src, user_data)
         except Exception as err:
             traceback_printer.print_traceback()
             raise err
