@@ -7,6 +7,7 @@ import collections
 import logging
 import math
 import liblo
+from exporter import Exporter
 
 dirname = os.path.dirname(__file__)
 if dirname:
@@ -192,9 +193,9 @@ class Visualizer:
             self.setup_osc(self.osc_log)
             self.orchestra.register(self.server.port)
 
+        self._screen_dumper = Exporter(".", self.margin, self.margin, self.width, self.height)
         if self.export:
             self.export_fps = args.export_fps
-            from exporter import Exporter
             import shutil
             shutil.rmtree(EXPORT_DIR)
             os.mkdir(EXPORT_DIR)
@@ -399,7 +400,7 @@ class Visualizer:
             if self.args.border:
                 self.draw_border()
             self.handle_incoming_messages()
-            if not self._accum_enabled:
+            if self._3d_enabled and not self._accum_enabled:
                 self.set_perspective(
                     0, 0,
                     -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
@@ -457,6 +458,11 @@ class Visualizer:
             self.exiting = True
         elif key == 'f':
             self._toggle_fullscreen()
+        elif key == 's':
+            self._dump_screen()
+
+    def _dump_screen(self):
+        self._screen_dumper.export_frame()
 
     def playing_segment(self, segment):
         self.orchestra.visualizing_segment(segment.id)
