@@ -4,8 +4,8 @@ import os
 
 FILENAME = "mockup_tr_log.log"
 EXPECTED_FILES = [{'length': 291, 'lastpiece': 0, 'firstpiece': 0, 'name': 'The Cataracs-Top of the WorldLike a G6 Remix Single/Distributed by Mininova.txt', 'offset': 0}, {'length': 969, 'lastpiece': 0, 'firstpiece': 0, 'name': 'The Cataracs-Top of the WorldLike a G6 Remix Single/The_Cataracs-Top_of_the_World_BW_Like_A_G6_(Lil_Prophet_Remix_Single)-2010/00-the_cataracs-top_of_the_world_bw_like_a_g6_(remix_single)-2010.m3u', 'offset': 291}]
-EXPECTED_CHUNKS = [{'begin': 0, 'end': 100, 'peeraddr': '221.187.146.133:5465', 'id': 0, 't': 0.0, 'filenum': 0}, {'begin': 100, 'end': 184, 'peeraddr': '221.187.146.133:5465', 'id': 1, 't': 0.315, 'filenum': 0}]
-EXPECTED_PEERS = ['221.187.146.133:5465']
+EXPECTED_CHUNKS = [{'begin': 0, 'end': 100, 'peeraddr': '221.187.146.133', 'id': 0, 't': 0.0, 'filenum': 0}, {'begin': 100, 'end': 184, 'peeraddr': '221.187.146.133', 'id': 1, 't': 0.315, 'filenum': 0}]
+EXPECTED_PEERS = ['221.187.146.133']
 EXPECTED_TOTALSIZE = 28348491
 
 class TrLogReaderTests(unittest.TestCase):

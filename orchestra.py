@@ -596,17 +596,17 @@ class Orchestra:
         try:
             peer_player = self._player_for_peer[peeraddr]
         except KeyError:
-            peer_player = self._create_player()
+            peer_player = self._create_player(peeraddr)
             self.players.append(peer_player)
             self._player_for_peer[peeraddr] = peer_player
         return peer_player
 
-    def _create_player(self):
+    def _create_player(self, addr):
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
         if self.visualizer:
-            self.visualizer.send("/peer", player.id, player.spatial_position.bearing)
+            self.visualizer.send("/peer", player.id, addr, player.spatial_position.bearing)
         return player
 
     def set_time_cursor(self, log_time):

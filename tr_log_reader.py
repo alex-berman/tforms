@@ -6,6 +6,8 @@ import cPickle
 import copy
 from logger import logger
 
+_peeraddr_re = re.compile('^\[([0-9.]+)\]:')
+
 class TrLog:
     def __init__(self):
         self._ignoring_non_downloaded_files = False
@@ -276,9 +278,16 @@ class TrLogReader:
         chunk = {"t": t,
                  "begin": b1,
                  "end": b2,
-                 "peeraddr": peeraddr,
+                 "peeraddr": self._parse_peeraddr(peeraddr),
                  "filenum": filenum}
         return chunk
+
+    def _parse_peeraddr(self, string):
+        m = _peeraddr_re.search(string)
+        if m:
+            return m.group(1)
+        else:
+            return string
 
     def _add_peer_unless_already_added(self, peeraddr):
         if peeraddr not in self.peeraddr_to_id:
