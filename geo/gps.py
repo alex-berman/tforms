@@ -1,7 +1,7 @@
 class GPS:
     def __init__(self, width, height):
-        self.width = width
-        self.height = height
+        self.width = float(width)
+        self.height = float(height)
 
     def x(self, longitude):
         return (longitude + 180) * (self.width / 360)

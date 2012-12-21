@@ -4,23 +4,48 @@ import world
 import sys
 from argparse import ArgumentParser
 
+import GeoIP
+import random
+from gps import GPS
+import os
+
 sys.path.append("visual-experiments")
 import visualizer
 from OpenGL.GL import *
 from vector import Vector3d, Vector
 
 LAND_COLOR = (1,1,1)
+BAR_COLOR = (1,1,1,.01)
+BARS_TOP = 6
+BARS_BOTTOM = 0
 
 CAMERA_POSITION = Vector(3, [-11.410326069762691, -7.499999999999989, -33.71008311478789])
 CAMERA_Y_ORIENTATION = 0
 CAMERA_X_ORIENTATION = 1
+
+WORLD_WIDTH = 20
+WORLD_HEIGHT = 20
+
+gi = GeoIP.open("%s/GeoLiteCity.dat" % os.path.dirname(__file__), GeoIP.GEOIP_STANDARD)
+gps = GPS(WORLD_WIDTH, WORLD_HEIGHT)
+locations = []
+
+n = 0
+while n < 10000:
+    addr = ".".join([str(random.randint(0,255)) for i in range(4)])
+    gir = gi.record_by_addr(addr)
+    if gir:
+        x = gps.x(gir['longitude'])
+        y = gps.y(gir['latitude'])
+        locations.append((x,y))
+        n += 1
 
 class Geography(visualizer.Visualizer):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args)
         self._set_camera_position(CAMERA_POSITION)
         self._set_camera_orientation(CAMERA_Y_ORIENTATION, CAMERA_X_ORIENTATION)
-        self._world = world.World(20.0, 20.0)
+        self._world = world.World(WORLD_WIDTH, WORLD_HEIGHT)
         self.enable_3d()
 
     def InitGL(self):
@@ -29,6 +54,7 @@ class Geography(visualizer.Visualizer):
 
     def render(self):
         self._render_world()
+        self._render_bars()
 
     def _render_world(self):
         glColor3f(*LAND_COLOR)
@@ -46,6 +72,13 @@ class Geography(visualizer.Visualizer):
             glVertex3f(x, 0, y)
         glEnd()
 
+    def _render_bars(self):
+        glColor4f(*BAR_COLOR)
+        glBegin(GL_LINES)
+        for x,y in locations:
+            glVertex3f(x, BARS_BOTTOM, y)
+            glVertex3f(x, BARS_TOP, y)
+        glEnd()
 
 parser = ArgumentParser()
 Geography.add_parser_arguments(parser)
