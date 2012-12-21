@@ -19,12 +19,17 @@ from smoother import Smoother
 CURVE_PRECISION = 50
 MARGIN = 20
 LINE_WIDTH = 2.0 / 640
+FORWARD = "forward"
+BACKWARD = "backward"
+PINGPONG = "pingpong"
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
         self.updated = False
+        self._unfold_function = getattr(self, "_unfold_%s" % args.unfold)
+
         for piece in pieces:
             self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
@@ -58,7 +63,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(1,1,1)
 
-        self.min_t = self._duration - (self.current_time() * self.args.timefactor) % self._duration
+        self._unfold_function(self.current_time() * self.args.timefactor)
 
         if self._autozoom:
             self._zoom = self._zoom_smoother.value()
@@ -77,24 +82,35 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 zoom = 0.5 + self.min_t/self._duration * 0.5 / self._max_pxy
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
+    def _unfold_backward(self, t):
+        self.min_t = self.cursor_t = self._duration - t % self._duration
+        self.max_t = self._duration
+
+    def _unfold_forward(self, t):
+        self.min_t = 0
+        self.max_t = self.cursor_t = t % self._duration
+
     def _follow_piece(self, piece):
         if len(piece.growth) > 0:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
-                if older_version.t > self.min_t:
+                if self.min_t < older_version.t < self.max_t:
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
 
         for parent in piece.parents.values():
-            if parent.t > self.min_t:
+            if self.min_t < parent.t < self.max_t:
                 self._connect_child_and_parent(
                     piece.t, (piece.begin + piece.end) / 2,
                     parent.t, (parent.begin + parent.end) / 2)
                 self._follow_piece(parent)
             else:
-                t = self.min_t - pow(self.min_t - parent.t, 0.7)
+                if self.args.unfold == BACKWARD:
+                    t = self.cursor_t - pow(self.cursor_t - parent.t, 0.7)
+                else:
+                    t = self.cursor_t
                 self._connect_child_and_parent(
                     piece.t, (piece.begin + piece.end) / 2,
                     t, (parent.begin + parent.end) / 2)
@@ -143,6 +159,7 @@ parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
+parser.add_argument("--unfold", choices=[FORWARD, BACKWARD, PINGPONG], default=BACKWARD)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
