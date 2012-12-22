@@ -52,6 +52,7 @@ class Geography(visualizer.Visualizer):
         self._world = world.World(WORLD_WIDTH, WORLD_HEIGHT)
         self.enable_3d()
         self.playing_segments = collections.OrderedDict()
+        self._stable_layer = self.new_layer(self._render_world_and_history)
 
     def _load_locations(self):
         self._locations = []
@@ -110,9 +111,11 @@ class Geography(visualizer.Visualizer):
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        self._stable_layer.draw()
+        self._render_activity()
 
+    def _render_world_and_history(self):
         self._location_max_value = numpy.max(self._grid)
-
         self._render_world()
 
         #self._render_bar_grid_lines()
@@ -160,6 +163,7 @@ class Geography(visualizer.Visualizer):
         glEnd()
 
     def _render_bar_grid_lines(self):
+        glColor4f(1, 1, 1, 0.2)
         glBegin(GL_LINES)
         ny = 0
         for row in self._grid:
@@ -174,12 +178,6 @@ class Geography(visualizer.Visualizer):
                     # glVertex3f(x, BARS_TOP, y)
                     # glColor4f(1, 1, 1, 0.05)
                     # glVertex3f(x, BARS_BOTTOM, y)
-
-                    grid_activity = self._grid_activity[ny, nx]
-                    if grid_activity:
-                        glColor4f(1, 1, 1, 1.0)
-                    else:
-                        glColor4f(1, 1, 1, 0.2)
 
                     glVertex3f(x, BARS_TOP, y)
                     glVertex3f(x, BARS_TOP - strength*BARS_TOP, y)
@@ -215,12 +213,22 @@ class Geography(visualizer.Visualizer):
             for value in row:
                 if value > 0:
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
-                    grid_activity = self._grid_activity[ny, nx]
-                    if grid_activity:
-                        glColor4f(1, 1, 1, 1)
-                    else:
-                        strength = pow(float(value) / self._location_max_value, 0.4) * 0.5
-                        glColor4f(1, 1, 1, strength)
+                    strength = pow(float(value) / self._location_max_value, 0.4) * 0.5
+                    glColor4f(1, 1, 1, strength)
+                    self._render_parabola(x, y, self._here_x, self._here_y)
+                nx += 1
+            ny += 1
+
+    def _render_activity(self):
+        ny = 0
+        for row in self._grid_activity:
+            y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
+            nx = 0
+            for value in row:
+                if value > 0:
+                    x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
+                    strength = 1.0
+                    glColor4f(1, 1, 1, strength)
                     self._render_parabola(x, y, self._here_x, self._here_y)
                 nx += 1
             ny += 1
