@@ -55,8 +55,7 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
                                        segment_class=Segment)
-        self._display_list = 1
-        self._updated = False
+        self._gathered_segments_layer = self.new_layer(self._render_gathered_segments)
         self.subscribe_to_waveform()
 
     def reset(self):
@@ -78,11 +77,11 @@ class Waves(visualizer.Visualizer):
         if len(outdated) > 0:
             for segment_id in outdated:
                 del self.playing_segments[segment_id]
-            self._updated = False
+            self._gathered_segments_layer.refresh()
 
     def render(self):
         self.update()
-        self.draw_gathered_segments()
+        self._gathered_segments_layer.draw()
         self.draw_playing_segments()
 
     def draw_playing_segments(self):
@@ -93,14 +92,7 @@ class Waves(visualizer.Visualizer):
         for segment in self.playing_segments.values():
             segment.render()
 
-    def draw_gathered_segments(self):
-        if self._updated:
-            glCallList(self._display_list)
-        else:
-            self.compile_and_draw_gathered_segments()
-
-    def compile_and_draw_gathered_segments(self):
-        glNewList(self._display_list, GL_COMPILE_AND_EXECUTE)
+    def _render_gathered_segments(self):
         glBegin(GL_QUADS)
         x1 = 0
         x2 = self.width
@@ -152,8 +144,6 @@ class Waves(visualizer.Visualizer):
                 glColor3f(0, 0, 0)
                 glVertex2f(x2, y1)
         glEnd()
-        glEndList()
-        self._updated = True
 
     def byte_to_py(self, byte):
         return int(self.byte_to_relative_y(byte) * self.height)

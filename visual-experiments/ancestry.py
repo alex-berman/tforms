@@ -16,8 +16,7 @@ class File(visualizer.File):
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, file_class=File)
-        self.updated = False
-        self._display_list = 1
+        self._layer = self.new_layer(self._render_ancestry_layer)
         self._initialized = False
 
     @staticmethod
@@ -33,37 +32,28 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
-        self.updated = False
 
     def added_segment(self, segment):
         AncestryPlotter.add_piece(self, segment.id, segment.t, segment.torrent_begin, segment.torrent_end)
-        self.updated = False
+        self._layer.refresh()
 
     def added_all_files(self):
         AncestryPlotter.__init__(self, self.total_size, self.download_duration, self.args)
         self._initialized = True
 
     def render(self):
-        if self.updated:
-            self.draw()
-        elif self._initialized:
-            self.update_and_draw()
+        self._layer.draw()
 
-    def update_and_draw(self):
-        glNewList(self._display_list, GL_COMPILE_AND_EXECUTE)
-        glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
-        glLineWidth(1)
-        glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor3f(1,1,1)
-        self.plot()
-        glEndList()
-        self.updated = True
-
-    def draw(self):
-        glCallList(self._display_list)
+    def _render_ancestry_layer(self):
+        if self._initialized:
+            glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
+            glLineWidth(1)
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glColor3f(1,1,1)
+            self.plot()
 
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)

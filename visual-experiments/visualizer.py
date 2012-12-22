@@ -144,6 +144,26 @@ class Peer:
     def add_segment(self, segment):
         pass
 
+
+class Layer:
+    def __init__(self, rendering_function, display_list_id):
+        self._rendering_function = rendering_function
+        self._updated = False
+        self._display_list_id = display_list_id
+
+    def draw(self):
+        if self._updated:
+            glCallList(self._display_list_id)
+        else:
+            glNewList(self._display_list_id, GL_COMPILE_AND_EXECUTE)
+            self._rendering_function()
+            glEndList()
+            self._updated = True
+
+    def refresh(self):
+        self._updated = False
+
+
 class Visualizer:
     def __init__(self, args,
                  file_class=File,
@@ -172,6 +192,7 @@ class Visualizer:
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
+        self._layers = []
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._accum_enabled = False
@@ -362,11 +383,16 @@ class Visualizer:
         self.width = window_width - 2*self.margin
         self.height = window_height - 2*self.margin
         self._aspect_ratio = float(window_width) / window_height
+        self._refresh_layers()
         if not self._3d_enabled:
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
             glOrtho(0.0, window_width, window_height, 0.0, -1.0, 1.0)
             glMatrixMode(GL_MODELVIEW)
+
+    def _refresh_layers(self):
+        for layer in self._layers:
+            layer.refresh()
 
     def DrawGLScene(self):
         if self.exiting:
@@ -610,6 +636,11 @@ class Visualizer:
             self.current_time())
         self._set_camera_position(position)
         self._set_camera_orientation(orientation.y, orientation.x)
+
+    def new_layer(self, rendering_function):
+        layer = Layer(rendering_function, len(self._layers)+1)
+        self._layers.append(layer)
+        return layer
 
     @staticmethod
     def add_parser_arguments(parser):
