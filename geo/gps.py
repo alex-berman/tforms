@@ -1,5 +1,5 @@
 class GPS:
-    def __init__(self, width, height):
+    def __init__(self, width=1.0, height=1.0):
         self.width = float(width)
         self.height = float(height)
 

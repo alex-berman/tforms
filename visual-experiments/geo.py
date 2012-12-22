@@ -9,7 +9,7 @@ import collections
 
 sys.path.append("geo")
 import world
-import GeoIP
+import ip_locator
 import random
 from gps import GPS
 import os
@@ -40,8 +40,7 @@ class File(visualizer.File):
 
 class Geography(visualizer.Visualizer):
     def __init__(self, args):
-        self._geo_ip = GeoIP.open(
-            "%s/../geo/GeoLiteCity.dat" % os.path.dirname(__file__), GeoIP.GEOIP_STANDARD)
+        self._ip_locator = ip_locator.IpLocator()
         self._gps = GPS(WORLD_WIDTH, WORLD_HEIGHT)
         self._here_x = self._gps.x(HERE_LONGITUDE)
         self._here_y = self._gps.y(HERE_LATITUDE)
@@ -89,12 +88,11 @@ class Geography(visualizer.Visualizer):
                 return True
 
     def _addr_location(self, addr):
-        gir = self._geo_ip.record_by_addr(addr)
-        if gir:
-            x = self._gps.x(gir['longitude'])
-            y = self._gps.y(gir['latitude'])
-            nx = int(LOCATION_PRECISION * x/WORLD_WIDTH)
-            ny = int(LOCATION_PRECISION * y/WORLD_HEIGHT)
+        location = self._ip_locator.locate(addr)
+        if location:
+            x, y = location
+            nx = int(LOCATION_PRECISION * x)
+            ny = int(LOCATION_PRECISION * y)
             return x, y, nx, ny
 
     def added_segment(self, segment):
@@ -157,7 +155,9 @@ class Geography(visualizer.Visualizer):
     def _render_locations(self):
         glColor4f(1, 1, 1, .01)
         glBegin(GL_LINES)
-        for x,y in self._locations:
+        for lx, ly in self._locations:
+            x = lx * WORLD_WIDTH
+            y = ly * WORLD_HEIGHT
             glVertex3f(x, BARS_BOTTOM, y)
             glVertex3f(x, BARS_TOP, y)
         glEnd()
