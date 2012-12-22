@@ -55,6 +55,7 @@ class AncestryPlotter:
         parser.add_argument("--stroke-style",
                             choices=[PLAIN,
                                      SHRINKING])
+        parser.add_argument("-stroke-width", type=float, default=1)
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))
@@ -100,6 +101,9 @@ class AncestryPlotter:
         self._stroke_width1 = self._stroke_width_at_time(t1)
         self._stroke_width2 = self._stroke_width_at_time(t2)
         self._edge_plot_method(x1, y1, x2, y2)
+
+    def _stroke_width_at_time(self, t):
+        return self._args.stroke_width * (1 - pow(t/self._duration, 0.6))
 
 
 class AncestrySvgPlotter(AncestryPlotter):
@@ -176,9 +180,6 @@ class AncestrySvgPlotter(AncestryPlotter):
         p2 = (x + math.cos(angle2) * width,
               y + math.sin(angle2) * width)
         return (p1, p2)
-
-    def _stroke_width_at_time(self, t):
-        return self._args.stroke_width * (1 - pow(t/self._duration, 0.6))
 
     def _stroke_angle(self, stroke_points, n):
         n1 = max(0, n-1)
