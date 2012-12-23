@@ -6,6 +6,7 @@ import numpy
 import re
 import math
 import collections
+import cPickle
 
 sys.path.append("geo")
 import world
@@ -52,6 +53,13 @@ class Geography(visualizer.Visualizer):
         self.enable_3d()
         self.playing_segments = collections.OrderedDict()
         self._stable_layer = self.new_layer(self._render_world_and_history)
+        self._load_traces()
+
+    def _load_traces(self):
+        #f = open("sessions/120827-084403-TDL4/traces.data", "r")
+        f = open("sessions/121104-171222-TDL4-slow/traces.data", "r")
+        self._traces = cPickle.load(f)
+        f.close()
 
     def _load_locations(self):
         self._locations = []
@@ -110,7 +118,8 @@ class Geography(visualizer.Visualizer):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         self._stable_layer.draw()
-        self._render_activity()
+        #self._render_grid_activity()
+        self._render_active_traces()
 
     def _render_world_and_history(self):
         self._location_max_value = numpy.max(self._grid)
@@ -119,7 +128,7 @@ class Geography(visualizer.Visualizer):
         #self._render_bar_grid_lines()
         #self._render_bar_grid_points()
 
-        self._render_parabolae()
+        #self._render_parabolae()
         self._render_land_points()
 
         #self._render_locations()
@@ -219,7 +228,7 @@ class Geography(visualizer.Visualizer):
                 nx += 1
             ny += 1
 
-    def _render_activity(self):
+    def _render_grid_activity(self):
         ny = 0
         for row in self._grid_activity:
             y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
@@ -249,5 +258,22 @@ class Geography(visualizer.Visualizer):
     def _render_land_points(self):
         self._render_grid_points(0)
 
-visualizer.run(Geography)
+    def _render_active_traces(self):
+        for segment in self.playing_segments.values():
+            trace = self._traces[segment.peer.addr]
+            self._render_trace(trace)
 
+    def _render_trace(self, trace):
+        glColor4f(1,1,1,1)
+        glBegin(GL_LINE_STRIP)
+        n = 1
+        for lx, ly in trace:
+            #opacity = float(n) / (len(trace)-1)
+            #glColor4f(1,1,1, opacity)
+            x = lx * WORLD_WIDTH
+            y = ly * WORLD_HEIGHT
+            glVertex3f(x, 0, y)
+            n += 1
+        glEnd()
+
+visualizer.run(Geography)
