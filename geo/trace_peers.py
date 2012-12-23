@@ -26,22 +26,23 @@ ip_matcher = re.compile(' (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) ')
 
 lock = threading.Lock()
 
-def trace(addr):
+def trace(peer_addr):
     global traces, lock
     result = []
-    p = subprocess.Popen("traceroute -n %s -w 1.0" % addr,
+    p = subprocess.Popen("traceroute -n %s -w 1.0 -N 1" % peer_addr,
                          shell=True,
                          stdout=subprocess.PIPE)
     for line in p.stdout:
         m = ip_matcher.search(line)
         if m:
-            addr = m.group(1)
-            location = ip_locator.locate(addr)
+            hop_addr = m.group(1)
+            location = ip_locator.locate(hop_addr)
             if location:
                 result.insert(0, location)
+    print "OK1 %s" % peer_addr
     with lock:
-        print "OK %s" % addr
-        traces[addr] = result
+        traces[peer_addr] = result
+    print "OK2 %s" % peer_addr
 
 def trace_in_new_thread(addr):
     thread = threading.Thread(target=trace, args=[addr])
@@ -56,11 +57,10 @@ for addr in log.peers:
 
 finished = False
 while not finished:
+    time.sleep(0.1)
     with lock:
         if len(traces) == len(log.peers):
             finished = True
-        else:
-            time.sleep(0.1)
 
 cPickle.dump(traces, output)
 output.close()
