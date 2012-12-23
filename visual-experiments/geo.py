@@ -53,7 +53,7 @@ class Geography(visualizer.Visualizer):
         self.enable_3d()
         self.playing_segments = collections.OrderedDict()
         self._stable_layer = self.new_layer(self._render_world_and_history)
-        self._load_traces()
+        #self._load_traces()
 
     def _load_traces(self):
         #f = open("sessions/120827-084403-TDL4/traces.data", "r")
@@ -118,8 +118,8 @@ class Geography(visualizer.Visualizer):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         self._stable_layer.draw()
-        #self._render_grid_activity()
-        self._render_active_traces()
+        self._render_grid_activity()
+        #self._render_active_traces()
 
     def _render_world_and_history(self):
         self._location_max_value = numpy.max(self._grid)
@@ -128,7 +128,7 @@ class Geography(visualizer.Visualizer):
         #self._render_bar_grid_lines()
         #self._render_bar_grid_points()
 
-        #self._render_parabolae()
+        self._render_parabolae()
         self._render_land_points()
 
         #self._render_locations()
