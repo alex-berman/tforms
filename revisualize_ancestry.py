@@ -12,7 +12,7 @@ import rectangular_visualizer as visualizer
 from OpenGL.GL import *
 import sys
 from bezier import make_bezier
-from ancestry_plotter import AncestryPlotter
+from ancestry_plotter import *
 from vector import Vector2d
 from smoother import Smoother
 
@@ -33,7 +33,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         for piece in pieces:
             self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
-        self._autozoom = (args.geometry == self.CIRCLE and self.args.autozoom)
+        self._autozoom = (args.geometry == CIRCLE and self.args.autozoom)
         if self._autozoom:
             self._max_pxy = 0
             self._zoom_smoother = Smoother()
