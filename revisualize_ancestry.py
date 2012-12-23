@@ -27,7 +27,6 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
-        self.updated = False
         self._unfold_function = getattr(self, "_unfold_%s" % args.unfold)
 
         for piece in pieces:
@@ -52,7 +51,6 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
         self._size = min(width, height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
-        self.updated = False
 
     def render(self):
         glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
@@ -73,7 +71,6 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._zoom = 1.0
 
         self.plot()
-        self.updated = True
 
         if self._autozoom:
             if self._max_pxy == 0:
