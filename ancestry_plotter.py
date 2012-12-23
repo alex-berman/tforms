@@ -22,23 +22,24 @@ class AncestryPlotter:
         self._tracker = AncestryTracker()
         self._num_pieces = 0
 
-        if args.edge_style == LINE:
-            self._edge_plot_method = self.draw_line
-        elif args.edge_style == CURVE:
+        if args.output_type != "dot":
+            if args.edge_style == LINE:
+                self._edge_plot_method = self.draw_line
+            elif args.edge_style == CURVE:
+                if args.stroke_style == SHRINKING:
+                    self._edge_plot_method = self.draw_shrinking_curve
+                else:
+                    self._edge_plot_method = self.draw_curve
+
             if args.stroke_style == SHRINKING:
-                self._edge_plot_method = self.draw_shrinking_curve
+                self._path_plot_method = self._draw_shrinking_path
             else:
-                self._edge_plot_method = self.draw_curve
+                self._path_plot_method = self.draw_path
 
-        if args.stroke_style == SHRINKING:
-            self._path_plot_method = self._draw_shrinking_path
-        else:
-            self._path_plot_method = self.draw_path
-
-        if args.geometry == RECT:
-            self._position = self._rect_position
-        elif args.geometry == CIRCLE:
-            self._position = self._circle_position
+            if args.geometry == RECT:
+                self._position = self._rect_position
+            elif args.geometry == CIRCLE:
+                self._position = self._circle_position
 
     def set_size(self, width, height):
         self._width = width
@@ -56,6 +57,8 @@ class AncestryPlotter:
                             choices=[PLAIN,
                                      SHRINKING])
         parser.add_argument("-stroke-width", type=float, default=1)
+        parser.add_argument("--output-type", choices=OUTPUT_TYPES.keys(),
+                            default="svg")
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))
@@ -81,6 +84,7 @@ class AncestryPlotter:
         sys.setrecursionlimit(max(self._num_pieces, sys.getrecursionlimit()))
 
     def _follow_piece(self, piece):
+        self.plot_piece(piece)
         if len(piece.growth) > 0:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
@@ -91,11 +95,14 @@ class AncestryPlotter:
 
         for parent in piece.parents.values():
             self._connect_child_and_parent(
-                piece.t, (piece.begin + piece.end) / 2,
-                parent.t, (parent.begin + parent.end) / 2)
+                piece.id, piece.t, (piece.begin + piece.end) / 2,
+                parent.id, parent.t, (parent.begin + parent.end) / 2)
             self._follow_piece(parent)
 
-    def _connect_child_and_parent(self, t1, b1, t2, b2):
+    def plot_piece(self, piece):
+        pass
+
+    def _connect_child_and_parent(self, child_id, t1, b1, parent_id, t2, b2):
         x1, y1 = self._position(t1, b1)
         x2, y2 = self._position(t2, b2)
         self._stroke_width1 = self._stroke_width_at_time(t1)
@@ -211,3 +218,30 @@ class AncestrySvgPlotter(AncestryPlotter):
     def _write_svg(self, line):
         if self._svg_output:
             print >>self._svg_output, line
+
+
+class AncestryDotPlotter(AncestryPlotter):
+    def plot(self, output):
+        self._output = output
+        self._write("digraph G {")
+        self._write("  node [shape=point];")
+        self._write("  edge [arrowhead=none];")
+        AncestryPlotter.plot(self)
+        self._write("}")
+
+    def plot_piece(self, piece):
+        self._write("  n%s;" % piece.id)
+
+    def _connect_child_and_parent(self, child_id, t1, b1, parent_id, t2, b2):
+        self._write("  n%s -> n%s;" % (child_id, parent_id))
+
+    def _path_plot_method(self, path):
+        pass
+
+    def _write(self, line):
+        print >>self._output, line
+        print >>self._output, "\n"
+
+
+OUTPUT_TYPES = {"svg": AncestrySvgPlotter,
+                "dot": AncestryDotPlotter}
