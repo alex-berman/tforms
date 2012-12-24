@@ -189,7 +189,10 @@ class Geography(visualizer.Visualizer):
         glEnd()
 
     def _render_land_points(self):
-        self._render_grid_points(0)
+        self._render_grid_points(BARS_BOTTOM)
+
+    def _render_surface_points(self):
+        self._render_grid_points(BARS_TOP)
 
 parser = ArgumentParser()
 Geography.add_parser_arguments(parser)
