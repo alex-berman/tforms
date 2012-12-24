@@ -71,3 +71,6 @@ class AncestryTracker:
                 (piece2.begin <= piece1.end <= piece2.end) or
                 (piece1.begin <= piece2.begin <= piece1.end) or
                 (piece1.begin <= piece2.end <= piece1.end))
+
+    def pieces(self):
+        return self._pieces
