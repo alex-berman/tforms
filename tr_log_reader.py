@@ -5,11 +5,21 @@ import Queue
 import cPickle
 import copy
 from logger import logger
+import subprocess
+from predecode import Predecoder
+
+SAMPLE_RATE = 44100
 
 _peeraddr_re = re.compile('^\[([0-9.]+)\]:')
 
 class TrLog:
-    def __init__(self):
+    @staticmethod
+    def add_parser_arguments(parser):
+        parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
+        parser.add_argument("--file-location", dest="file_location", default="../../Downloads")
+
+    def __init__(self, options=None):
+        self.options = options
         self._ignoring_non_downloaded_files = False
 
     def lastchunktime(self):
@@ -23,7 +33,7 @@ class TrLog:
 
     def total_file_size(self):
         if self._ignoring_non_downloaded_files:
-            files = filter(lambda f: f["downloaded"], self.files)
+            files = filter(lambda f: f["playable_file_index"] != -1, self.files)
         else:
             files = self.files
         return sum([f["length"] for f in files])
@@ -50,8 +60,8 @@ class TrLog:
         f.close()
 
     @staticmethod
-    def from_cache(filename):
-        log = TrLog()
+    def from_cache(filename, options=None):
+        log = TrLog(options)
         f = open(filename, 'r')
         log.files = cPickle.load(f)
         log.chunks = cPickle.load(f)
@@ -82,14 +92,8 @@ class TrLog:
     def ignore_non_downloaded_files(self):
         self._ignoring_non_downloaded_files = True
         for filenum in reversed(range(len(self.files))):
-            self.files[filenum]["downloaded"] = self._file_was_downloaded(filenum)
-            if not self.files[filenum]["downloaded"]:
+            if self.files[filenum]["playable_file_index"] == -1:
                 self._ignore_non_downloaded_file(self.files[filenum])
-
-    def _file_was_downloaded(self, filenum):
-        for chunk in self.chunks:
-            if chunk["filenum"] == filenum:
-                return True
 
     def _ignore_non_downloaded_file(self, f):
         file_begin = f["offset"]
@@ -127,11 +131,58 @@ class TrLog:
             f["offset"] -= file_length
         del self.files[filenum]
 
+    def get_wav_files_info(self, include_non_playable=True):
+        if self.options is None:
+            raise Exception("options need to be provided to TrLogReader")
+        if self.options.predecode:
+            predecoder = Predecoder(self, self.options.file_location, SAMPLE_RATE)
+            predecoder.decode()
+
+        playable_file_index = 0
+        for filenum in range(len(self.files)):
+            file_info = self.files[filenum]
+            file_info["playable_file_index"] = -1
+
+            if "decoded_name" in file_info:
+                file_info["duration"] = self._get_file_duration(file_info)
+                if file_info["duration"] > 0:
+                    file_info["num_channels"] = self._get_num_channels(file_info)
+                    file_info["playable_file_index"] = playable_file_index
+                    logger.debug("duration for %r: %r\n" %
+                                      (file_info["name"], file_info["duration"]))
+                    playable_file_index += 1
+
+            if include_non_playable:
+                file_info["index"] = filenum
+            else:
+                file_info["index"] = file_info["playable_file_index"]
+        self.num_playable_files = playable_file_index
+
+    def _get_file_duration(self, file_info):
+        if "decoded_name" in file_info:
+            cmd = 'soxi -D "%s"' % file_info["decoded_name"]
+            try:
+                stdoutdata, stderrdata = subprocess.Popen(
+                    cmd, shell=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+                return float(stdoutdata)
+            except:
+                logger.debug("failed to get duration for %s" % file_info["decoded_name"])
+                return 0
+
+    def _get_num_channels(self, file_info):
+        if "decoded_name" in file_info:
+            cmd = 'soxi -c "%s"' % file_info["decoded_name"]
+            stdoutdata, stderrdata = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE).communicate()
+            return int(stdoutdata)
+
 class TrLogReader:
     NO_MORE_CHUNKS = {}
 
     def __init__(self, logfilename, torrent_name="",
-                 realtime=False, pretend_sequential=False):
+                 realtime=False, pretend_sequential=False, options=None):
+        self.options = options
         self.logfilename = logfilename
         self.torrent_name = torrent_name
         self.realtime = realtime
@@ -146,13 +197,13 @@ class TrLogReader:
 
     def get_log(self, use_cache=True):
         if use_cache and os.path.exists(self._cache_filename()):
-            return TrLog.from_cache(self._cache_filename())
+            return TrLog.from_cache(self._cache_filename(), self.options)
         else:
             self.logfile = open(self.logfilename, "r")
             self._process_torrent_info()
             self._process_chunks()
             self.logfile.close()
-            log = TrLog()
+            log = TrLog(self.options)
             log.files = self.files
             log.chunks = self.chunks
             log.peers = self.peers

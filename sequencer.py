@@ -49,7 +49,8 @@ while True:
 
     tr_log = TrLogReader(logfilename, options.torrentname,
                          realtime=options.realtime,
-                         pretend_sequential=options.pretend_sequential).get_log()
+                         pretend_sequential=options.pretend_sequential,
+                         options=options).get_log()
 
     orchestra = Orchestra(sessiondir, tr_log, options)
     server.set_orchestra(orchestra)
