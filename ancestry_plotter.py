@@ -24,7 +24,10 @@ class AncestryPlotter:
 
         if args.output_type != "dot":
             if args.edge_style == LINE:
-                self._edge_plot_method = self.draw_line
+                if args.stroke_style == SHRINKING:
+                    self._edge_plot_method = self.draw_shrinking_line
+                else:
+                    self._edge_plot_method = self.draw_line
             elif args.edge_style == CURVE:
                 if args.stroke_style == SHRINKING:
                     self._edge_plot_method = self.draw_shrinking_curve
@@ -135,8 +138,13 @@ class AncestrySvgPlotter(AncestryPlotter):
         self._write_svg('</svg>')
 
     def draw_line(self, x1, y1, x2, y2):
-        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" stroke="%s" stroke-width="%f" stroke-opacity="0.5" />' % (
+        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" />' % (
                 x1, y1, x2, y2, self._args.stroke_color, self._args.stroke_width))
+
+    def draw_shrinking_line(self, x1, y1, x2, y2):
+        stroke_points = [(x1, y1),
+                         (x2, y2)]
+        self._draw_shrinking_path_xy(stroke_points)
 
     def draw_curve(self, x1, y1, x2, y2):
         self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
@@ -161,7 +169,7 @@ class AncestrySvgPlotter(AncestryPlotter):
     def _draw_shrinking_path_xy(self, stroke_points):
         outline_pairs = self._outline(stroke_points)
         x0, y0 = stroke_points[0]
-        self._write_svg('<path style="fill:%s;stroke:none;" d="M%f,%f' % (
+        self._write_svg('<path style="fill:%s;stroke:none;stroke-opacity:0.5;" d="M%f,%f' % (
                 self._args.stroke_color,
                 x0, y0))
         for pair in outline_pairs:
