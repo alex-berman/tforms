@@ -9,7 +9,6 @@ from osc_receiver import OscReceiver
 import threading
 import sched
 from logger import logger
-from synth_controller import SynthController
 from osc_sender import OscSender
 from interpret import Interpreter
 from stopwatch import Stopwatch
@@ -163,6 +162,7 @@ class Orchestra:
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
+        parser.add_argument("--no-synth", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -193,7 +193,13 @@ class Orchestra:
         self._log_time_for_last_handled_event = 0
         self.gui = None
         self._check_which_files_are_audio()
-        self.synth = SynthController()
+
+        if options.no_synth:
+            self.synth = None
+        else:
+            from synth_controller import SynthController
+            self.synth = SynthController()
+
         self._create_players()
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
@@ -280,18 +286,19 @@ class Orchestra:
             self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
-        logger.debug("asking synth to play %s" % segment)
-        file_info = self.tr_log.files[segment["filenum"]]
+        if self.synth:
+            logger.debug("asking synth to play %s" % segment)
+            file_info = self.tr_log.files[segment["filenum"]]
 
-        self.synth.play_segment(
-            segment["id"],
-            segment["filenum"],
-            segment["start_time_in_file"] / file_info["duration"],
-            segment["end_time_in_file"] / file_info["duration"],
-            segment["duration"],
-            self.looped_duration,            
-            channel,
-            pan)
+            self.synth.play_segment(
+                segment["id"],
+                segment["filenum"],
+                segment["start_time_in_file"] / file_info["duration"],
+                segment["end_time_in_file"] / file_info["duration"],
+                segment["duration"],
+                self.looped_duration,            
+                channel,
+                pan)
         self.scheduler.enter(
             segment["playback_duration"], 1,
             self.stopped_playing, [segment])
@@ -323,12 +330,15 @@ class Orchestra:
             raise Exception("playing wav without precoding is not supported")
 
     def _load_sounds(self):
-        for filenum in range(len(self.tr_log.files)):
-            file_info = self.tr_log.files[filenum]
-            if file_info["playable_file_index"] != -1:
-                logger.debug("load_sound(%s)" % file_info["decoded_name"])
-                result = self.synth.load_sound(filenum, file_info["decoded_name"])
-                logger.debug("result: %s" % result)
+        if self.synth:
+            print "loading sounds"
+            for filenum in range(len(self.tr_log.files)):
+                file_info = self.tr_log.files[filenum]
+                if file_info["playable_file_index"] != -1:
+                    logger.debug("load_sound(%s)" % file_info["decoded_name"])
+                    result = self.synth.load_sound(filenum, file_info["decoded_name"])
+                    logger.debug("result: %s" % result)
+            print "OK"
 
     def _get_wav_files_info(self):
         playable_file_index = 0
@@ -448,7 +458,8 @@ class Orchestra:
                     "segment": segment}
             
     def stop(self):
-        self.synth.stop_all()
+        if self.synth:
+            self.synth.stop_all()
         self._playing = False
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
@@ -656,7 +667,8 @@ class Orchestra:
                 self.ssr.place_source(sound_source_id, x, y, duration)
         else:
             pan = self._spatial_position_to_stereo_pan(x, y)
-            self.synth.pan(segment_id, pan)
+            if self.synth:
+                self.synth.pan(segment_id, pan)
 
     def _handle_enable_smooth_movement(self, path, args, types, src, data):
         if self.ssr:
@@ -683,10 +695,11 @@ class Orchestra:
             self.visualizer.send("/reset")
 
     def _free_sounds(self):
-        for filenum in range(len(self.tr_log.files)):
-            file_info = self.tr_log.files[filenum]
-            if file_info["playable_file_index"] != -1:
-                self.synth.free_sound(filenum)
+        if self.synth:
+            for filenum in range(len(self.tr_log.files)):
+                file_info = self.tr_log.files[filenum]
+                if file_info["playable_file_index"] != -1:
+                    self.synth.free_sound(filenum)
 
 def warn(logger, message):
     logger.debug(message)
