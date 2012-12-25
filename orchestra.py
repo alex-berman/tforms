@@ -16,6 +16,7 @@ from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
 from predecode import Predecoder
+from config import DOWNLOAD_LOCATION
 
 class Server(OscReceiver):
     @staticmethod
@@ -151,7 +152,7 @@ class Orchestra:
         parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
         parser.add_argument("--gui", action="store_true", dest="gui_enabled")
         parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
-        parser.add_argument("--file-location", dest="file_location", default="../../Downloads")
+        parser.add_argument("--file-location", dest="file_location", default=DOWNLOAD_LOCATION)
         parser.add_argument("--fast-forward", action="store_true", dest="ff")
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")

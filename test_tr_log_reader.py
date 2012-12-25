@@ -113,23 +113,29 @@ class TrLogTests(unittest.TestCase):
     def test_ignore_non_downloaded_files(self):
         log = TrLog()
         log.files = [
-            {'offset': 0,    'length': 1000},
-            {'offset': 1000, 'length': 1000},
-            {'offset': 2000, 'length': 1000},
-            {'offset': 3000, 'length': 1000},
+            {'offset': 0,    'length': 1000, 'exists_on_disk': False},
+            {'offset': 1000, 'length': 1000, 'exists_on_disk': True},
+            {'offset': 2000, 'length': 1000, 'exists_on_disk': False},
+            {'offset': 3000, 'length': 1000, 'exists_on_disk': True}, # no chunks in log
+            {'offset': 4000, 'length': 1000, 'exists_on_disk': True},
             ]
         log.chunks = [
+            {'filenum': 0, 'begin': 500, 'end': 600},
             {'filenum': 1, 'begin': 1200, 'end': 1300},
             {'filenum': 1, 'begin': 1400, 'end': 1500},
-            {'filenum': 3, 'begin': 3200, 'end': 3300},
-            {'filenum': 3, 'begin': 3400, 'end': 3500},
+            {'filenum': 4, 'begin': 4200, 'end': 4300},
+            {'filenum': 4, 'begin': 4400, 'end': 4500},
+            {'filenum': 2, 'begin': 2500, 'end': 2600},
             ]
         expected_result = [
-            {'filenum': 1, 'begin':  200, 'end':  300},
-            {'filenum': 1, 'begin':  400, 'end':  500},
-            {'filenum': 3, 'begin': 1200, 'end': 1300},
-            {'filenum': 3, 'begin': 1400, 'end': 1500}
+            {'filenum': 0, 'begin':  200, 'end':  300},
+            {'filenum': 0, 'begin':  400, 'end':  500},
+            {'filenum': 1, 'begin': 1200, 'end': 1300},
+            {'filenum': 1, 'begin': 1400, 'end': 1500}
             ]
+        def exists(f):
+            return f['exists_on_disk']
+        log._file_exists = exists
         log.ignore_non_downloaded_files()
         self.assertEquals(expected_result, log.chunks)
         self.assertEquals(2000, log.total_file_size())

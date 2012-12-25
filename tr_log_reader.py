@@ -5,13 +5,11 @@ import Queue
 import cPickle
 import copy
 from logger import logger
+from config import DOWNLOAD_LOCATION
 
 _peeraddr_re = re.compile('^\[([0-9.]+)\]:')
 
 class TrLog:
-    def __init__(self):
-        self._ignoring_non_downloaded_files = False
-
     def lastchunktime(self):
         return self.chunks[-1]["t"]
 
@@ -22,11 +20,7 @@ class TrLog:
         return sum(map(lambda x: x["end"] - x["begin"], self.chunks)) / len(self.chunks)
 
     def total_file_size(self):
-        if self._ignoring_non_downloaded_files:
-            files = filter(lambda f: f["downloaded"], self.files)
-        else:
-            files = self.files
-        return sum([f["length"] for f in files])
+        return sum([f["length"] for f in self.files])
 
     @staticmethod
     def sort_chunks_sequentially(chunks):
@@ -80,25 +74,18 @@ class TrLog:
         self.chunks = result
 
     def ignore_non_downloaded_files(self):
-        self._ignoring_non_downloaded_files = True
         for filenum in reversed(range(len(self.files))):
-            self.files[filenum]["downloaded"] = self._file_was_downloaded(filenum)
-            if not self.files[filenum]["downloaded"]:
-                self._ignore_non_downloaded_file(self.files[filenum])
+            f = self.files[filenum]
+            if not (self._file_exists(f) and self._has_chunks_in_log(filenum)):
+                self._remove_file(filenum)
 
-    def _file_was_downloaded(self, filenum):
+    def _file_exists(self, f):
+        return os.path.exists("%s/%s" % (DOWNLOAD_LOCATION, f["name"]))
+
+    def _has_chunks_in_log(self, filenum):
         for chunk in self.chunks:
             if chunk["filenum"] == filenum:
                 return True
-
-    def _ignore_non_downloaded_file(self, f):
-        file_begin = f["offset"]
-        file_length = f["length"]
-        file_end = file_begin + file_length
-        for chunk in self.chunks:
-            if chunk["begin"] >= file_end:
-                chunk["begin"] -= file_length
-                chunk["end"] -= file_length
 
     def select_files(self, selected_filenums):
         for filenum in reversed(range(len(self.files))):
