@@ -8,8 +8,8 @@ for session in session_library.get_sessions():
     if session["name"].startswith("A"):
         geometry = CIRCLE
 
-        output_path = "graphs/ancestry_circle_straight/ancestry_%s_%s.svg" % (session["name"], geometry)
-        cmdline = "./plot_ancestry.py -width 2000 -stroke-width 6 --geometry=%s -o %s %s --edge-style=line" % (
+        output_path = "graphs/ancestry_circle_spline/ancestry_%s_%s.svg" % (session["name"], geometry)
+        cmdline = "./plot_ancestry.py -width 2000 -stroke-width 6 --geometry=%s -o %s %s --edge-style=spline" % (
             geometry, output_path, session["dir"])
 
         # output_path = "graphs/ancestry_circle_straight_shrinking/ancestry_%s_%s.svg" % (session["name"], geometry)

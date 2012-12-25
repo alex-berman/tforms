@@ -1,5 +1,6 @@
 from vector import Vector2d
 import unittest
+import math
 
 class Vector2dTest(unittest.TestCase):
     def test_eq(self):
@@ -31,4 +32,10 @@ class Vector2dTest(unittest.TestCase):
 
     def test_equals_none(self):
         self.assertEquals(False, Vector2d(0,0) == None)
+
+    def test_rotate(self):
+        v = Vector2d(1, 0)
+        w = v.rotate(-math.pi/2)
+        self.assertAlmostEqual(0, w.x)
+        self.assertAlmostEqual(-1, w.y)
 

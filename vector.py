@@ -33,6 +33,9 @@ class Angle:
             x -= 2*math.pi
         return x
 
+    def __neg__(self):
+        return Angle(-self.value)
+
     def __repr__(self):
         return "Angle(%s)" % self.value
 
@@ -134,6 +137,10 @@ class Vector:
 
     def angle(self):
         return Angle(math.atan2(self.y, self.x))
+
+    def rotate(self, angle):
+        new_angle = self.angle() + Angle(angle)
+        return DirectionalVector(new_angle.get(), self.mag())
 
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.n, self.v)

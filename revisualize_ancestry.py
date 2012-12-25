@@ -87,7 +87,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.min_t = 0
         self.max_t = self.cursor_t = t % self._duration
 
-    def _follow_piece(self, piece):
+    def _follow_piece(self, piece, child=None):
         if len(piece.growth) > 0:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
@@ -99,23 +99,19 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
         for parent in piece.parents.values():
             if self.min_t < parent.t < self.max_t:
-                self._connect_child_and_parent(
-                    piece.t, (piece.begin + piece.end) / 2,
-                    parent.t, (parent.begin + parent.end) / 2)
-                self._follow_piece(parent)
+                self._connect_generations(parent, piece, child)
+                self._follow_piece(parent, piece)
             else:
                 if self.args.unfold == BACKWARD:
                     t = self.cursor_t - pow(self.cursor_t - parent.t, 0.7)
                 else:
                     t = self.cursor_t
-                self._connect_child_and_parent(
-                    piece.t, (piece.begin + piece.end) / 2,
-                    t, (parent.begin + parent.end) / 2)
+                    self._connect_generations(parent, piece, child)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
         y = (1 - t / self._duration) * self._height
-        return x, y
+        return Vector2d(x, y)
 
     def _circle_position(self, t, byte_pos):
         angle = float(byte_pos) / self._total_size * 2*math.pi
@@ -126,7 +122,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         y = self._height / 2 + (py * self._zoom) * self._height / 2
         if self._autozoom:
             self._max_pxy = max([self._max_pxy, abs(px), abs(py)])
-        return x, y
+        return Vector2d(x, y)
 
     def draw_path(self, points):
         glBegin(GL_LINE_STRIP)
