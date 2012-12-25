@@ -1,6 +1,6 @@
 import time
 import subprocess
-from tr_log_reader import *
+from tr_log_reader import TrLogReader
 import random
 import sys
 import os
@@ -15,11 +15,11 @@ from interpret import Interpreter
 from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
+from predecode import Predecoder
 
 class Server(OscReceiver):
     @staticmethod
     def add_parser_arguments(parser):
-        TrLog.add_parser_arguments(parser)
         parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
         parser.add_argument("--visualizer", dest="visualizer_command_line")
         parser.add_argument("--osc-log", dest="osc_log")
@@ -136,6 +136,7 @@ class WavPlayer(Player):
 
 
 class Orchestra:
+    SAMPLE_RATE = 44100
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
     JACK = "jack"
     SSR = "ssr"
@@ -149,6 +150,8 @@ class Orchestra:
         parser.add_argument("-q", "--quiet", action="store_true", dest="quiet")
         parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
         parser.add_argument("--gui", action="store_true", dest="gui_enabled")
+        parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
+        parser.add_argument("--file-location", dest="file_location", default="../../Downloads")
         parser.add_argument("--fast-forward", action="store_true", dest="ff")
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
@@ -177,6 +180,10 @@ class Orchestra:
         self.include_non_playable = options.include_non_playable
         self._visualizer_enabled = (options.visualizer_enabled or options.visualizer_command_line)
 
+        if options.predecode:
+            predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
+            predecoder.decode()
+
         if options.selected_files:
             tr_log.select_files(options.selected_files)
 
@@ -196,7 +203,7 @@ class Orchestra:
             self._num_selected_files = len(self.tr_log.files)
         else:
             self.chunks = self.playable_chunks
-            self._num_selected_files = self.tr_log.num_playable_files
+            self._num_selected_files = self._num_playable_files
         logger.debug("total num chunks: %s" % len(tr_log.chunks))
         logger.debug("num playable chunks: %s" % len(self.playable_chunks))
         logger.debug("num selected chunks: %s" % len(self.chunks))
@@ -309,7 +316,7 @@ class Orchestra:
 
     def _prepare_playable_files(self):
         if self.predecode:
-            self.tr_log.get_wav_files_info(self.include_non_playable)
+            self._get_wav_files_info()
             self._load_sounds()
         else:
             raise Exception("playing wav without precoding is not supported")
@@ -321,6 +328,46 @@ class Orchestra:
                 logger.debug("load_sound(%s)" % file_info["decoded_name"])
                 result = self.synth.load_sound(filenum, file_info["decoded_name"])
                 logger.debug("result: %s" % result)
+
+    def _get_wav_files_info(self):
+        playable_file_index = 0
+        for filenum in range(len(self.tr_log.files)):
+            file_info = self.tr_log.files[filenum]
+            file_info["playable_file_index"] = -1
+
+            if "decoded_name" in file_info:
+                file_info["duration"] = self._get_file_duration(file_info)
+                if file_info["duration"] > 0:
+                    file_info["num_channels"] = self._get_num_channels(file_info)
+                    file_info["playable_file_index"] = playable_file_index
+                    logger.debug("duration for %r: %r\n" %
+                                      (file_info["name"], file_info["duration"]))
+                    playable_file_index += 1
+
+            if self.include_non_playable:
+                file_info["index"] = filenum
+            else:
+                file_info["index"] = file_info["playable_file_index"]
+        self._num_playable_files = playable_file_index
+
+    def _get_file_duration(self, file_info):
+        if "decoded_name" in file_info:
+            cmd = 'soxi -D "%s"' % file_info["decoded_name"]
+            try:
+                stdoutdata, stderrdata = subprocess.Popen(
+                    cmd, shell=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+                return float(stdoutdata)
+            except:
+                logger.debug("failed to get duration for %s" % file_info["decoded_name"])
+                return 0
+
+    def _get_num_channels(self, file_info):
+        if "decoded_name" in file_info:
+            cmd = 'soxi -c "%s"' % file_info["decoded_name"]
+            stdoutdata, stderrdata = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE).communicate()
+            return int(stdoutdata)
 
     def get_current_log_time(self):
         if self.fast_forwarding:

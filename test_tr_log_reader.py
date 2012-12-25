@@ -113,10 +113,10 @@ class TrLogTests(unittest.TestCase):
     def test_ignore_non_downloaded_files(self):
         log = TrLog()
         log.files = [
-            {'offset': 0,    'length': 1000, 'playable_file_index': -1},
-            {'offset': 1000, 'length': 1000, 'playable_file_index': 0},
-            {'offset': 2000, 'length': 1000, 'playable_file_index': -1},
-            {'offset': 3000, 'length': 1000, 'playable_file_index': 1},
+            {'offset': 0,    'length': 1000},
+            {'offset': 1000, 'length': 1000},
+            {'offset': 2000, 'length': 1000},
+            {'offset': 3000, 'length': 1000},
             ]
         log.chunks = [
             {'filenum': 1, 'begin': 1200, 'end': 1300},

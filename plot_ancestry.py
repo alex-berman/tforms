@@ -17,7 +17,6 @@ parser.add_argument("-stroke-color", type=str, default="black")
 parser.add_argument("-f", "--force", action="store_true")
 parser.add_argument("-o", dest="output_filename")
 parser.add_argument("-interpret", action="store_true")
-TrLog.add_parser_arguments(parser)
 ancestry_plotter.AncestryPlotter.add_parser_arguments(parser)
 args = parser.parse_args()
 
@@ -30,11 +29,10 @@ if os.path.exists(output_filename) and not args.force:
     sys.exit(-1)
 
 logfilename = "%s/session.log" % args.sessiondir
-log = TrLogReader(logfilename, args.torrentname, args.filenum, options=args).get_log()
+log = TrLogReader(logfilename, args.torrentname, args.filenum).get_log()
 if args.selected_files:
     log.select_files(args.selected_files)
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
-log.get_wav_files_info()
 log.ignore_non_downloaded_files()
 
 if args.interpret:
