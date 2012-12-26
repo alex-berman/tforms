@@ -103,11 +103,13 @@ class AncestryPlotter:
     def plot_piece(self, piece):
         pass
 
-    def _connect_generations(self, parent, child, grandchild):
-        parent_pos = self._position(parent.t, (parent.begin + parent.end) / 2)
+    def _connect_generations(self, parent, child, grandchild, parent_t=None):
+        if parent_t is None:
+            parent_t = parent.t
+        parent_pos = self._position(parent_t, (parent.begin + parent.end) / 2)
         child_pos = self._position(child.t, (child.begin + child.end) / 2)
         self._stroke_width1 = self._stroke_width_at_time(child.t)
-        self._stroke_width2 = self._stroke_width_at_time(parent.t)
+        self._stroke_width2 = self._stroke_width_at_time(parent_t)
 
         if self._args.edge_style == SPLINE and grandchild is not None:
             grandchild_pos = self._position(grandchild.t, (grandchild.begin + grandchild.end) / 2)
@@ -126,7 +128,6 @@ class AncestryPlotter:
         control_point2 = Vector2d(parent2.x, 0)
         control_point1 = control_point2.rotate(angle)
         control_point = control_point1 + child
-        print "angle=%s mag=%s\n%s\n%s\n%s\n%s\n\n" % ((parent-child).angle().get()*math.pi*2, (parent-child).mag(), parent, child, grandchild, control_point)
         return control_point
 
     def _draw_spline(self, p1, p2, p_control):
@@ -265,7 +266,7 @@ class AncestryDotPlotter(AncestryPlotter):
     def plot_piece(self, piece):
         self._write("  n%s;" % piece.id)
 
-    def _connect_generations(self, parent, child, grandchild):
+    def _connect_generations(self, parent, child, grandchild, parent_t=None):
         self._write("  n%s -> n%s;" % (child.id, parent.id))
 
     def _path_plot_method(self, path):

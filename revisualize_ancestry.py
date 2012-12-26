@@ -106,7 +106,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                     t = self.cursor_t - pow(self.cursor_t - parent.t, 0.7)
                 else:
                     t = self.cursor_t
-                    self._connect_generations(parent, piece, child)
+                self._connect_generations(parent, piece, child, t)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
