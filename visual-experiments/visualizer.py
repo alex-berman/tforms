@@ -440,7 +440,13 @@ class Visualizer:
         glutSwapBuffers()
         self.previous_frame_time = self.now
         if self.export:
-            self.exporter.export_frame()
+            if self.export_finished():
+                self.exiting = True
+            else:
+                self.exporter.export_frame()
+
+    def export_finished(self):
+        return False
 
     def handle_incoming_messages(self):
         if not self.args.standalone:

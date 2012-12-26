@@ -90,6 +90,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 zoom = 0.5 + self.min_t/self._duration * 0.5 / self._max_pxy
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
+    def export_finished(self):
+        return self.current_time() * self.args.timefactor >= self._duration
+
     def _unfold_backward(self, t):
         self.min_t = self.cursor_t = self._duration - t % self._duration
         self.max_t = self._duration
