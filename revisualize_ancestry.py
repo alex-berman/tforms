@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from session import Session
 from interpret import Interpreter
 import math
+import copy
 
 import sys
 sys.path.append("visual-experiments")
@@ -26,10 +27,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
-        self._unfold_function = getattr(self, "_unfold_%s" % args.unfold)
 
-        for piece in pieces:
-            self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
+        if args.unfold == BACKWARD:
+            for piece in pieces:
+                self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
+        elif args.unfold == FORWARD:
+            self._remaining_pieces = copy.copy(pieces)
 
         self._autozoom = (args.geometry == CIRCLE and self.args.autozoom)
         if self._autozoom:
@@ -51,7 +54,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
-        if self._args.node_style == CIRCLE:
+        if self.args.node_style == CIRCLE:
             self._node_circle_list = self.new_display_list_id()
             glNewList(self._node_circle_list, GL_COMPILE)
             self._render_node_circle(0, 0)
@@ -71,7 +74,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(1,1,1)
 
-        self._unfold_function(self.current_time() * self.args.timefactor)
+        if self.args.unfold == BACKWARD:
+            self._cursor_t = self._duration - self._adjusted_current_time() % self._duration
+        elif self.args.unfold == FORWARD and len(self._remaining_pieces) > 0:
+            piece = self._remaining_pieces[0]
+            if self.args.ff or (piece["t"] <= self._adjusted_current_time()):
+                self._remaining_pieces.pop(0)
+                self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
         if self._autozoom:
             self._zoom = self._zoom_smoother.value()
@@ -90,13 +99,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
     def export_finished(self):
-        return self.current_time() * self.args.timefactor >= self._duration
+        return self._adjusted_current_time() >= self._duration
 
-    def _unfold_backward(self, t):
-        self._cursor_t = self._duration - t % self._duration
-
-    def _unfold_forward(self, t):
-        raise Exception("unimplemented")
+    def _adjusted_current_time(self):
+        return self.current_time() * self.args.timefactor
 
     def _follow_piece(self, piece, child=None):
         self._draw_node(piece.t, (piece.begin + piece.end) / 2)
@@ -105,14 +111,14 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
-                if self._cursor_t < older_version.t:
+                if self.args.unfold == FORWARD or self._cursor_t < older_version.t:
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
             self._draw_node(path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            if self._cursor_t < parent.t:
+            if self.args.unfold == FORWARD or self._cursor_t < parent.t:
                 self._connect_generations(parent, piece, child)
                 self._follow_piece(parent, piece)
             else:
@@ -205,6 +211,7 @@ parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size", default=10.0/1000)
+parser.add_argument("--fast-forward", action="store_true", dest="ff")
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
