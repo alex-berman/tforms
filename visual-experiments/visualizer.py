@@ -193,6 +193,7 @@ class Visualizer:
         self.time_increment = 0
         self.stopwatch = Stopwatch()
         self._layers = []
+        self._display_list_count = 0
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._accum_enabled = False
@@ -638,9 +639,13 @@ class Visualizer:
         self._set_camera_orientation(orientation.y, orientation.x)
 
     def new_layer(self, rendering_function):
-        layer = Layer(rendering_function, len(self._layers)+1)
+        layer = Layer(rendering_function, self.new_display_list_id())
         self._layers.append(layer)
         return layer
+
+    def new_display_list_id(self):
+        self._display_list_count += 1
+        return self._display_list_count
 
     @staticmethod
     def add_parser_arguments(parser):

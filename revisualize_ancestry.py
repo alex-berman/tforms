@@ -37,6 +37,11 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._max_pxy = 0
             self._zoom_smoother = Smoother()
 
+        if args.node_style == CIRCLE:
+            self._node_plot_method = self._draw_node_circle
+        else:
+            self._node_plot_method = None
+
     @staticmethod
     def add_parser_arguments(parser):
         AncestryPlotter.add_parser_arguments(parser)
@@ -46,6 +51,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
+
+        if self._args.node_style == CIRCLE:
+            self._node_circle_list = self.new_display_list_id()
+            glNewList(self._node_circle_list, GL_COMPILE)
+            self._render_node_circle(0, 0)
+            glEndList()
 
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
@@ -88,6 +99,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.max_t = self.cursor_t = t % self._duration
 
     def _follow_piece(self, piece, child=None):
+        self._draw_node(piece.t, (piece.begin + piece.end) / 2)
+
         if len(piece.growth) > 0:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
@@ -96,6 +109,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
+            self._draw_node(path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
             if self.min_t < parent.t < self.max_t:
@@ -107,6 +121,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 else:
                     t = self.cursor_t
                 self._connect_generations(parent, piece, child, t)
+                self._draw_node(t, (parent.begin + parent.end) / 2)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -145,6 +160,41 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
+    def _draw_node(self, t, b):
+        if self._node_plot_method:
+            self._node_plot_method(t, b)
+
+    def _draw_node_circle(self, t, b):
+        cx, cy = self._position(t, b)
+        glPushMatrix()
+        glTranslatef(cx, cy, 0)
+        glCallList(self._node_circle_list)
+        glPopMatrix()
+
+    def _render_node_circle(self, cx, cy):
+        glColor3f(0,0,0)
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex2f(cx, cy)
+        angle = 0
+        while angle < 2*math.pi:
+            x = cx + math.cos(angle) * self.args.node_size * self.width
+            y = cy + math.sin(angle) * self.args.node_size * self.width
+            glVertex2f(x, y)
+            angle += 0.1
+        x = cx + math.cos(0) * self.args.node_size * self.width
+        y = cy + math.sin(0) * self.args.node_size * self.width
+        glVertex2f(x, y)
+        glEnd()
+
+        glColor3f(1,1,1)
+        glBegin(GL_LINE_STRIP)
+        angle = 0
+        while angle < 2*math.pi:
+            x = cx + math.cos(angle) * self.args.node_size * self.width
+            y = cy + math.sin(angle) * self.args.node_size * self.width
+            glVertex2f(x, y)
+            angle += 0.1
+        glEnd()
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
@@ -153,6 +203,8 @@ parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD, PINGPONG], default=BACKWARD)
+parser.add_argument("--node-style", choices=[CIRCLE])
+parser.add_argument("--node-size", default=10.0/1000)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
