@@ -21,7 +21,6 @@ MARGIN = 20
 LINE_WIDTH = 2.0 / 640
 FORWARD = "forward"
 BACKWARD = "backward"
-PINGPONG = "pingpong"
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
@@ -87,19 +86,17 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             if self._max_pxy == 0:
                 zoom = 0.5
             else:
-                zoom = 0.5 + self.min_t/self._duration * 0.5 / self._max_pxy
+                zoom = 0.5 + self._cursor_t/self._duration * 0.5 / self._max_pxy
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
     def export_finished(self):
         return self.current_time() * self.args.timefactor >= self._duration
 
     def _unfold_backward(self, t):
-        self.min_t = self.cursor_t = self._duration - t % self._duration
-        self.max_t = self._duration
+        self._cursor_t = self._duration - t % self._duration
 
     def _unfold_forward(self, t):
-        self.min_t = 0
-        self.max_t = self.cursor_t = t % self._duration
+        raise Exception("unimplemented")
 
     def _follow_piece(self, piece, child=None):
         self._draw_node(piece.t, (piece.begin + piece.end) / 2)
@@ -108,21 +105,21 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
-                if self.min_t < older_version.t < self.max_t:
+                if self._cursor_t < older_version.t:
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
             self._draw_node(path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            if self.min_t < parent.t < self.max_t:
+            if self._cursor_t < parent.t:
                 self._connect_generations(parent, piece, child)
                 self._follow_piece(parent, piece)
             else:
                 if self.args.unfold == BACKWARD:
-                    t = self.cursor_t - pow(self.cursor_t - parent.t, 0.7)
+                    t = self._cursor_t - pow(self._cursor_t - parent.t, 0.7)
                 else:
-                    t = self.cursor_t
+                    t = self._cursor_t
                 self._connect_generations(parent, piece, child, t)
                 self._draw_node(t, (parent.begin + parent.end) / 2)
 
@@ -205,7 +202,7 @@ parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
-parser.add_argument("--unfold", choices=[FORWARD, BACKWARD, PINGPONG], default=BACKWARD)
+parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size", default=10.0/1000)
 Ancestry.add_parser_arguments(parser)
