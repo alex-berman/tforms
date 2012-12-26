@@ -14,6 +14,7 @@ from OpenGL.GL import *
 import sys
 from bezier import make_bezier
 from ancestry_plotter import *
+import ancestry_tracker
 from vector import Vector2d
 from smoother import Smoother
 
@@ -22,11 +23,21 @@ MARGIN = 20
 LINE_WIDTH = 2.0 / 640
 FORWARD = "forward"
 BACKWARD = "backward"
+NODE_CIRCLE_SIZE_PRECISION = 20
+NODE_CIRCLE_GROWTH_TIME = 0.5
+
+class Piece(ancestry_tracker.Piece):
+    def inherit_from(self, pieces):
+        appearance_times = [piece.appearance_time
+                            for piece in filter(lambda piece: hasattr(piece, "appearance_time"),
+                                                pieces)]
+        if len(appearance_times) > 0:
+            self.appearance_time = min(appearance_times)
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
-        AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
+        AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args, Piece)
 
         if args.unfold == BACKWARD:
             for piece in pieces:
@@ -41,6 +52,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
         if args.node_style == CIRCLE:
             self._node_plot_method = self._draw_node_circle
+            self._nodes = {}
         else:
             self._node_plot_method = None
 
@@ -55,10 +67,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
         if self.args.node_style == CIRCLE:
-            self._node_circle_list = self.new_display_list_id()
-            glNewList(self._node_circle_list, GL_COMPILE)
-            self._render_node_circle(0, 0)
-            glEndList()
+            self._node_circle_lists = []
+            for n in range(0, NODE_CIRCLE_SIZE_PRECISION):
+                display_list = self.new_display_list_id()
+                self._node_circle_lists.append(display_list)
+                glNewList(display_list, GL_COMPILE)
+                self._render_node_circle(0, 0, n)
+                glEndList()
 
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
@@ -105,7 +120,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         return self.current_time() * self.args.timefactor
 
     def _follow_piece(self, piece, child=None):
-        self._draw_node(piece.t, (piece.begin + piece.end) / 2)
+        self._draw_node(piece, piece.t, (piece.begin + piece.end) / 2)
 
         if len(piece.growth) > 0:
             path = [(piece.t,
@@ -115,7 +130,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
             self.draw_path(path)
-            self._draw_node(path[-1][0], path[-1][1])
+            self._draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
             if self.args.unfold == FORWARD or self._cursor_t < parent.t:
@@ -127,7 +142,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 else:
                     t = self._cursor_t
                 self._connect_generations(parent, piece, child, t)
-                self._draw_node(t, (parent.begin + parent.end) / 2)
+                self._draw_node(parent, t, (parent.begin + parent.end) / 2)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -166,29 +181,39 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
-    def _draw_node(self, t, b):
+    def _draw_node(self, piece, t, b):
         if self._node_plot_method:
-            self._node_plot_method(t, b)
+            self._node_plot_method(piece, t, b)
 
-    def _draw_node_circle(self, t, b):
+    def _draw_node_circle(self, piece, t, b):
+        try:
+            appearance_time = piece.appearance_time
+        except AttributeError:
+            appearance_time = piece.appearance_time = self._adjusted_current_time()
+        age = self._adjusted_current_time() - appearance_time
+        if age > NODE_CIRCLE_GROWTH_TIME:
+            size = NODE_CIRCLE_SIZE_PRECISION - 1
+        else:
+            size = int(pow(age / NODE_CIRCLE_GROWTH_TIME, 0.2) * (NODE_CIRCLE_SIZE_PRECISION-1))
         cx, cy = self._position(t, b)
         glPushMatrix()
         glTranslatef(cx, cy, 0)
-        glCallList(self._node_circle_list)
+        glCallList(self._node_circle_lists[size])
         glPopMatrix()
 
-    def _render_node_circle(self, cx, cy):
+    def _render_node_circle(self, cx, cy, size):
         glColor3f(0,0,0)
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(cx, cy)
         angle = 0
+        radius = self.args.node_size * self.width * size / (NODE_CIRCLE_SIZE_PRECISION-1)
         while angle < 2*math.pi:
-            x = cx + math.cos(angle) * self.args.node_size * self.width
-            y = cy + math.sin(angle) * self.args.node_size * self.width
+            x = cx + math.cos(angle) * radius
+            y = cy + math.sin(angle) * radius
             glVertex2f(x, y)
             angle += 0.1
-        x = cx + math.cos(0) * self.args.node_size * self.width
-        y = cy + math.sin(0) * self.args.node_size * self.width
+        x = cx + math.cos(0) * radius
+        y = cy + math.sin(0) * radius
         glVertex2f(x, y)
         glEnd()
 
@@ -196,8 +221,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glBegin(GL_LINE_STRIP)
         angle = 0
         while angle < 2*math.pi:
-            x = cx + math.cos(angle) * self.args.node_size * self.width
-            y = cy + math.sin(angle) * self.args.node_size * self.width
+            x = cx + math.cos(angle) * radius
+            y = cy + math.sin(angle) * radius
             glVertex2f(x, y)
             angle += 0.1
         glEnd()

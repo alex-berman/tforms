@@ -16,11 +16,11 @@ PLAIN = "plain"
 SHRINKING = "shrinking"
 
 class AncestryPlotter:
-    def __init__(self, total_size, duration, args):
+    def __init__(self, total_size, duration, args, piece_class=None):
         self._total_size = total_size
         self._duration = duration
         self._args = args
-        self._tracker = AncestryTracker()
+        self._tracker = AncestryTracker(piece_class)
         self._num_pieces = 0
 
         if args.output_type != "dot":

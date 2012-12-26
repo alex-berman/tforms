@@ -9,12 +9,18 @@ class Piece:
         self.parents = parents
         self.growth = growth
 
+    def inherit_from(self, pieces):
+        pass
+
     def __repr__(self):
         return "Piece(id=%s, t=%s, begin=%s, end=%s, parent_ids=%s)" % (
             self.id, self.t, self.begin, self.end, self.parents.keys())
 
 class AncestryTracker:
-    def __init__(self):
+    def __init__(self, piece_class=None):
+        if piece_class is None:
+            piece_class = Piece
+        self._piece_class = piece_class
         self._pieces = dict()
         self._counter = 1
 
@@ -38,13 +44,14 @@ class AncestryTracker:
             new_extension.extend([self._pieces[key] for key in overlapping_pieces])
             for key in overlapping_pieces:
                 del self._pieces[key]
-            replacement_piece = Piece(
+            replacement_piece = self._piece_class(
                 id = replacement_id,
                 t = max([piece.t for piece in new_extension]),
                 begin = min([piece.begin for piece in new_extension]),
                 end = max([piece.end for piece in new_extension]),
                 parents = parents,
                 growth = growth)
+            replacement_piece.inherit_from(new_extension)
             self._add_piece(replacement_piece)
         else:
             self._add_piece(new_piece)
