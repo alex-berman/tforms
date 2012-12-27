@@ -39,3 +39,7 @@ class Vector2dTest(unittest.TestCase):
         self.assertAlmostEqual(0, w.x)
         self.assertAlmostEqual(-1, w.y)
 
+    def test_inplace_mul(self):
+        v = Vector2d(2, 3)
+        v *= 10
+        self.assertEquals(Vector2d(20, 30), v)

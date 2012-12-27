@@ -6,6 +6,8 @@ from session import Session
 from interpret import Interpreter
 import math
 import copy
+import random
+from sway import Sway
 
 import sys
 sys.path.append("visual-experiments")
@@ -111,7 +113,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         return self.current_time() * self.args.timefactor
 
     def _follow_piece(self, piece, child=None):
-        self._draw_node(piece, piece.t, (piece.begin + piece.end) / 2)
+        self._update_and_draw_node(piece, piece.t, (piece.begin + piece.end) / 2)
 
         if len(piece.growth) > 0:
             path = [(piece.t,
@@ -120,8 +122,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 if self.args.unfold == FORWARD or self._cursor_t < older_version.t:
                     path.append((older_version.t,
                                  (older_version.begin + older_version.end) / 2))
-            self.draw_path(path)
-            self._draw_node(piece, path[-1][0], path[-1][1])
+            self.draw_path(piece, path)
+            self._update_and_draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
             if self.args.unfold == FORWARD or self._cursor_t < parent.t:
@@ -133,7 +135,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 else:
                     t = self._cursor_t
                 self._connect_generations(parent, piece, child, t)
-                self._draw_node(parent, t, (parent.begin + parent.end) / 2)
+                self._update_and_draw_node(parent, t, (parent.begin + parent.end) / 2)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -151,10 +153,16 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._max_pxy = max([self._max_pxy, abs(px), abs(py)])
         return Vector2d(x, y)
 
-    def draw_path(self, points):
+    def draw_path(self, piece, points):
         glBegin(GL_LINE_STRIP)
+        n = 0
         for (t, b) in points:
             x, y = self._position(t, b)
+            if self.args.sway:
+                a = 1 - float(n) / len(points)
+                x += piece.sway.sway.x * a * self.width
+                y += piece.sway.sway.y * a * self.height
+                n += 1
             glVertex2f(x, y)
         glEnd()
 
@@ -172,9 +180,16 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
-    def _draw_node(self, piece, t, b):
+    def _update_and_draw_node(self, piece, t, b):
+        if self.args.sway:
+            self._update_sway(piece)
         if self._node_plot_method:
             self._node_plot_method(piece, t, b)
+
+    def _update_sway(self, piece):
+        if not hasattr(piece, "sway"):
+            piece.sway = Sway()
+        piece.sway.update(self.time_increment)
 
     def _draw_node_circle(self, piece, t, b):
         try:
@@ -187,6 +202,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             size = int(pow(age / NODE_CIRCLE_GROWTH_TIME, 0.2) * (NODE_CIRCLE_SIZE_PRECISION-1))
         cx, cy = self._position(t, b)
+        if self.args.sway:
+            cx += piece.sway.sway.x * self.width
+            cy += piece.sway.sway.y * self.height
         glPushMatrix()
         glTranslatef(cx, cy, 0)
         glCallList(self._node_circle_lists[size])
@@ -228,6 +246,7 @@ parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size", default=10.0/1000)
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
+parser.add_argument("--sway", action="store_true")
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True

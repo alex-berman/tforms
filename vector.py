@@ -106,7 +106,7 @@ class Vector:
 
     def __imul__(self, factor):
         for i in range(self.n):
-            self[i] *= other[i]
+            self[i] *= factor
         return self
 
     def __iadd__(self, other):

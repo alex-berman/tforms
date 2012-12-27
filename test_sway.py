@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from argparse import ArgumentParser
+from sway import Sway
 from vector import Vector2d
 import random
 import copy
@@ -11,23 +12,15 @@ import rectangular_visualizer as visualizer
 from OpenGL.GL import *
 
 class Node:
-    def __init__(self, attractor):
-        self.attractor = attractor
-        self.position = copy.deepcopy(attractor)
-        self.sway_force = Vector2d(0, 0)
-        self.attraction_force = Vector2d(0, 0)
-
+    def __init__(self, position):
+        self.position = position
+        self._sway = Sway()
+    
     def update(self, time_increment):
-        delta = min(time_increment, 1)
-        self.sway_force += self.random_vector() * 0.001 * delta
-        self.sway_force.limit(0.001)
-        self.attraction_force += (self.attractor - self.position) * delta * 0.05
-        self.position += self.sway_force
-        self.position += self.attraction_force
+        self._sway.update(time_increment)
 
-    def random_vector(self):
-        return Vector2d(random.uniform(-0.5, 0.5),
-                        random.uniform(-0.5, 0.5))
+    def sway(self):
+        return self._sway.sway
 
 class MovingNodes(visualizer.Visualizer):
     def __init__(self, *args):
@@ -50,13 +43,13 @@ class MovingNodes(visualizer.Visualizer):
 
     def draw_node(self, node):
         glBegin(GL_POINTS)
-        glVertex2f(node.position.x * self.width,
-                   node.position.y * self.height)
+        glVertex2f((node.position.x + node.sway().x) * self.width,
+                   (node.position.y + node.sway().y) * self.height)
         glEnd()
 
         glBegin(GL_LINES)
-        glVertex2f(node.attractor.x * self.width,
-                   node.attractor.y * self.height)
+        glVertex2f((node.position.x + node.sway().x) * self.width,
+                   (node.position.y + node.sway().y) * self.height)
         glVertex2f(node.position.x * self.width,
                    node.position.y * self.height)
         glEnd()
