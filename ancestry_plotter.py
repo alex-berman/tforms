@@ -53,7 +53,7 @@ class AncestryPlotter:
     def add_parser_arguments(parser):
         parser.add_argument("--edge-style",
                             choices=[LINE, CURVE, SPLINE],
-                            default=CURVE)
+                            default=LINE)
         parser.add_argument("--geometry",
                             choices=GEOMETRIES,
                             default=GEOMETRIES[0])
