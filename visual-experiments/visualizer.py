@@ -490,8 +490,6 @@ class Visualizer:
         if key == ESCAPE:
             self.synth.stop_all()
             self.exiting = True
-        elif key == 'f':
-            self._toggle_fullscreen()
         elif key == 's':
             self._dump_screen()
 
