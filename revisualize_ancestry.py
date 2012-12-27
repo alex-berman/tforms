@@ -204,10 +204,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         except AttributeError:
             appearance_time = piece.appearance_time = self._adjusted_current_time()
         age = self._adjusted_current_time() - appearance_time
-        if age > NODE_CIRCLE_GROWTH_TIME:
-            size = NODE_CIRCLE_SIZE_PRECISION - 1
-        else:
-            size = int(pow(age / NODE_CIRCLE_GROWTH_TIME, 0.2) * (NODE_CIRCLE_SIZE_PRECISION-1))
+        size = self._node_size(age)
         cx, cy = self._position(t, b)
         if self.args.sway:
             cx += piece.sway.sway.x * self.width
@@ -216,6 +213,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glTranslatef(cx, cy, 0)
         glCallList(self._node_circle_lists[size])
         glPopMatrix()
+
+    def _node_size(self, age):
+        if age > NODE_CIRCLE_GROWTH_TIME:
+            return NODE_CIRCLE_SIZE_PRECISION - 1
+        else:
+            return int(pow(age / NODE_CIRCLE_GROWTH_TIME, 0.2) * (NODE_CIRCLE_SIZE_PRECISION-1))
 
     def _render_node_circle(self, cx, cy, size):
         glColor3f(0,0,0)
