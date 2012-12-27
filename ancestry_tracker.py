@@ -9,18 +9,12 @@ class Piece:
         self.parents = parents
         self.growth = growth
 
-    def inherit_from(self, pieces):
-        pass
-
     def __repr__(self):
         return "Piece(id=%s, t=%s, begin=%s, end=%s, parent_ids=%s)" % (
             self.id, self.t, self.begin, self.end, self.parents.keys())
 
 class AncestryTracker:
-    def __init__(self, piece_class=None):
-        if piece_class is None:
-            piece_class = Piece
-        self._piece_class = piece_class
+    def __init__(self):
         self._pieces = dict()
         self._counter = 1
 
@@ -33,26 +27,33 @@ class AncestryTracker:
                 for parent_id in overlapping_pieces:
                     parents[parent_id] = self._pieces[parent_id]
                 growth = []
-            else:
-                parent = self._pieces[overlapping_pieces[0]]
-                replacement_id = new_piece.id
-                parents = copy.copy(parent.parents)
-                growth = copy.copy(parent.growth)
-                growth.append(parent)
 
-            new_extension = [new_piece]
-            new_extension.extend([self._pieces[key] for key in overlapping_pieces])
-            for key in overlapping_pieces:
-                del self._pieces[key]
-            replacement_piece = self._piece_class(
-                id = replacement_id,
-                t = max([piece.t for piece in new_extension]),
-                begin = min([piece.begin for piece in new_extension]),
-                end = max([piece.end for piece in new_extension]),
-                parents = parents,
-                growth = growth)
-            replacement_piece.inherit_from(new_extension)
-            self._add_piece(replacement_piece)
+                new_extension = [new_piece]
+                new_extension.extend([self._pieces[key] for key in overlapping_pieces])
+                for key in overlapping_pieces:
+                    del self._pieces[key]
+                replacement_piece = Piece(
+                    id = replacement_id,
+                    t = max([piece.t for piece in new_extension]),
+                    begin = min([piece.begin for piece in new_extension]),
+                    end = max([piece.end for piece in new_extension]),
+                    parents = parents,
+                    growth = growth)
+                self._add_piece(replacement_piece)
+            else:
+                parent_id = overlapping_pieces[0]
+                parent = self._pieces[parent_id]
+                replacement_piece = copy.copy(parent)
+                replacement_piece.id = new_piece.id
+                replacement_piece.parents = copy.copy(parent.parents)
+                replacement_piece.growth = copy.copy(parent.growth)
+                replacement_piece.growth.append(parent)
+                new_extension = [new_piece, parent]
+                replacement_piece.t = max([piece.t for piece in new_extension])
+                replacement_piece.begin = min([piece.begin for piece in new_extension])
+                replacement_piece.end = max([piece.end for piece in new_extension])
+                del self._pieces[parent_id]
+                self._add_piece(replacement_piece)
         else:
             self._add_piece(new_piece)
 

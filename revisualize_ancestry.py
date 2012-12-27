@@ -14,7 +14,6 @@ from OpenGL.GL import *
 import sys
 from bezier import make_bezier
 from ancestry_plotter import *
-import ancestry_tracker
 from vector import Vector2d
 from smoother import Smoother
 
@@ -26,18 +25,10 @@ BACKWARD = "backward"
 NODE_CIRCLE_SIZE_PRECISION = 20
 NODE_CIRCLE_GROWTH_TIME = 0.5
 
-class Piece(ancestry_tracker.Piece):
-    def inherit_from(self, pieces):
-        appearance_times = [piece.appearance_time
-                            for piece in filter(lambda piece: hasattr(piece, "appearance_time"),
-                                                pieces)]
-        if len(appearance_times) > 0:
-            self.appearance_time = min(appearance_times)
-
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
         visualizer.Visualizer.__init__(self, args)
-        AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args, Piece)
+        AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
 
         if args.unfold == BACKWARD:
             for piece in pieces:
