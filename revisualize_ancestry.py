@@ -26,6 +26,7 @@ FORWARD = "forward"
 BACKWARD = "backward"
 NODE_CIRCLE_SIZE_PRECISION = 20
 NODE_CIRCLE_GROWTH_TIME = 0.5
+SUSTAIN_TIME = 5.0
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
@@ -107,7 +108,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
     def export_finished(self):
-        return self._adjusted_current_time() >= self._duration
+        return self._adjusted_current_time() >= (self._duration + SUSTAIN_TIME)
 
     def _adjusted_current_time(self):
         return self.current_time() * self.args.timefactor
@@ -188,7 +189,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _update_sway(self, piece):
         if not hasattr(piece, "sway"):
-            piece.sway = Sway()
+            piece.sway = Sway(self.args.sway_magnitude)
         piece.sway.update(self.time_increment)
 
     def _draw_node_circle(self, piece, t, b):
@@ -247,6 +248,7 @@ parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size", default=10.0/1000)
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--sway", action="store_true")
+parser.add_argument("--sway-magnitude", type=float, default=0.002)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
