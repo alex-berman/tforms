@@ -20,7 +20,7 @@ from OpenGL.GL import *
 from vector import Vector3d, Vector
 
 LAND_COLOR = (.5, .5, .5)
-BARS_TOP = 5
+BARS_TOP = -5
 BARS_BOTTOM = 0
 
 CAMERA_POSITION = Vector(3, [-17.237835534835536, -14.099999999999966, -24.48634534467994])
@@ -123,13 +123,13 @@ class Geography(visualizer.Visualizer):
 
     def _render_world_and_history(self):
         self._location_max_value = numpy.max(self._grid)
-        self._render_world()
+        #self._render_world()
 
-        #self._render_bar_grid_lines()
-        #self._render_bar_grid_points()
+        self._render_bar_grid_lines()
+        self._render_bar_grid_points()
 
-        self._render_parabolae()
-        self._render_land_points()
+        #self._render_parabolae()
+        #self._render_land_points()
 
         #self._render_locations()
 
@@ -229,6 +229,7 @@ class Geography(visualizer.Visualizer):
             ny += 1
 
     def _render_grid_activity(self):
+        glBegin(GL_LINES)
         ny = 0
         for row in self._grid_activity:
             y = (ny+0.5) / LOCATION_PRECISION * WORLD_HEIGHT
@@ -236,11 +237,14 @@ class Geography(visualizer.Visualizer):
             for value in row:
                 if value > 0:
                     x = (nx+0.5) / LOCATION_PRECISION * WORLD_WIDTH
-                    strength = 1.0
-                    glColor4f(1, 1, 1, strength)
-                    self._render_parabola(x, y, self._here_x, self._here_y)
+                    glColor4f(1, 1, 1, 1)
+                    #self._render_parabola(x, y, self._here_x, self._here_y)
+                    glVertex3f(x, BARS_TOP, y)
+                    glColor4f(1, 1, 1, 0.25)
+                    glVertex3f(x, BARS_BOTTOM, y)
                 nx += 1
             ny += 1
+        glEnd()
 
     def _render_parabola(self, x1, y1, x2, y2):
         h1 = 0
