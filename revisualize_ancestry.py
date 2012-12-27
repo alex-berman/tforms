@@ -85,11 +85,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
         if self.args.unfold == BACKWARD:
             self._cursor_t = self._duration - self._adjusted_current_time() % self._duration
-        elif self.args.unfold == FORWARD and len(self._remaining_pieces) > 0:
-            piece = self._remaining_pieces[0]
-            if self.args.ff or (piece["t"] <= self._adjusted_current_time()):
-                self._remaining_pieces.pop(0)
-                self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
+        elif self.args.unfold == FORWARD:
+            if self.args.ff:
+                self._add_oldest_remaining_piece()
+            else:
+                while (len(self._remaining_pieces) > 0 and
+                       self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
+                    self._add_oldest_remaining_piece()
 
         if self._autozoom:
             self._zoom = self._zoom_smoother.value()
@@ -107,8 +109,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                 zoom = 0.5 + self._cursor_t/self._duration * 0.5 / self._max_pxy
             self._zoom_smoother.smooth(zoom, self.time_increment)
 
+    def _add_oldest_remaining_piece(self):
+        piece = self._remaining_pieces.pop(0)
+        self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
+
     def export_finished(self):
-        return self._adjusted_current_time() >= (self._duration + SUSTAIN_TIME)
+        return ((self.current_time() - SUSTAIN_TIME) / self.args.timefactor) > self._duration
 
     def _adjusted_current_time(self):
         return self.current_time() * self.args.timefactor
