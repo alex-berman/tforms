@@ -1,0 +1,12 @@
+*~
+*.pyc
+*.log
+*.svg
+*.dot
+*.png
+*#
+transmission*/
+sessions
+export
+press
+visual-experiments/capture.*
