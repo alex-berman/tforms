@@ -45,7 +45,6 @@ class AncestryTracker:
                 parent = self._pieces[parent_id]
                 replacement_piece = copy.copy(parent)
                 replacement_piece.id = new_piece.id
-                replacement_piece.parents = copy.copy(parent.parents)
                 replacement_piece.growth = copy.copy(parent.growth)
                 replacement_piece.growth.append(parent)
                 new_extension = [new_piece, parent]
