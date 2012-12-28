@@ -28,7 +28,6 @@ logging.basicConfig(filename="visualizer.log",
 ESCAPE = '\033'
 BORDER_OPACITY = 0.7
 FAKE_CHUNK_DURATION = 0.1
-EXPORT_DIR = "export"
 
 CAMERA_KEY_SPEED = 0.5
 CAMERA_Y_SPEED = .1
@@ -219,9 +218,14 @@ class Visualizer:
         if self.export:
             self.export_fps = args.export_fps
             import shutil
-            shutil.rmtree(EXPORT_DIR)
-            os.mkdir(EXPORT_DIR)
-            self.exporter = Exporter(EXPORT_DIR, self.margin, self.margin, self.width, self.height)
+            if hasattr(args, "sessiondir"):
+                export_dir = "%s/rendered_%s" % (args.sessiondir, self.__class__.__name__)
+            else:
+                export_dir = "export"
+            if os.path.exists(export_dir):
+                shutil.rmtree(export_dir)
+            os.mkdir(export_dir)
+            self.exporter = Exporter(export_dir, self.margin, self.margin, self.width, self.height)
 
     def reset(self):
         self.files = {}
