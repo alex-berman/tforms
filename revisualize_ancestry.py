@@ -25,7 +25,7 @@ MARGIN = 20
 FORWARD = "forward"
 BACKWARD = "backward"
 NODE_SIZE_PRECISION = 20
-SUSTAIN_TIME = 15.0
+SUSTAIN_TIME = 10.0
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
@@ -127,7 +127,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
     def export_finished(self):
-        return ((self.current_time() - SUSTAIN_TIME) / self.args.timefactor) > self._duration
+        return self.current_time() > (self._duration / self.args.timefactor + SUSTAIN_TIME)
 
     def _adjusted_current_time(self):
         return self.current_time() * self.args.timefactor
