@@ -15,6 +15,6 @@ class Exporter:
         buffer = glReadPixels(self.x, self.y, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE)
         image = Image.fromstring(mode="RGB", size=(self.width, self.height), data=buffer)
         image = image.transpose(Image.FLIP_TOP_BOTTOM)
-        filename = "%s/%05d.png" % (self.target_directory, self.frame_count)
+        filename = "%s/%07d.png" % (self.target_directory, self.frame_count)
         image.save(filename)
         self.frame_count += 1
