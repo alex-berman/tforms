@@ -254,6 +254,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _render_node_circle(self, cx, cy, size):
         glColor3f(0,0,0)
+        self._render_filled_circle(cx, cy, size)
+
+        glColor3f(1,1,1)
+        self._render_circle_outline(cx, cy, size)
+
+    def _render_filled_circle(self, cx, cy, size):
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(cx, cy)
         angle = 0
@@ -268,9 +274,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glVertex2f(x, y)
         glEnd()
 
-        glColor3f(1,1,1)
+    def _render_circle_outline(self, cx, cy, size):
         glBegin(GL_LINE_STRIP)
         angle = 0
+        radius = self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1)
         while angle < 2*math.pi:
             x = cx + math.cos(angle) * radius
             y = cy + math.sin(angle) * radius
