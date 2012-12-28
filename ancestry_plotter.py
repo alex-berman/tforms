@@ -120,15 +120,6 @@ class AncestryPlotter:
 
     def _spline_control_point(self, parent, child, grandchild):
         return grandchild + (child - grandchild)*1.3
-        parent1 = parent - child
-        grandchild1 = grandchild - child
-        angle = grandchild.angle().get()
-        parent2 = parent1.rotate(-angle)
-
-        control_point2 = Vector2d(parent2.x, 0)
-        control_point1 = control_point2.rotate(angle)
-        control_point = control_point1 + child
-        return control_point
 
     def _draw_spline(self, p1, p2, p_control):
         self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f" />' % (
