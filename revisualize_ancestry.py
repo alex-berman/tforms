@@ -56,6 +56,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             self._node_size_envelope = None
 
+        if args.sway_envelope:
+            attack, decay, sustain = args.sway_envelope.split(",")
+            self._sway_envelope = AdsrEnvelope(attack, decay, sustain)
+        else:
+            self._sway_envelope = None
+
+
     @staticmethod
     def add_parser_arguments(parser):
         AncestryPlotter.add_parser_arguments(parser)
@@ -167,14 +174,16 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         return Vector2d(x, y)
 
     def draw_path(self, piece, points):
+        if self.args.sway:
+            piece_sway_magnitude = self._sway_magnitude(piece)
         glBegin(GL_LINE_STRIP)
         n = 0
         for (t, b) in points:
             x, y = self._position(t, b)
             if self.args.sway:
-                a = 1 - float(n) / len(points)
-                x += piece.sway.sway.x * a * self.width
-                y += piece.sway.sway.y * a * self.height
+                magnitude = (1 - float(n) / len(points)) * piece_sway_magnitude
+                x += piece.sway.sway.x * magnitude * self.width
+                y += piece.sway.sway.y * magnitude * self.height
                 n += 1
             glVertex2f(x, y)
         glEnd()
@@ -211,26 +220,37 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         piece.sway.update(self.time_increment)
 
     def _draw_node_circle(self, piece, t, b):
-        try:
-            appearance_time = piece.appearance_time
-        except AttributeError:
-            appearance_time = piece.appearance_time = self._adjusted_current_time()
-        age = self._adjusted_current_time() - appearance_time
+        age = self._age(piece)
         size = self._node_size(age)
         cx, cy = self._position(t, b)
         if self.args.sway:
-            cx += piece.sway.sway.x * self.width
-            cy += piece.sway.sway.y * self.height
+            piece_sway_magnitude = self._sway_magnitude(piece)
+            cx += piece.sway.sway.x * piece_sway_magnitude * self.width
+            cy += piece.sway.sway.y * piece_sway_magnitude * self.height
         glPushMatrix()
         glTranslatef(cx, cy, 0)
         glCallList(self._node_circle_lists[size])
         glPopMatrix()
+
+    def _age(self, piece):
+        try:
+            appearance_time = piece.appearance_time
+        except AttributeError:
+            appearance_time = piece.appearance_time = self._adjusted_current_time()
+        return self._adjusted_current_time() - appearance_time
 
     def _node_size(self, age):
         if self._node_size_envelope:
             return int(self._node_size_envelope.value(age) * (NODE_SIZE_PRECISION-1))
         else:
             return NODE_SIZE_PRECISION-1
+
+    def _sway_magnitude(self, piece):
+        age = self._age(piece)
+        if self._sway_envelope:
+            return self._sway_envelope.value(age)
+        else:
+            return 1
 
     def _render_node_circle(self, cx, cy, size):
         glColor3f(0,0,0)
@@ -266,12 +286,15 @@ parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
-parser.add_argument("--node-size", default=10.0/1000)
-parser.add_argument("--node-size-envelope", type=str, help="attack-time,decay-time,sustain-level")
+parser.add_argument("--node-size", type=float, default=5.0/1000)
+parser.add_argument("--node-size-envelope", type=str,
+                    help="attack-time,decay-time,sustain-level")
 parser.add_argument("--node-size-envelope-slope", type=float, default=0.2)
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--sway", action="store_true")
 parser.add_argument("--sway-magnitude", type=float, default=0.002)
+parser.add_argument("--sway-envelope", type=str,
+                    help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
