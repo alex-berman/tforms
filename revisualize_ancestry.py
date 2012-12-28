@@ -8,6 +8,7 @@ import math
 import copy
 import random
 from sway import Sway
+from envelope import AdsrEnvelope
 
 import sys
 sys.path.append("visual-experiments")
@@ -21,11 +22,9 @@ from smoother import Smoother
 
 CURVE_PRECISION = 50
 MARGIN = 20
-LINE_WIDTH = 2.0 / 640
 FORWARD = "forward"
 BACKWARD = "backward"
-NODE_CIRCLE_SIZE_PRECISION = 20
-NODE_CIRCLE_GROWTH_TIME = 0.5
+NODE_SIZE_PRECISION = 20
 SUSTAIN_TIME = 5.0
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
@@ -50,6 +49,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             self._node_plot_method = None
 
+        if args.node_size_envelope:
+            attack, decay, sustain = args.node_size_envelope.split(",")
+            self._node_size_envelope = AdsrEnvelope(
+                attack, decay, sustain, args.node_size_envelope_slope)
+        else:
+            self._node_size_envelope = None
+
     @staticmethod
     def add_parser_arguments(parser):
         AncestryPlotter.add_parser_arguments(parser)
@@ -62,7 +68,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
         if self.args.node_style == CIRCLE:
             self._node_circle_lists = []
-            for n in range(0, NODE_CIRCLE_SIZE_PRECISION):
+            for n in range(0, NODE_SIZE_PRECISION):
                 display_list = self.new_display_list_id()
                 self._node_circle_lists.append(display_list)
                 glNewList(display_list, GL_COMPILE)
@@ -76,7 +82,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def render(self):
         glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
-        glLineWidth(LINE_WIDTH * self.width)
+        glLineWidth(self.args.line_width)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
@@ -187,6 +193,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             glVertex2f(x, y)
         glEnd()
 
+    def draw_line(self, x1, y1, x2, y2):
+        glBegin(GL_LINES)
+        glVertex2f(x1, y1)
+        glVertex2f(x2, y2)
+        glEnd()
+
     def _update_and_draw_node(self, piece, t, b):
         if self.args.sway:
             self._update_sway(piece)
@@ -215,17 +227,17 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glPopMatrix()
 
     def _node_size(self, age):
-        if age > NODE_CIRCLE_GROWTH_TIME:
-            return NODE_CIRCLE_SIZE_PRECISION - 1
+        if self._node_size_envelope:
+            return int(self._node_size_envelope.value(age) * (NODE_SIZE_PRECISION-1))
         else:
-            return int(pow(age / NODE_CIRCLE_GROWTH_TIME, 0.2) * (NODE_CIRCLE_SIZE_PRECISION-1))
+            return NODE_SIZE_PRECISION-1
 
     def _render_node_circle(self, cx, cy, size):
         glColor3f(0,0,0)
         glBegin(GL_TRIANGLE_FAN)
         glVertex2f(cx, cy)
         angle = 0
-        radius = self.args.node_size * self.width * size / (NODE_CIRCLE_SIZE_PRECISION-1)
+        radius = self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1)
         while angle < 2*math.pi:
             x = cx + math.cos(angle) * radius
             y = cy + math.sin(angle) * radius
@@ -255,9 +267,12 @@ parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size", default=10.0/1000)
+parser.add_argument("--node-size-envelope", type=str, help="attack-time,decay-time,sustain-level")
+parser.add_argument("--node-size-envelope-slope", type=float, default=0.2)
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--sway", action="store_true")
 parser.add_argument("--sway-magnitude", type=float, default=0.002)
+parser.add_argument("--line-width", type=float, default=2.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
