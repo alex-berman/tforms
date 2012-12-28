@@ -25,7 +25,7 @@ MARGIN = 20
 FORWARD = "forward"
 BACKWARD = "backward"
 NODE_SIZE_PRECISION = 20
-SUSTAIN_TIME = 5.0
+SUSTAIN_TIME = 15.0
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, tr_log, pieces, args):
@@ -182,8 +182,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             x, y = self._position(t, b)
             if self.args.sway:
                 magnitude = (1 - float(n) / len(points)) * piece_sway_magnitude
-                x += piece.sway.sway.x * magnitude * self.width
-                y += piece.sway.sway.y * magnitude * self.height
+                x += piece.sway.sway.x * magnitude * self._size
+                y += piece.sway.sway.y * magnitude * self._size
                 n += 1
             glVertex2f(x, y)
         glEnd()
@@ -225,8 +225,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         cx, cy = self._position(t, b)
         if self.args.sway:
             piece_sway_magnitude = self._sway_magnitude(piece)
-            cx += piece.sway.sway.x * piece_sway_magnitude * self.width
-            cy += piece.sway.sway.y * piece_sway_magnitude * self.height
+            cx += piece.sway.sway.x * piece_sway_magnitude * self._size
+            cy += piece.sway.sway.y * piece_sway_magnitude * self._size
         glPushMatrix()
         glTranslatef(cx, cy, 0)
         glCallList(self._node_circle_lists[size])
@@ -253,11 +253,21 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             return 1
 
     def _render_node_circle(self, cx, cy, size):
-        glColor3f(0,0,0)
-        self._render_filled_circle(cx, cy, size)
+        # glColor3f(0,0,0)
+        # self._render_filled_circle(cx, cy, size)
+        # glColor3f(1,1,1)
+        # self._render_circle_outline(cx, cy, size)
+
+        # glColor3f(1,1,1)
+        # self._render_filled_circle(cx, cy, size)
 
         glColor3f(1,1,1)
-        self._render_circle_outline(cx, cy, size)
+        glEnable(GL_POINT_SMOOTH)
+        radius = max(self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1), 0.1)
+        glPointSize(radius * 2)
+        glBegin(GL_POINTS)
+        glVertex2f(cx, cy)
+        glEnd()
 
     def _render_filled_circle(self, cx, cy, size):
         glBegin(GL_TRIANGLE_FAN)

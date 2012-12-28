@@ -193,7 +193,6 @@ class Visualizer:
         self.time_increment = 0
         self.stopwatch = Stopwatch()
         self._layers = []
-        self._display_list_count = 0
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
         self._accum_enabled = False
@@ -648,8 +647,7 @@ class Visualizer:
         return layer
 
     def new_display_list_id(self):
-        self._display_list_count += 1
-        return self._display_list_count
+        return glGenLists(1)
 
     @staticmethod
     def add_parser_arguments(parser):
