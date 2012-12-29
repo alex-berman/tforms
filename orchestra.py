@@ -20,8 +20,8 @@ from config import DOWNLOAD_LOCATION
 class Server(OscReceiver):
     @staticmethod
     def add_parser_arguments(parser):
-        parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
         parser.add_argument("--visualizer", dest="visualizer_command_line")
+        parser.add_argument("--visualizer-host", dest="visualizer_host", type=str)
         parser.add_argument("-port", type=int)
         parser.add_argument("--osc-log", dest="osc_log")
 
@@ -29,7 +29,9 @@ class Server(OscReceiver):
         self.options = options
         self.visualizer = None
         self._orchestra = None
-        if options.visualizer_enabled or options.visualizer_command_line:
+        if options.visualizer_host or options.visualizer_command_line:
+            if options.visualizer_host and options.visualizer_command_line:
+                raise Exception("cannot combine --visualizer and --visualizer-host yet")
             self._setup_osc()
             if options.visualizer_command_line:
                 self._spawn_visualizer(options.visualizer_command_line)
@@ -76,7 +78,10 @@ class Server(OscReceiver):
 
     def _handle_register(self, path, args, types, src, data):
         visualizer_port = args[0]
-        self.visualizer = OscSender(visualizer_port, self.options.osc_log)
+        self.visualizer = OscSender(
+            host=self.options.visualizer_host,
+            port=visualizer_port,
+            log_filename=self.options.osc_log)
         self._visualizer_registered = True
 
     def _handle(self, *args):
@@ -180,7 +185,7 @@ class Orchestra:
         self.looped_duration = options.looped_duration
         self.output = options.output
         self.include_non_playable = options.include_non_playable
-        self._visualizer_enabled = (options.visualizer_enabled or options.visualizer_command_line)
+        self._visualizer_enabled = (options.visualizer_host or options.visualizer_command_line)
 
         if options.predecode:
             predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)

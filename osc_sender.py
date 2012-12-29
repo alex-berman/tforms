@@ -4,9 +4,9 @@ import time
 import threading
 
 class OscSender:
-    def __init__(self, port, log_filename=None):
+    def __init__(self, port, host="localhost", log_filename=None):
         self._lock = threading.Lock()
-        self.address = liblo.Address("localhost", port, liblo.TCP)
+        self.address = liblo.Address(host, port, liblo.TCP)
         if log_filename:
             self.log = open(log_filename, "w")
             self.start_time = time.time()
