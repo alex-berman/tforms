@@ -16,7 +16,6 @@ class File(visualizer.File):
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def __init__(self, args):
         visualizer.Visualizer.__init__(self, args, file_class=File)
-        self._layer = self.new_layer(self._render_ancestry_layer)
         self._initialized = False
 
     @staticmethod
@@ -27,6 +26,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
+        self._layer = self.new_layer(self._render_ancestry_layer)
 
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
