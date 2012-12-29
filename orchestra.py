@@ -22,6 +22,7 @@ class Server(OscReceiver):
     def add_parser_arguments(parser):
         parser.add_argument("--visualize", dest="visualizer_enabled", action="store_true")
         parser.add_argument("--visualizer", dest="visualizer_command_line")
+        parser.add_argument("-port", type=int)
         parser.add_argument("--osc-log", dest="osc_log")
 
     def __init__(self, options):
@@ -40,7 +41,7 @@ class Server(OscReceiver):
 
     def _setup_osc(self):
         self._orchestra_queue = []
-        OscReceiver.__init__(self)
+        OscReceiver.__init__(self, port=self.options.port)
         self.add_method("/register", "i", self._handle_register)
         self.add_method("/visualizing", "i", self._handle, "_handle_visualizing_message")
         self.add_method("/set_listener_position", "ff", self._handle, "_handle_set_listener_position")
@@ -60,7 +61,7 @@ class Server(OscReceiver):
             time.sleep(0.01)
 
     def _wait_for_visualizer_to_register(self):
-        print "waiting for visualizer to register"
+        print "waiting for visualizer to register on port %s" % self.port
         while not self._visualizer_registered:
             time.sleep(0.1)
         print "OK"

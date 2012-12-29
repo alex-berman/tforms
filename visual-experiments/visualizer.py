@@ -209,6 +209,8 @@ class Visualizer:
             self.previous_shown_fps_time = None
 
         if not args.standalone:
+            if not args.port:
+                raise Exception("please specify port number")
             self.orchestra_port = args.port
             self.setup_osc(self.osc_log)
             self.orchestra.register(self.server.port)
