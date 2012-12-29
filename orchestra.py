@@ -17,29 +17,49 @@ from space import Space
 from predecode import Predecoder
 from config import DOWNLOAD_LOCATION
 
+class VisualizerConnector:
+    def __init__(self, spec, server):
+        self.server = server
+        if self._is_command_line(spec):
+            self.host = "localhost"
+            self._spawn_visualizer(spec)
+        else:
+            self.host = spec
+        self.informed_about_torrent = False
+
+    def _is_command_line(self, spec):
+        return spec.startswith("python ")
+
+    def _spawn_visualizer(self, command_line):
+        command_line_with_port = "%s -port %d" % (command_line, self.server.port)
+        subprocess.Popen(command_line_with_port, shell=True, stdin=None)
+
+    def connect_to(self, port):
+        self._sender = OscSender(
+            host=self.host,
+            port=port,
+            log_filename=self.server.options.osc_log)
+
+    def send(self, *args):
+        self._sender.send(*args)
+
 class Server(OscReceiver):
     @staticmethod
     def add_parser_arguments(parser):
-        parser.add_argument("--visualizer", dest="visualizer_command_line")
-        parser.add_argument("--visualizer-host", dest="visualizer_host", type=str)
+        parser.add_argument("--visualizer", type=str, action="append")
         parser.add_argument("-port", type=int)
         parser.add_argument("--osc-log", dest="osc_log")
 
     def __init__(self, options):
         self.options = options
-        self.visualizer = None
+        self.visualizers = []
         self._orchestra = None
-        if options.visualizer_host or options.visualizer_command_line:
-            if options.visualizer_host and options.visualizer_command_line:
-                raise Exception("cannot combine --visualizer and --visualizer-host yet")
+        if len(options.visualizer) > 0:
             self._setup_osc()
-            if options.visualizer_command_line:
-                self._spawn_visualizer(options.visualizer_command_line)
-            self._wait_for_visualizer_to_register()
-
-    def _spawn_visualizer(self, command_line):
-        command_line_with_port = "%s -port %d" % (command_line, self.port)
-        visualizer_process = subprocess.Popen(command_line_with_port, shell=True, stdin=None)
+            for visualizer_spec in options.visualizer:
+                visualizer = VisualizerConnector(visualizer_spec, self)
+                self.visualizers.append(visualizer)
+            self._wait_for_visualizers_to_register()
 
     def _setup_osc(self):
         self._orchestra_queue = []
@@ -52,7 +72,7 @@ class Server(OscReceiver):
         self.add_method("/enable_smooth_movement", "", self._handle, "_handle_enable_smooth_movement")
         self.add_method("/start_segment_movement_from_peer", "if", self._handle, "_handle_start_segment_movement_from_peer")
         self.start()
-        self._visualizer_registered = False
+        self._num_registered_visualizers = 0
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
@@ -62,27 +82,24 @@ class Server(OscReceiver):
             self.serve()
             time.sleep(0.01)
 
-    def _wait_for_visualizer_to_register(self):
-        print "waiting for visualizer to register on port %s" % self.port
-        while not self._visualizer_registered:
+    def _wait_for_visualizers_to_register(self):
+        print "waiting for %s visualizer(s) to register on port %s" % (len(self.visualizers), self.port)
+        while self._num_registered_visualizers < len(self.visualizers):
             time.sleep(0.1)
-        print "OK"
 
     def set_orchestra(self, orchestra):
         self._orchestra = orchestra
         orchestra.server = self
-        orchestra.visualizer = self.visualizer
+        orchestra.visualizers = self.visualizers
         for args in self._orchestra_queue:
             self._dispatch(*args)
         self._orchestra_queue = []
 
     def _handle_register(self, path, args, types, src, data):
+        print "visualizer registered"
         visualizer_port = args[0]
-        self.visualizer = OscSender(
-            host=self.options.visualizer_host,
-            port=visualizer_port,
-            log_filename=self.options.osc_log)
-        self._visualizer_registered = True
+        self.visualizers[self._num_registered_visualizers].connect_to(visualizer_port)
+        self._num_registered_visualizers += 1
 
     def _handle(self, *args):
         if self._orchestra:
@@ -95,8 +112,11 @@ class Server(OscReceiver):
         getattr(self._orchestra, method_name)(path, args, types, src, user_data)
 
     def shutdown(self):
-        if self.visualizer:
-            self.visualizer.send("/shutdown")
+        self._tell_visualizers("/shutdown")
+
+    def _tell_visualizers(self, *args):
+        for visualizer in self.visualizers:
+            visualizer.send(*args)
 
 
 class Player:
@@ -185,7 +205,6 @@ class Orchestra:
         self.looped_duration = options.looped_duration
         self.output = options.output
         self.include_non_playable = options.include_non_playable
-        self._visualizer_enabled = (options.visualizer_host or options.visualizer_command_line)
 
         if options.predecode:
             predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
@@ -226,7 +245,6 @@ class Orchestra:
         self.segments_by_id = {}
         self._playing = False
         self._quitting = False
-        self._informed_visualizer_about_torrent = False
         self.space = Space()
 
         if options.ff_to_start:
@@ -525,39 +543,39 @@ class Orchestra:
             self.gui.highlight_segment(segment)
 
     def visualize_chunk(self, chunk, player):
-        if self.visualizer:
-            if not self._informed_visualizer_about_torrent:
-                self._send_torrent_info_to_visualizer()
+        if len(self.visualizers) > 0:
+            self._send_torrent_info_to_uninformed_visualizers()
             file_info = self.tr_log.files[chunk["filenum"]]
             self._chunks_by_id[chunk["id"]] = chunk
-            self.visualizer.send("/chunk",
-                                 chunk["id"],
-                                 chunk["begin"],
-                                 chunk["end"] - chunk["begin"],
-                                 file_info["index"],
-                                 player.id,
-                                 chunk["t"])
+            self._tell_visualizers(
+                "/chunk",
+                chunk["id"],
+                chunk["begin"],
+                chunk["end"] - chunk["begin"],
+                file_info["index"],
+                player.id,
+                chunk["t"])
 
     def visualize_segment(self, segment, player):
-        if self.visualizer:
+        if len(self.visualizers) > 0:
             if self.ssr:
                 segment["sound_source_id"] = self.ssr.allocate_source()
                 if not segment["sound_source_id"] and not self._warned_about_max_sources:
                     print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
                     self._warned_about_max_sources = True
 
-            if not self._informed_visualizer_about_torrent:
-                self._send_torrent_info_to_visualizer()
+            self._send_torrent_info_to_uninformed_visualizers()
             file_info = self.tr_log.files[segment["filenum"]]
             self.segments_by_id[segment["id"]] = segment
-            self.visualizer.send("/segment",
-                                 segment["id"],
-                                 segment["begin"],
-                                 segment["end"] - segment["begin"],
-                                 file_info["index"],
-                                 player.id,
-                                 segment["t"],
-                                 segment["playback_duration"])
+            self._tell_visualizers(
+                "/segment",
+                segment["id"],
+                segment["begin"],
+                segment["end"] - segment["begin"],
+                file_info["index"],
+                player.id,
+                segment["t"],
+                segment["playback_duration"])
         else:
             self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
 
@@ -565,7 +583,7 @@ class Orchestra:
         logger.debug("stopped segment %s" % segment)
         if self.gui:
             self.gui.unhighlight_segment(segment)
-        if self.visualizer:
+        if len(self.visualizers) > 0:
             if self.ssr and segment["sound_source_id"]:
                 self.ssr.free_source(segment["sound_source_id"])
 
@@ -579,19 +597,26 @@ class Orchestra:
 
         self.visualize_segment(segment, player)
 
-    def _send_torrent_info_to_visualizer(self):
-        self._informed_visualizer_about_torrent = True
-        self.visualizer.send("/torrent",
-                             self._num_selected_files,
-                             self.tr_log.lastchunktime(),
-                             self.tr_log.total_file_size())
+    def _send_torrent_info_to_uninformed_visualizers(self):
+        for visualizer in self.visualizers:
+            if not visualizer.informed_about_torrent:
+                self._send_torrent_info_to_visualizer(visualizer)
+
+    def _send_torrent_info_to_visualizer(self, visualizer):
+        visualizer.send(
+            "/torrent",
+            self._num_selected_files,
+            self.tr_log.lastchunktime(),
+            self.tr_log.total_file_size())
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:
-                self.visualizer.send("/file",
-                                     file_info["index"],
-                                     file_info["offset"],
-                                     file_info["length"])
+                visualizer.send(
+                    "/file",
+                    file_info["index"],
+                    file_info["offset"],
+                    file_info["length"])
+        visualizer.informed_about_torrent = True
 
     def get_player_for_chunk(self, chunk):
         try:
@@ -623,8 +648,7 @@ class Orchestra:
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
-        if self.visualizer:
-            self.visualizer.send("/peer", player.id, addr, player.spatial_position.bearing)
+        self._tell_visualizers("/peer", player.id, addr, player.spatial_position.bearing)
         return player
 
     def set_time_cursor(self, log_time):
@@ -697,8 +721,7 @@ class Orchestra:
 
     def reset(self):
         self._free_sounds()
-        if self.visualizer:
-            self.visualizer.send("/reset")
+        self._tell_visualizers("/reset")
 
     def _free_sounds(self):
         if self.synth:
@@ -706,6 +729,9 @@ class Orchestra:
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
                     self.synth.free_sound(filenum)
+
+    def _tell_visualizers(self, *args):
+        self.server._tell_visualizers(*args)
 
 def warn(logger, message):
     logger.debug(message)
