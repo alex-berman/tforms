@@ -211,6 +211,7 @@ class Visualizer:
         if not args.standalone:
             if not args.port:
                 raise Exception("please specify port number")
+            self.orchestra_host = args.host
             self.orchestra_port = args.port
             self.setup_osc(self.osc_log)
             self.orchestra.register(self.server.port)
@@ -353,7 +354,7 @@ class Visualizer:
         pass
 
     def setup_osc(self, log_filename):
-        self.orchestra = OrchestraController(self.orchestra_port)
+        self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = OscReceiver(log_filename=log_filename)
         self.server.add_method("/torrent", "ifi", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
@@ -655,6 +656,7 @@ class Visualizer:
 
     @staticmethod
     def add_parser_arguments(parser):
+        parser.add_argument("-host", type=str, default="localhost")
         parser.add_argument('-port', type=int)
         parser.add_argument('-sync', action='store_true')
         parser.add_argument('-width', dest='width', type=int, default=640)

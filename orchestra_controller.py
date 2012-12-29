@@ -2,8 +2,8 @@ import liblo
 import orchestra
 
 class OrchestraController:
-    def __init__(self, port):
-        self.target = liblo.Address("localhost", port, liblo.TCP)
+    def __init__(self, host, port):
+        self.target = liblo.Address(host, port, liblo.TCP)
 
     def register(self, port):
         self._send("/register", port)
