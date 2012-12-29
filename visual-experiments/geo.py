@@ -52,8 +52,12 @@ class Geography(visualizer.Visualizer):
         self._world = world.World(WORLD_WIDTH, WORLD_HEIGHT)
         self.enable_3d()
         self.playing_segments = collections.OrderedDict()
-        self._stable_layer = self.new_layer(self._render_world_and_history)
         #self._load_traces()
+
+    def InitGL(self):
+        visualizer.Visualizer.InitGL(self)
+        glClearColor(0.0, 0.0, 0.0, 0.0)
+        self._stable_layer = self.new_layer(self._render_world_and_history)
 
     def _load_traces(self):
         #f = open("sessions/120827-084403-TDL4/traces.data", "r")
@@ -106,10 +110,6 @@ class Geography(visualizer.Visualizer):
     def added_segment(self, segment):
         self._add_ip(segment.peer.addr)
         self.playing_segments[segment.id] = segment
-
-    def InitGL(self):
-        visualizer.Visualizer.InitGL(self)
-        glClearColor(0.0, 0.0, 0.0, 0.0)
 
     def render(self):
         self.update()

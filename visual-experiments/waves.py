@@ -55,7 +55,6 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
                                        segment_class=Segment)
-        self._gathered_segments_layer = self.new_layer(self._render_gathered_segments)
         self.subscribe_to_waveform()
 
     def reset(self):
@@ -66,6 +65,7 @@ class Waves(visualizer.Visualizer):
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
+        self._gathered_segments_layer = self.new_layer(self._render_gathered_segments)
 
     def update(self):
         outdated = []
