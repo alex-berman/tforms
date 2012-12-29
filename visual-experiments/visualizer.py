@@ -151,13 +151,12 @@ class Layer:
         self._display_list_id = display_list_id
 
     def draw(self):
-        if self._updated:
-            glCallList(self._display_list_id)
-        else:
-            glNewList(self._display_list_id, GL_COMPILE_AND_EXECUTE)
+        if not self._updated:
+            glNewList(self._display_list_id, GL_COMPILE)
             self._rendering_function()
             glEndList()
             self._updated = True
+        glCallList(self._display_list_id)
 
     def refresh(self):
         self._updated = False
@@ -273,7 +272,6 @@ class Visualizer:
             self.added_all_files()
 
     def handle_chunk_message(self, path, args, types, src, data):
-        self.logger.debug("handling chunk message")
         (chunk_id, torrent_position, byte_size, filenum, peer_id, t) = args
         if filenum in self.files:
             f = self.files[filenum]
