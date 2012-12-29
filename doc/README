@@ -8,13 +8,13 @@ cd ..
 REQUIREMENTS
 
 Some of the requirements (but there are more):
-python
-sox
+python sox mpg123
 
 For visualizations:
-wxpython
-PyOpenGL
-matplotlib
+python-opengl
+
+For GUI:
+python-wxgtk2.8 matplotlib
 
 
 RECORDING A SESSION
