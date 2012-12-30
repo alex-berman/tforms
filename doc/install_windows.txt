@@ -1,0 +1,7 @@
+Requirements for running visual-experiments\geo.py on Windows:
+
+numpy
+http://sourceforge.net/projects/numpy/files/latest/download?source=files
+
+pyopengl
+http://pypi.python.org/pypi/PyOpenGL/3.0.2
