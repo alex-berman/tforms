@@ -3,15 +3,12 @@
 import sys
 from argparse import ArgumentParser
 import numpy
-import re
 import math
 import collections
 import cPickle
 
 sys.path.append("geo")
 import world
-import ip_locator
-import random
 from gps import GPS
 import os
 
@@ -41,7 +38,6 @@ class File(visualizer.File):
 
 class Geography(visualizer.Visualizer):
     def __init__(self, args):
-        self._ip_locator = ip_locator.IpLocator()
         self._gps = GPS(WORLD_WIDTH, WORLD_HEIGHT)
         self._here_x = self._gps.x(HERE_LONGITUDE)
         self._here_y = self._gps.y(HERE_LATITUDE)
@@ -68,36 +64,23 @@ class Geography(visualizer.Visualizer):
     def _load_locations(self):
         self._locations = []
         self._grid = numpy.zeros((LOCATION_PRECISION, LOCATION_PRECISION), int)
-        self._addrs = set()
-        #self._add_random_locations()
         self._add_peers_from_log()
 
     def _add_peers_from_log(self):
-        f = open("%s/../geo/scanner/peers.log" % os.path.dirname(__file__), "r")
-        r = re.compile('^peer \[([0-9.]+)\]')
-        for line in f:
-            m = r.search(line)
-            if m:
-                addr = m.group(1)
-                self._add_ip(addr)
+        f = open("%s/../geo/scanner/locations.dat" % os.path.dirname(__file__), "r")
+        locations = cPickle.load(f)
         f.close()
+        for location in locations:
+            self._add_location(location)
 
-    def _add_random_locations(self):
-        n = 0
-        while n < 10000:
-            addr = ".".join([str(random.randint(0,255)) for i in range(4)])
-            if self._add_ip(addr):
-                n += 1
-
-    def _add_ip(self, addr):
-        if not addr in self._addrs:
-            location_info = self._addr_location(addr)
-            if location_info:
-                x, y, nx, ny = location_info
-                self._locations.append((x, y))
-                self._grid[ny, nx] += 1
-                self._addrs.add(addr)
-                return True
+    def _add_location(self, location):
+        if location and location not in self._locations:
+            self._locations.append(location)
+            x, y = location
+            nx = int(LOCATION_PRECISION * x)
+            ny = int(LOCATION_PRECISION * y)
+            self._grid[ny, nx] += 1
+            return True
 
     def _addr_location(self, addr):
         location = self._ip_locator.locate(addr)
@@ -108,7 +91,7 @@ class Geography(visualizer.Visualizer):
             return x, y, nx, ny
 
     def added_segment(self, segment):
-        self._add_ip(segment.peer.addr)
+        self._add_location(self.peers_by_addr[segment.peer.addr].location)
         self.playing_segments[segment.id] = segment
 
     def render(self):
@@ -138,9 +121,10 @@ class Geography(visualizer.Visualizer):
         outdated = []
         for segment in self.playing_segments.values():
             if segment.is_playing():
-                location_info = self._addr_location(segment.peer.addr)
-                if location_info:
-                    x, y, nx, ny = location_info
+                if segment.peer.location:
+                    x, y = segment.peer.location
+                    nx = int(LOCATION_PRECISION * x)
+                    ny = int(LOCATION_PRECISION * y)
                     self._grid_activity[ny, nx] = 1
             else:
                 outdated.append(segment.id)

@@ -189,10 +189,12 @@ class Orchestra:
         parser.add_argument("--include-non-playable", action="store_true")
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
         parser.add_argument("--no-synth", action="store_true")
+        parser.add_argument("--locate-peers", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
 
     def __init__(self, sessiondir, tr_log, options):
+        self.options = options
         self.sessiondir = sessiondir
         self.tr_log = tr_log
         self.realtime = options.realtime
@@ -204,7 +206,15 @@ class Orchestra:
         self._max_passivity = options.max_passivity
         self.looped_duration = options.looped_duration
         self.output = options.output
+
         self.include_non_playable = options.include_non_playable
+
+        if options.locate_peers:
+            import geo.ip_locator
+            self._peer_location = {}
+            ip_locator = geo.ip_locator.IpLocator()
+            for peeraddr in tr_log.peers:
+                self._peer_location[peeraddr] = ip_locator.locate(peeraddr)
 
         if options.predecode:
             predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
@@ -648,7 +658,13 @@ class Orchestra:
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
-        self._tell_visualizers("/peer", player.id, addr, player.spatial_position.bearing)
+        if self.options.locate_peers and self._peer_location[addr] is not None:
+            x, y = self._peer_location[addr]
+            location_str = "%s,%s" % (x, y)
+        else:
+            location_str = ""
+        self._tell_visualizers(
+            "/peer", player.id, addr, player.spatial_position.bearing, location_str)
         return player
 
     def set_time_cursor(self, log_time):

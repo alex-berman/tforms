@@ -135,10 +135,14 @@ class Segment(Chunk):
             self.id, self.begin, self.end, self.torrent_begin, self.torrent_end, self.filenum, self.duration)
 
 class Peer:
-    def __init__(self, visualizer, addr, bearing):
+    def __init__(self, visualizer, addr, bearing, location):
         self.visualizer = visualizer
         self.addr = addr
         self.bearing = bearing
+        if location == "":
+            self.location = None
+        else:
+            self.location = map(float, location.split(","))
 
     def add_segment(self, segment):
         pass
@@ -232,6 +236,7 @@ class Visualizer:
     def reset(self):
         self.files = {}
         self.peers = {}
+        self.peers_by_addr = {}
         self._segments_by_id = {}
         self.torrent_length = 0
 
@@ -304,8 +309,10 @@ class Visualizer:
             print "ignoring segment from undeclared file %s" % filenum
 
     def handle_peer_message(self, path, args, types, src, data):
-        peer_id, addr, bearing = args
-        self.peers[peer_id] = self.peer_class(self, addr, bearing)
+        peer_id, addr, bearing, location = args
+        peer = self.peer_class(self, addr, bearing, location)
+        self.peers[peer_id] = peer
+        self.peers_by_addr[addr] = peer
 
     def add_segment(self, segment):
         peer = self.peers[segment.peer_id]
@@ -360,7 +367,7 @@ class Visualizer:
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
-        self.server.add_method("/peer", "isf", self.handle_peer_message)
+        self.server.add_method("/peer", "isfs", self.handle_peer_message)
         self.server.add_method("/reset", "", self.handle_reset)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
         self.server.start()
