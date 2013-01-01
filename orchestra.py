@@ -20,15 +20,20 @@ from config import DOWNLOAD_LOCATION
 class VisualizerConnector:
     def __init__(self, spec, server):
         self.server = server
-        if self._is_command_line(spec):
+        if self._is_shell(spec):
             self.host = "localhost"
-            self._spawn_visualizer(spec)
+            self._spawn_visualizer(spec[6:])
+        elif self._is_remote(spec):
+            self.host = spec[7:]
         else:
             self.host = spec
         self.informed_about_torrent = False
 
-    def _is_command_line(self, spec):
-        return spec.startswith("python ")
+    def _is_shell(self, spec):
+        return spec.startswith("shell:")
+
+    def _is_remote(self, spec):
+        return spec.startswith("remote:")
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)
