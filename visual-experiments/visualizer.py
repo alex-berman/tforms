@@ -6,7 +6,6 @@ import argparse
 import collections
 import logging
 import math
-import liblo
 from exporter import Exporter
 
 dirname = os.path.dirname(__file__)
@@ -16,7 +15,9 @@ else:
     sys.path.append("..")
 from synth_controller import SynthController
 from orchestra_controller import OrchestraController
-from osc_receiver import OscReceiver
+import osc
+import osc_receiver
+import simple_osc_receiver
 from stopwatch import Stopwatch
 import traceback_printer
 from camera_script_interpreter import CameraScriptInterpreter
@@ -362,7 +363,7 @@ class Visualizer:
 
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
-        self.server = OscReceiver(log_filename=log_filename)
+        self.server = simple_osc_receiver.OscReceiver(log_filename=log_filename)
         self.server.add_method("/torrent", "ifi", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
@@ -374,7 +375,7 @@ class Visualizer:
         self.waveform_server = None
 
     def setup_waveform_server(self):
-        self.waveform_server = OscReceiver(proto=liblo.UDP)
+        self.waveform_server = osc_receiver.OscReceiver(proto=osc.UDP)
         self.waveform_server.add_method("/amp", "if", self.handle_amp_message)
         self.waveform_server.add_method("/waveform", "if", self.handle_waveform_message)
         self.waveform_server.start()
