@@ -1,30 +1,28 @@
-import liblo
+import osc
+import osc_sender
 import orchestra
 
-class OrchestraController:
+class OrchestraController(osc_sender.OscSender):
     def __init__(self, host, port):
-        self.target = liblo.Address(host, port, liblo.TCP)
+        osc_sender.OscSender.__init__(self, port, host)
 
     def register(self, port):
-        self._send("/register", port)
+        self.send("/register", port)
 
     def visualizing_segment(self, segment_id):
-        self._send("/visualizing", segment_id)
+        self.send("/visualizing", segment_id)
 
     def set_listener_position(self, x, y):
-        self._send("/set_listener_position", x, y)
+        self.send("/set_listener_position", x, y)
 
     def set_listener_orientation(self, orientation):
-        self._send("/set_listener_orientation", orientation)
+        self.send("/set_listener_orientation", orientation)
 
     def place_segment(self, segment_id, x, y, duration):
-        self._send("/place_segment", segment_id, x, y, duration)
+        self.send("/place_segment", segment_id, x, y, duration)
 
     def enable_smooth_movement(self):
-        self._send("/enable_smooth_movement")
+        self.send("/enable_smooth_movement")
 
     def start_segment_movement_from_peer(self, segment_id, duration):
-        self._send("/start_segment_movement_from_peer", segment_id, duration)
-
-    def _send(self, command, *args):
-        liblo.send(self.target, command, *args)
+        self.send("/start_segment_movement_from_peer", segment_id, duration)
