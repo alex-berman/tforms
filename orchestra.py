@@ -18,22 +18,22 @@ from predecode import Predecoder
 from config import DOWNLOAD_LOCATION
 
 class VisualizerConnector:
+    remote_matcher = re.compile('^remote:(.*)$')
+    shell_matcher = re.compile('^(shell:)?(.*)$')
+
     def __init__(self, spec, server):
         self.server = server
-        if self._is_shell(spec):
+        remote_match = self.remote_matcher.match(spec)
+        shell_match = self.shell_matcher.match(spec)
+        if remote_match:
+            self.host = remote_match.group(1)
+        elif shell_match:
             self.host = "localhost"
-            self._spawn_visualizer(spec[6:])
-        elif self._is_remote(spec):
-            self.host = spec[7:]
+            command_line = shell_match.group(2)
+            self._spawn_visualizer(command_line)
         else:
-            self.host = spec
+            raise Exception("failed to parse visualizer spec '%s'" % spec)
         self.informed_about_torrent = False
-
-    def _is_shell(self, spec):
-        return spec.startswith("shell:")
-
-    def _is_remote(self, spec):
-        return spec.startswith("remote:")
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)
