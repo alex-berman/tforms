@@ -559,7 +559,6 @@ class Orchestra:
 
     def visualize_chunk(self, chunk, player):
         if len(self.visualizers) > 0:
-            self._send_torrent_info_to_uninformed_visualizers()
             file_info = self.tr_log.files[chunk["filenum"]]
             self._chunks_by_id[chunk["id"]] = chunk
             self._tell_visualizers(
@@ -579,7 +578,6 @@ class Orchestra:
                     print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
                     self._warned_about_max_sources = True
 
-            self._send_torrent_info_to_uninformed_visualizers()
             file_info = self.tr_log.files[segment["filenum"]]
             self.segments_by_id[segment["id"]] = segment
             self._tell_visualizers(
@@ -752,6 +750,7 @@ class Orchestra:
                     self.synth.free_sound(filenum)
 
     def _tell_visualizers(self, *args):
+        self._send_torrent_info_to_uninformed_visualizers()
         self.server._tell_visualizers(*args)
 
 def warn(logger, message):
