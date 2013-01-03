@@ -20,6 +20,8 @@ class OscReceiver:
         self._socket.bind(("localhost", port))
         self._socket.listen(5)
         self.port = self._socket.getsockname()[1]
+        self._queue = []
+        self._lock = threading.Lock()
 
     def add_method(self, path, typespec, callback_func, user_data=None):
         self._handlers[path] = Handler(typespec, callback_func, user_data)
@@ -32,7 +34,6 @@ class OscReceiver:
     def _serve(self):
         client_socket, client_address = self._socket.accept()
         self._client_socket_file = client_socket.makefile("rb")
-        #self._serve_once()
         while True:
             self._serve_once()
 
@@ -60,7 +61,10 @@ class OscReceiver:
             arg = self._read_arg(type_tag)
             args.append(arg)
 
-        print address_pattern, args
+        src = None
+        with self._lock:
+            self._queue.append((address_pattern, args, type_tags, src,
+                                handler.callback_func, handler.user_data))
 
     def _read_arg(self, type_tag):
         if type_tag == 'i':
@@ -100,4 +104,15 @@ class OscReceiver:
         return result
 
     def serve(self):
-        pass
+        with self._lock:
+            for path, args, types, src, callback_func, user_data in self._queue:
+                self._fire_callback_with_exception_handler(
+                    path, args, types, src, callback_func, user_data)
+            self._queue = []
+
+    def _fire_callback_with_exception_handler(self, path, args, types, src, callback, user_data):
+        try:
+            callback(path, args, types, src, user_data)
+        except Exception as err:
+            traceback_printer.print_traceback()
+            raise err
