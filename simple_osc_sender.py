@@ -7,7 +7,7 @@ class OscSender:
         if log_filename:
             raise Exception("log_filename not supported")
         if host is None:
-            host = "localhost"
+            host = socket.gethostbyname(socket.gethostname())
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((host, port))
         self._lock = threading.Lock()

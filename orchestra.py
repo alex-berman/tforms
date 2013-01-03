@@ -16,6 +16,7 @@ from ssr.ssr_control import SsrControl
 from space import Space
 from predecode import Predecoder
 from config import DOWNLOAD_LOCATION
+import socket
 
 class VisualizerConnector:
     remote_matcher = re.compile('^remote:(.*)$')
@@ -28,7 +29,7 @@ class VisualizerConnector:
         if remote_match:
             self.host = remote_match.group(1)
         elif shell_match:
-            self.host = "localhost"
+            self.host = self.server.host
             command_line = shell_match.group(2)
             self._spawn_visualizer(command_line)
         else:
@@ -67,6 +68,7 @@ class Server(OscReceiver):
             self._wait_for_visualizers_to_register()
 
     def _setup_osc(self):
+        self.host = socket.gethostbyname(socket.gethostname())
         self._orchestra_queue = []
         OscReceiver.__init__(self, port=self.options.port)
         self.add_method("/register", "i", self._handle_register)
@@ -88,7 +90,8 @@ class Server(OscReceiver):
             time.sleep(0.01)
 
     def _wait_for_visualizers_to_register(self):
-        print "waiting for %s visualizer(s) to register on port %s" % (len(self.visualizers), self.port)
+        print "waiting for %s visualizer(s) to register at %s:%s" % (
+            len(self.visualizers), self.host, self.port)
         while self._num_registered_visualizers < len(self.visualizers):
             time.sleep(0.1)
 
