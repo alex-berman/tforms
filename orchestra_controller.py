@@ -1,6 +1,5 @@
 import osc
 import simple_osc_sender
-import orchestra
 
 class OrchestraController(simple_osc_sender.OscSender):
     def __init__(self, host, port):

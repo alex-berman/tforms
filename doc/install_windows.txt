@@ -5,3 +5,7 @@ http://sourceforge.net/projects/numpy/files/latest/download?source=files
 
 pyopengl
 http://pypi.python.org/pypi/PyOpenGL/3.0.2
+
+pyopengl might also need glut32.dll:
+- download glut-3.7.6-bin.zip from http://user.xmission.com/~nate/glut.html
+- place glut32.dll in c:\windows\system (64-bit) or c:\windows\system32 (32-bit)

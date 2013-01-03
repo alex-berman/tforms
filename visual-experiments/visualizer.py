@@ -13,10 +13,8 @@ if dirname:
     sys.path.append(dirname + "/..")
 else:
     sys.path.append("..")
-from synth_controller import SynthController
 from orchestra_controller import OrchestraController
 import osc
-import osc_receiver
 import simple_osc_receiver
 from stopwatch import Stopwatch
 import traceback_printer
@@ -191,10 +189,10 @@ class Visualizer:
         self.logger = logging.getLogger("visualizer")
         self.reset()
         self.first_frame = True
-        self.synth = SynthController()
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
+        self._synth_instance = None
         self._layers = []
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
@@ -375,6 +373,7 @@ class Visualizer:
         self.waveform_server = None
 
     def setup_waveform_server(self):
+        import osc_receiver
         self.waveform_server = osc_receiver.OscReceiver(proto=osc.UDP)
         self.waveform_server.add_method("/amp", "if", self.handle_amp_message)
         self.waveform_server.add_method("/waveform", "if", self.handle_waveform_message)
@@ -432,7 +431,7 @@ class Visualizer:
         if self.first_frame:
             self.stopwatch.start()
             if self.sync:
-                self.synth.sync_beep()
+                self._synth().sync_beep()
             self.first_frame = False
         else:
             self.time_increment = self.now - self.previous_frame_time
@@ -500,7 +499,7 @@ class Visualizer:
 
     def keyPressed(self, key, x, y):
         if key == ESCAPE:
-            self.synth.stop_all()
+            self._synth().stop_all()
             self.exiting = True
         elif key == 's':
             self._dump_screen()
@@ -641,12 +640,12 @@ class Visualizer:
     def subscribe_to_amp(self):
         if not self.waveform_server:
             self.setup_waveform_server()
-        self.synth.subscribe_to_amp(self.waveform_server.port)
+        self._synth().subscribe_to_amp(self.waveform_server.port)
 
     def subscribe_to_waveform(self):
         if not self.waveform_server:
             self.setup_waveform_server()
-        self.synth.subscribe_to_waveform(self.waveform_server.port)
+        self._synth().subscribe_to_waveform(self.waveform_server.port)
 
     def _move_camera_by_script(self):
         position, orientation = self._camera_script.position_and_orientation(
@@ -661,6 +660,12 @@ class Visualizer:
 
     def new_display_list_id(self):
         return glGenLists(1)
+    
+    def _synth(self):
+        if self._synth_instance is None:
+            from synth_controller import SynthController
+            self._synth_instance = SynthController()
+        return self._synth_instance
 
     @staticmethod
     def add_parser_arguments(parser):
