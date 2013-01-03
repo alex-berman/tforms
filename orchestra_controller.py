@@ -1,10 +1,10 @@
 import osc
-import osc_sender
+import simple_osc_sender
 import orchestra
 
-class OrchestraController(osc_sender.OscSender):
+class OrchestraController(simple_osc_sender.OscSender):
     def __init__(self, host, port):
-        osc_sender.OscSender.__init__(self, port, host)
+        simple_osc_sender.OscSender.__init__(self, port, host)
 
     def register(self, port):
         self.send("/register", port)
