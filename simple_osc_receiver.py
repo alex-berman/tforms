@@ -20,7 +20,6 @@ class OscReceiver:
         self._socket.bind(("localhost", port))
         self._socket.listen(5)
         self.port = self._socket.getsockname()[1]
-        self._TEMP = open("osc_debug.log", "wb")
 
     def add_method(self, path, typespec, callback_func, user_data=None):
         self._handlers[path] = Handler(typespec, callback_func, user_data)
@@ -62,9 +61,6 @@ class OscReceiver:
             args.append(arg)
 
         print address_pattern, args
-
-        #buf = self._client_socket_file.read(1024)
-        #self._TEMP.write(buf)
 
     def _read_arg(self, type_tag):
         if type_tag == 'i':
