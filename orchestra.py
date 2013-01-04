@@ -16,6 +16,7 @@ from ssr.ssr_control import SsrControl
 from space import Space
 from predecode import Predecoder
 from config import DOWNLOAD_LOCATION
+import math
 
 class VisualizerConnector:
     remote_matcher = re.compile('^remote:(.*)$')
@@ -147,6 +148,8 @@ class Player:
         file_num_bytes = file_info["length"]
         return duration_secs * byte_count / file_num_bytes
 
+    def pan(self):
+        return math.cos(self.spatial_position.bearing)
 
 
 
@@ -322,7 +325,9 @@ class Orchestra:
                 channel = segment["sound_source_id"] - 1
                 self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
         else:
-            self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
+            #self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
+            player = self.get_player_for_segment(segment)
+            self._ask_synth_to_play_segment(segment, channel=0, pan=player.pan())
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
         if self.synth:
@@ -661,6 +666,7 @@ class Orchestra:
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
+        print "play pan: %s" % player.pan()
         if self.options.locate_peers and self._peer_location[addr] is not None:
             x, y = self._peer_location[addr]
             location_str = "%s,%s" % (x, y)
@@ -716,8 +722,8 @@ class Orchestra:
                 self.ssr.place_source(sound_source_id, x, y, duration)
         else:
             pan = self._spatial_position_to_stereo_pan(x, y)
-            if self.synth:
-                self.synth.pan(segment_id, pan)
+            # if self.synth:
+            #     self.synth.pan(segment_id, pan)
 
     def _handle_enable_smooth_movement(self, path, args, types, src, data):
         if self.ssr:
