@@ -1,6 +1,9 @@
-from PIL import Image
-from OpenGL.GL import *
-
+try:
+    from PIL import Image
+    from OpenGL.GL import *
+except ImportError:
+    pass
+    
 class Exporter:
     def __init__(self, target_directory, x, y, width, height):
         self.target_directory = target_directory
