@@ -152,7 +152,6 @@ class Player:
 
 
 
-
 class WavPlayer(Player):
     def interpret_sonically(self, segment):
         file_info = self.orchestra.tr_log.files[segment["filenum"]]
@@ -325,7 +324,8 @@ class Orchestra:
                 channel = segment["sound_source_id"] - 1
                 self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
         else:
-            self._ask_synth_to_play_segment(segment, channel=0, pan=0.5)
+            player = self.get_player_for_segment(segment)
+            self._ask_synth_to_play_segment(segment, channel=0, pan=player.spatial_position.pan)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
         if self.synth:

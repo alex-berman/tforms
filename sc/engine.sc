@@ -1,14 +1,3 @@
-"SC_JACK_DEFAULT_OUTPUTS".setenv("");
-"SC_JACK_DEFAULT_INPUTS".setenv("");
-
-Server.local.options.memSize = 1100000;
-Server.local.options.numOutputBusChannels = 16;
-s.boot;
-
-"langPort=".post; NetAddr.langPort.postln;
-
-s.doWhenBooted({
-
 ~sounds = Dictionary[];
 ~filenames = Dictionary[];
 ~synths = Dictionary[];
@@ -65,40 +54,6 @@ OSCresponder.new(nil, "/waveform_subscribe",
 	  var port = msg[1];
 	  ~waveform_subscriber = NetAddr.new("127.0.0.1", port);
   }).add;
-
-SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
-	var out, pointer, filelength, pitch, env, dir, amp;
-	pointer = Line.kr(begin, end, duration);
-	pitch = 1.0;
-	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
-	 	[0.005*duration, 0.99*duration, 0.005*duration], 'exp'), doneAction: 2);
-	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
-	Out.ar(channel, out);
-
-	amp = LPF.kr(Amplitude.kr(out), 5);
-	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
-
-	SendReply.ar(Impulse.ar(500), "/waveform_private", out, segment_id);
-}).send(s);
-
-SynthDef(\loop, {arg buffer = 0, segment_id, begin, end, period, duration, channel, pan;
-	var out, pointer, filelength, pitch, env, dir, amp;
-	var period_line = Line.kr(period, period*5, duration);
-	//pan = SinOsc.ar(freq: 2 + 0.5.rand, phase: 3.rand) * Line.kr(0.45, 0, duration); // panning designed for waves visuals
-	pointer = begin + ((end - begin) * LFSaw.ar(freq:1.0/period_line, iphase:1));
-	pitch = 1.0;
-	env = EnvGen.kr(Env([0.001, 1, 0.001],
-		[0.005*duration, 0.995*duration], 'exp'), doneAction: 2);
-	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	if(pan != nil, { out = Pan2.ar(out, pan); }, {});
-	Out.ar(channel, out);
-
-	amp = LPF.kr(Amplitude.kr(out), 5);
-	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
-
-	SendReply.ar(Impulse.ar(500), "/waveform_private", out, segment_id);
-}).send(s);
 
 OSCresponderNode(nil,"/amp_private",{|t,r,msg|
 	var segment_id = msg[2];
@@ -200,5 +155,3 @@ OSCresponder.new(nil, "/stop_all",
 	{ arg t, r, msg;
 		s.freeAll;
 	}).add;
-
-});

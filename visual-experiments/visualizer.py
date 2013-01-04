@@ -334,7 +334,7 @@ class Visualizer:
 
     def pan_segment(self, segment):
         if not self._warned_about_missing_pan_segment:
-            print "WARNING: pan_segment undefined. All sounds will be centered."
+            print "WARNING: pan_segment undefined in visualizer. Orchestra and synth now control panning."
             self._warned_about_missing_pan_segment = True
 
     def handle_shutdown(self, path, args, types, src, data):
