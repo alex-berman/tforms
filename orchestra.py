@@ -623,7 +623,9 @@ class Orchestra:
             "/torrent",
             self._num_selected_files,
             self.tr_log.lastchunktime(),
-            self.tr_log.total_file_size())
+            self.tr_log.total_file_size(),
+            len(self.chunks),
+            len(self.score))
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:

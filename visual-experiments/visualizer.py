@@ -266,7 +266,7 @@ class Visualizer:
         glutMainLoop()
 
     def handle_torrent_message(self, path, args, types, src, data):
-        self.num_files, self.download_duration, self.total_size = args
+        self.num_files, self.download_duration, self.total_size, num_chunks, num_segments = args
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
@@ -362,7 +362,7 @@ class Visualizer:
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = simple_osc_receiver.OscReceiver(log_filename=log_filename)
-        self.server.add_method("/torrent", "ifi", self.handle_torrent_message)
+        self.server.add_method("/torrent", "ifiii", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
