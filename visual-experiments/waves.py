@@ -62,6 +62,10 @@ class Waves(visualizer.Visualizer):
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
 
+    def pan_segment(self, segment):
+        # let orchestra & synth spatialize
+        pass
+
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
