@@ -3,7 +3,8 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir, amp, pan_env;
 	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
-	env = EnvGen.kr(Env([0.001, 1, 0.001], [0.005*duration, 0.995*duration], 'exp'), doneAction: 2);
+	env = EnvGen.kr(Env([0.001, 1, 1, 0.001],
+		[0.005*duration, 0.99*duration, 0.005*duration], 'exp'), doneAction: 2);
 	out = env * Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 	if(pan != nil, {
 		pan_env = EnvGen.kr(Env([pan, 0], [duration], 'linear'), doneAction: 2);
