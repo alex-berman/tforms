@@ -10,7 +10,7 @@ import cPickle
 sys.path.append("geo")
 import world
 from gps import GPS
-import os
+import locations
 
 import visualizer
 from OpenGL.GL import *
@@ -67,10 +67,7 @@ class Geography(visualizer.Visualizer):
         self._add_peers_from_log()
 
     def _add_peers_from_log(self):
-        f = open("%s/../geo/scanner/locations.dat" % os.path.dirname(__file__), "r")
-        locations = cPickle.load(f)
-        f.close()
-        for location in locations:
+        for location in locations.get_locations():
             self._add_location(location)
 
     def _add_location(self, location):

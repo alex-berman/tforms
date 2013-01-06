@@ -10,6 +10,7 @@ import math
 import ip_locator
 import random
 from gps import GPS
+import locations
 import os
 
 sys.path.append("visual-experiments")
@@ -48,34 +49,19 @@ class Geography(visualizer.Visualizer):
     def _load_locations(self):
         self._locations = []
         self._grid = numpy.zeros((LOCATION_PRECISION, LOCATION_PRECISION), int)
-        #self._add_random_locations()
         self._add_peers_from_log()
         self._location_max_value = numpy.max(self._grid)
 
     def _add_peers_from_log(self):
-        f = open("%s/scanner/peers.log" % os.path.dirname(__file__), "r")
-        r = re.compile('^peer \[([0-9.]+)\]')
-        for line in f:
-            m = r.search(line)
-            if m:
-                addr = m.group(1)
-                self._add_ip(addr)
-        f.close()
+        for location in locations.get_locations():
+            self._add_location(location)
 
-    def _add_random_locations(self):
-        n = 0
-        while n < 10000:
-            addr = ".".join([str(random.randint(0,255)) for i in range(4)])
-            if self._add_ip(addr):
-                n += 1
-
-    def _add_ip(self, addr):
-        location = self._ip_locator.locate(addr)
-        if location:
+    def _add_location(self, location):
+        if location and location not in self._locations:
+            self._locations.append(location)
             x, y = location
             nx = int(LOCATION_PRECISION * x)
             ny = int(LOCATION_PRECISION * y)
-            self._locations.append((x, y))
             self._grid[ny, nx] += 1
             return True
 
