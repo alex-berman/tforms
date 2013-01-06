@@ -265,12 +265,14 @@ class Visualizer:
             raise Exception("don't know how to handle your OS (%s)" % platform.system())
 
     def _read_port_with_unix_smbclient(self):
-        subprocess.call('smbclient -N \\\\\\\\%s\\\\TorrentialForms -c "get server_port.txt server_remote_port.txt"' % self.args.host,
-                        shell=True)
+        subprocess.call(
+            'smbclient -N \\\\\\\\%s\\\\TorrentialForms -c "get server_port.txt server_remote_port.txt"' % self.args.host,
+            shell=True)
         return self._read_port_from_file("server_remote_port.txt")
 
     def _read_port_via_windows_samba_access(self):
-        return self._read_port_from_file("\\\\\\\\%s\\\\TorrentialForms\server_port.txt")
+        return self._read_port_from_file(
+            '\\\\%s\\TorrentialForms\\server_port.txt' % self.args.host)
 
     def reset(self):
         self.files = {}
