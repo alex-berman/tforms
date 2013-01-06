@@ -10,6 +10,7 @@ import os
 import collections
 import logging
 import math
+import subprocess
 from exporter import Exporter
 
 dirname = os.path.dirname(__file__)
@@ -216,10 +217,12 @@ class Visualizer:
             self.previous_shown_fps_time = None
 
         if not args.standalone:
-            if not args.port:
-                raise Exception("please specify port number")
+            if args.port:
+                port = args.port
+            else:
+                port = self._get_orchestra_port()
             self.orchestra_host = args.host
-            self.orchestra_port = args.port
+            self.orchestra_port = port
             self.setup_osc(self.osc_log)
             self.orchestra.register(self.server.port)
 
@@ -235,6 +238,31 @@ class Visualizer:
                 shutil.rmtree(export_dir)
             os.mkdir(export_dir)
             self.exporter = Exporter(export_dir, self.margin, self.margin, self.width, self.height)
+
+    def _get_orchestra_port(self):
+        if self.args.host == "localhost":
+            return self._read_port_from_disk()
+        else:
+            return self._read_port_from_network_share()
+
+    def _read_port_from_disk(self):
+        self._read_port_from_local_file("server_port.txt")
+
+    def _read_port_from_local_file(self, filename):
+        f = open(filename, "r")
+        line = f.read()
+        port = int(line)
+        f.close()
+        return port
+
+    def _read_port_from_network_share(self):
+        return self._read_port_with_unix_smbclient()
+
+    def _read_port_with_unix_smbclient(self):
+        subprocess.call('smbclient -N \\\\\\\\%s\\\\TorrentialForms -c "get server_port.txt server_remote_port.txt"' % self.args.host,
+                        shell=True)
+        return self._read_port_from_local_file("server_remote_port.txt")
+
 
     def reset(self):
         self.files = {}

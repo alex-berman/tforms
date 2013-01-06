@@ -62,6 +62,7 @@ class Server(OscReceiver):
         self._orchestra = None
         if len(options.visualizer) > 0:
             self._setup_osc()
+            self._save_port_to_disk()
             for visualizer_spec in options.visualizer:
                 visualizer = VisualizerConnector(visualizer_spec, self)
                 self.visualizers.append(visualizer)
@@ -83,6 +84,11 @@ class Server(OscReceiver):
         server_thread = threading.Thread(target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
+
+    def _save_port_to_disk(self):
+        f = open("server_port.txt", "w")
+        print >>f, self.port
+        f.close()
 
     def _serve_osc(self):
         while True:
