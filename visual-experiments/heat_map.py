@@ -102,7 +102,6 @@ class HeatMap(visualizer.Visualizer):
             glEnd()
 
     def _render_activity(self):
-        glColor4f(1,1,1,1)
         for segment in self.playing_segments.values():
             location = self.peers_by_addr[segment.peer.addr].location
             x, y = location
@@ -111,6 +110,7 @@ class HeatMap(visualizer.Visualizer):
             n = clamp(int(segment.relative_size() * MARKER_PRECISION), 0, MARKER_PRECISION-1)
             glPushMatrix()
             glTranslatef(x * self.width, y * self.height, 0)
+            #self._render_marker_circle(n)
             glCallList(self._marker_lists[n])
             glPopMatrix()
 
@@ -121,15 +121,39 @@ class HeatMap(visualizer.Visualizer):
             # glEnd()
 
     def _render_marker_circle(self, n):
-        glLineWidth(2.0 / 1024 * self.width)
         # t = float(n) / MARKER_PRECISION * 2*math.pi
         # radius = (1.0 + 0.15 * math.sin(t)) * 8 / 640
-        radius = float(n) / MARKER_PRECISION * 8 / 640
+
+        stroke_radius = float(n) / MARKER_PRECISION * 8 / 640
+        shadow_inner_radius = float(n) / MARKER_PRECISION * 4 / 640
+        shadow_outer_radius = float(n) / MARKER_PRECISION * 12 / 640
+
+        glColor4f(0,0,0,0.2)
+        glBegin(GL_QUADS)
+        for i in range(20):
+            a1 = float(i) / 20 * 2*math.pi
+            a2 = float(i+1) / 20 * 2*math.pi
+            x1 = shadow_outer_radius * math.cos(a1) * self.min_dimension
+            y1 = shadow_outer_radius * math.sin(a1) * self.min_dimension
+            x2 = shadow_inner_radius * math.cos(a1) * self.min_dimension
+            y2 = shadow_inner_radius * math.sin(a1) * self.min_dimension
+            x3 = shadow_inner_radius * math.cos(a2) * self.min_dimension
+            y3 = shadow_inner_radius * math.sin(a2) * self.min_dimension
+            x4 = shadow_outer_radius * math.cos(a2) * self.min_dimension
+            y4 = shadow_outer_radius * math.sin(a2) * self.min_dimension
+            glVertex2f(x1, y1)
+            glVertex2f(x2, y2)
+            glVertex2f(x3, y3)
+            glVertex2f(x4, y4)
+        glEnd()
+
+        glColor4f(1,1,1,1)
+        glLineWidth(2.0 / 1024 * self.width)
         glBegin(GL_LINE_LOOP)
         for i in range(20):
             a = float(i) / 20 * 2*math.pi
-            cx = radius * math.cos(a) * self.min_dimension
-            cy = radius * math.sin(a) * self.min_dimension
+            cx = stroke_radius * math.cos(a) * self.min_dimension
+            cy = stroke_radius * math.sin(a) * self.min_dimension
             glVertex2f(cx, cy)
         glEnd()
 
