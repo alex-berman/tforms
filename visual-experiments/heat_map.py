@@ -27,7 +27,6 @@ class File(visualizer.File):
     def add_segment(self, segment):
         location = self.visualizer.peers_by_addr[segment.peer.addr].location
         if location:
-            self.visualizer.playing_segment(segment)
             self.visualizer.added_segment(segment)
 
 class Peer(visualizer.Peer):
