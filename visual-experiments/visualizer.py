@@ -1,14 +1,12 @@
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument("-check-opengl-errors", action="store_true")
-args, unknown = parser.parse_known_args()
+import sys
 import OpenGL
-OpenGL.ERROR_LOGGING = args.check_opengl_errors
+OpenGL.ERROR_LOGGING = "-check-opengl-errors" in sys.argv
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
-import sys, os
+import argparse
+import os
 import collections
 import logging
 import math
