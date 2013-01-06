@@ -41,6 +41,7 @@ class HeatMap(visualizer.Visualizer):
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
+        self._history_layer = self.new_layer(self._render_history)
 
     def ReSizeGLScene(self, *args):
         visualizer.Visualizer.ReSizeGLScene(self, *args)
@@ -75,7 +76,8 @@ class HeatMap(visualizer.Visualizer):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        self._render_history()
+        self._update()
+        self._history_layer.draw()
         self._render_activity()
 
     def _render_history(self):
@@ -105,6 +107,7 @@ class HeatMap(visualizer.Visualizer):
             # glEnd()
 
     def _render_marker_circle(self, n):
+        glLineWidth(2.0 / 1024 * self.width)
         t = float(n) / MARKER_PRECISION * 2*math.pi
         radius = (1.0 + 0.15 * math.sin(t)) * 8 / 640
         glBegin(GL_LINE_LOOP)
