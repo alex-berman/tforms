@@ -1,8 +1,14 @@
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-check-opengl-errors", action="store_true")
+args, unknown = parser.parse_known_args()
+import OpenGL
+OpenGL.ERROR_LOGGING = args.check_opengl_errors
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+
 import sys, os
-import argparse
 import collections
 import logging
 import math
@@ -188,7 +194,7 @@ class Visualizer:
 
         self.logger = logging.getLogger("visualizer")
         self.reset()
-        self.first_frame = True
+        self._frame_count = 0
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
@@ -408,6 +414,8 @@ class Visualizer:
 
     def DrawGLScene(self):
         if self.exiting:
+            self.logger.debug("total number of rendered frames: %s" % self._frame_count)
+            self.logger.debug("total FPS: %s" % (float(self._frame_count) / self.stopwatch.get_elapsed_time()))
             if self.args.profile:
                 import yappi
                 yappi.print_stats(sys.stdout, yappi.SORTTYPE_TTOT)
@@ -432,11 +440,10 @@ class Visualizer:
             self.current_export_time = float(self.exporter.frame_count) / self.export_fps
 
         self.now = self.current_time()
-        if self.first_frame:
+        if self._frame_count == 0:
             self.stopwatch.start()
             if self.sync:
                 self._synth().sync_beep()
-            self.first_frame = False
         else:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(self.margin, self.margin, 0)
@@ -454,13 +461,14 @@ class Visualizer:
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
+        if (self.export or self.args.exit_when_finished) and self.finished():
+            self.exiting = True
         if self.export:
-            if self.export_finished():
-                self.exiting = True
-            else:
-                self.exporter.export_frame()
+            self.exporter.export_frame()
 
-    def export_finished(self):
+        self._frame_count += 1
+
+    def finished(self):
         return False
 
     def handle_incoming_messages(self):
@@ -690,6 +698,8 @@ class Visualizer:
         parser.add_argument("-fullscreen", action="store_true")
         parser.add_argument("-standalone", action="store_true")
         parser.add_argument("-profile", action="store_true")
+        parser.add_argument("-check-opengl-errors", action="store_true")
+        parser.add_argument("-exit-when-finished", action="store_true")
 
 def run(visualizer_class):
     print "Hit ESC key to quit."

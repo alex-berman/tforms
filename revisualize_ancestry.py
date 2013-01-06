@@ -126,7 +126,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         piece = self._remaining_pieces.pop(0)
         self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
 
-    def export_finished(self):
+    def finished(self):
         return self.current_time() > (self._duration / self.args.timefactor + SUSTAIN_TIME)
 
     def _adjusted_current_time(self):

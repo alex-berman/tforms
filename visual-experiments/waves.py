@@ -158,4 +158,11 @@ class Waves(visualizer.Visualizer):
     def handle_segment_waveform_value(self, segment, value):
         segment.waveform.appendleft(value)
 
+    def finished(self):
+        if len(self.gatherer.pieces()) == 1:
+            piece = self.gatherer.pieces()[0]
+            return piece.begin == 0 and piece.end == self.torrent_length
+        else:
+            return False
+
 visualizer.run(Waves)
