@@ -145,6 +145,9 @@ class Vector:
     def __repr__(self):
         return 'Vector(%s, %s)' % (self.n, self.v)
 
+    def __hash__(self):
+        return hash(tuple(self.v))
+
 class Vector2d(Vector):
     def __init__(self, x, y):
         Vector.__init__(self, 2, [x,y])
