@@ -11,3 +11,4 @@ export
 press
 visual-experiments/capture.*
 sc/_compiled.sc
+geo/scanner/locations.dat
