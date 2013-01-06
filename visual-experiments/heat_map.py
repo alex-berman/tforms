@@ -15,6 +15,9 @@ import locations
 
 MARKER_PRECISION = 20
 
+def clamp(value, min_value, max_value):
+    return max(min(max_value, value), min_value)
+
 class Location(Vector2d):
     def __init__(self, x_y_tuple):
         x, y = x_y_tuple
@@ -31,11 +34,18 @@ class Peer(visualizer.Peer):
     def __init__(self, *args):
         visualizer.Peer.__init__(self, *args)
         self.arrival_time = self.visualizer.current_time()
+        self.visualizer.added_peer(self)
+
+class Segment(visualizer.Segment):
+    def relative_size(self):
+        return math.sin(self.relative_age() * 2*math.pi)
 
 class HeatMap(visualizer.Visualizer):
     def __init__(self, args):
+        self._history_layer = None
         self._load_locations()
-        visualizer.Visualizer.__init__(self, args, file_class=File, peer_class=Peer)
+        visualizer.Visualizer.__init__(
+            self, args, file_class=File, peer_class=Peer, segment_class=Segment)
         self.playing_segments = collections.OrderedDict()
 
     def InitGL(self):
@@ -63,10 +73,14 @@ class HeatMap(visualizer.Visualizer):
         if not location:
             return
         self._locations[Location(location)] += 1
+        if self._history_layer:
+            self._history_layer.refresh()
 
     def added_segment(self, segment):
-        self._add_location(self.peers_by_addr[segment.peer.addr].location)
         self.playing_segments[segment.id] = segment
+
+    def added_peer(self, peer):
+        self._add_location(peer.location)
 
     def render(self):
         glEnable(GL_POINT_SMOOTH)
@@ -94,7 +108,8 @@ class HeatMap(visualizer.Visualizer):
             location = self.peers_by_addr[segment.peer.addr].location
             x, y = location
 
-            n = int(MARKER_PRECISION * (((self.now - segment.peer.arrival_time) * 0.8))) % MARKER_PRECISION
+            #n = int(MARKER_PRECISION * (((self.now - segment.peer.arrival_time) * 0.8))) % MARKER_PRECISION
+            n = clamp(int(segment.relative_size() * MARKER_PRECISION), 0, MARKER_PRECISION-1)
             glPushMatrix()
             glTranslatef(x * self.width, y * self.height, 0)
             glCallList(self._marker_lists[n])
@@ -108,8 +123,9 @@ class HeatMap(visualizer.Visualizer):
 
     def _render_marker_circle(self, n):
         glLineWidth(2.0 / 1024 * self.width)
-        t = float(n) / MARKER_PRECISION * 2*math.pi
-        radius = (1.0 + 0.15 * math.sin(t)) * 8 / 640
+        # t = float(n) / MARKER_PRECISION * 2*math.pi
+        # radius = (1.0 + 0.15 * math.sin(t)) * 8 / 640
+        radius = float(n) / MARKER_PRECISION * 8 / 640
         glBegin(GL_LINE_LOOP)
         for i in range(20):
             a = float(i) / 20 * 2*math.pi
