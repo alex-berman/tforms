@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-from argparse import ArgumentParser
 import numpy
 import math
 import collections
