@@ -408,7 +408,11 @@ class Visualizer:
 
     def DrawGLScene(self):
         if self.exiting:
-            sys.exit()
+            if self.args.profile:
+                import yappi
+                yappi.print_stats(sys.stdout, yappi.SORTTYPE_TTOT)
+            glutDestroyWindow(glutGetWindow())
+            return
 
         try:
             self._draw_gl_scene_error_handled()
@@ -685,6 +689,7 @@ class Visualizer:
         parser.add_argument("-border", action="store_true")
         parser.add_argument("-fullscreen", action="store_true")
         parser.add_argument("-standalone", action="store_true")
+        parser.add_argument("-profile", action="store_true")
 
 def run(visualizer_class):
     print "Hit ESC key to quit."
@@ -692,5 +697,9 @@ def run(visualizer_class):
     parser = argparse.ArgumentParser()
     visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
+
+    if args.profile:
+        import yappi
+        yappi.start()
 
     visualizer_class(args).run()
