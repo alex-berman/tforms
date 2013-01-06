@@ -399,6 +399,7 @@ class Visualizer:
         self.width = window_width - 2*self.margin
         self.height = window_height - 2*self.margin
         self._aspect_ratio = float(window_width) / window_height
+        self.min_dimension = min(self.width, self.height)
         self._refresh_layers()
         if not self._3d_enabled:
             glMatrixMode(GL_PROJECTION)

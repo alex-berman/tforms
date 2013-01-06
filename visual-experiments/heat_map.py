@@ -13,6 +13,8 @@ from OpenGL.GL import *
 sys.path.append("geo")
 import locations
 
+MARKER_PRECISION = 20
+
 class Location(Vector2d):
     def __init__(self, x_y_tuple):
         x, y = x_y_tuple
@@ -40,6 +42,16 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
+    def ReSizeGLScene(self, *args):
+        visualizer.Visualizer.ReSizeGLScene(self, *args)
+        self._marker_lists = []
+        for n in range(0, MARKER_PRECISION):
+            display_list = self.new_display_list_id()
+            self._marker_lists.append(display_list)
+            glNewList(display_list, GL_COMPILE)
+            self._render_marker_circle(n)
+            glEndList()
+
     def _load_locations(self):
         self._locations = collections.defaultdict(int)
         for location in locations.get_locations():
@@ -58,6 +70,8 @@ class HeatMap(visualizer.Visualizer):
     def render(self):
         glEnable(GL_POINT_SMOOTH)
         glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -67,7 +81,7 @@ class HeatMap(visualizer.Visualizer):
     def _render_history(self):
         glColor4f(1,1,1,1)
         for location, frequency in self._locations.iteritems():
-            glPointSize(pow(float(frequency) / self._max_frequency, 0.3) * 8 / 640 * self.width)
+            glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 6 / 640 * self.width)
             glBegin(GL_POINTS)
             glVertex2f(location.x * self.width, location.y * self.height)
             glEnd()
@@ -77,15 +91,29 @@ class HeatMap(visualizer.Visualizer):
         for segment in self.playing_segments.values():
             location = self.peers_by_addr[segment.peer.addr].location
             x, y = location
-            # frequency = self._locations[Location(location)]
-            # amplitude = pow(float(frequency) / self._max_frequency, 0.3)
-            # amplitude *= (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0))
-            # size = amplitude * 8 / 640
-            size = (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0)) * 8 / 640
-            glPointSize(size * self.width)
-            glBegin(GL_POINTS)
-            glVertex2f(x * self.width, y * self.height)
-            glEnd()
+
+            n = int(MARKER_PRECISION * (((self.now - segment.peer.arrival_time) * 0.8))) % MARKER_PRECISION
+            glPushMatrix()
+            glTranslatef(x * self.width, y * self.height, 0)
+            glCallList(self._marker_lists[n])
+            glPopMatrix()
+
+            # size = (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0)) * 8 / 640
+            # glPointSize(size * self.width)
+            # glBegin(GL_POINTS)
+            # glVertex2f(x * self.width, y * self.height)
+            # glEnd()
+
+    def _render_marker_circle(self, n):
+        t = float(n) / MARKER_PRECISION * 2*math.pi
+        radius = (1.0 + 0.15 * math.sin(t)) * 8 / 640
+        glBegin(GL_LINE_LOOP)
+        for i in range(20):
+            a = float(i) / 20 * 2*math.pi
+            cx = radius * math.cos(a) * self.min_dimension
+            cy = radius * math.sin(a) * self.min_dimension
+            glVertex2f(cx, cy)
+        glEnd()
 
     def _update(self):
         outdated = []
