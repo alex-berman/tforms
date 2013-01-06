@@ -2,6 +2,7 @@ import osc
 import socket
 import threading
 import struct
+import traceback_printer
 
 class Handler:
     def __init__(self, typespec, callback_func, user_data):
