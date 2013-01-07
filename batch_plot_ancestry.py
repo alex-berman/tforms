@@ -5,7 +5,7 @@ from ancestry_plotter import *
 import subprocess
 
 for session in session_library.get_sessions():
-    if session["name"].startswith("A"):
+    if not session["name"].startswith("b"):
         geometry = CIRCLE
 
         output_path = "graphs/ancestry_circle_spline/ancestry_%s_%s.svg" % (session["name"], geometry)

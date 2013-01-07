@@ -21,7 +21,7 @@ from vector import Vector2d
 from smoother import Smoother
 
 CURVE_PRECISION = 50
-MARGIN = 20
+MARGIN = 0.03
 FORWARD = "forward"
 BACKWARD = "backward"
 NODE_SIZE_PRECISION = 20
@@ -84,11 +84,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
-        self._size = min(width, height) - 2*MARGIN
+        self._margin = MARGIN * self.min_dimension
+        self._size = self.min_dimension - 2*self._margin
         AncestryPlotter.set_size(self, self._size, self._size)
 
     def render(self):
-        glTranslatef(MARGIN + (self.width - self._size)/2, MARGIN, 0)
+        glTranslatef(self._margin + (self.width - self._size)/2, self._margin, 0)
         glLineWidth(self.args.line_width)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
