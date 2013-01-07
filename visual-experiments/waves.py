@@ -50,6 +50,10 @@ class File(visualizer.File):
     def add_segment(self, segment):
         self.visualizer.playing_segment(segment)
         self.visualizer.playing_segments[segment.id] = segment
+        if segment.peer.pan < 0:
+            segment.append_to_waveform = segment.waveform.appendleft
+        else:
+            segment.append_to_waveform = segment.waveform.append
 
 class Waves(visualizer.Visualizer):
     def __init__(self, args):
@@ -173,7 +177,7 @@ class Waves(visualizer.Visualizer):
         return float(byte) / self.torrent_length
 
     def handle_segment_waveform_value(self, segment, value):
-        segment.waveform.appendleft(value)
+        segment.append_to_waveform(value)
 
     def finished(self):
         if self.torrent_download_completion_time:

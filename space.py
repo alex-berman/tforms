@@ -36,4 +36,5 @@ class Peer:
     def __init__(self, space):
         self.space = space
         self.bearing = random.uniform(0.0, 2*math.pi)
-        self.pan = math.cos(self.bearing)
+        #self.pan = math.cos(self.bearing)
+        self.pan = random.choice([-1.0, 1.0])

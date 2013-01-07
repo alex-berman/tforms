@@ -678,7 +678,7 @@ class Orchestra:
         else:
             location_str = ""
         self._tell_visualizers(
-            "/peer", player.id, addr, player.spatial_position.bearing, location_str)
+            "/peer", player.id, addr, player.spatial_position.bearing, player.spatial_position.pan, location_str)
         return player
 
     def set_time_cursor(self, log_time):
