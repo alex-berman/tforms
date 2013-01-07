@@ -95,9 +95,9 @@ class HeatMap(visualizer.Visualizer):
         self._render_activity()
 
     def _render_history(self):
-        glColor4f(0.7,0.7,0.7,1)
+        glColor4f(0.8,0.8,0.8,1)
         for location, frequency in self._locations.iteritems():
-            glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 6 / 640 * self.width)
+            glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width)
             glBegin(GL_POINTS)
             glVertex2f(location.x * self.width, location.y * self.height)
             glEnd()
