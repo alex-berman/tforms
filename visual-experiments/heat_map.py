@@ -25,6 +25,7 @@ class Location(Vector2d):
 
 class File(visualizer.File):
     def add_segment(self, segment):
+        self.visualizer.playing_segment(segment) # TEMP
         location = self.visualizer.peers_by_addr[segment.peer.addr].location
         if location:
             self.visualizer.added_segment(segment)
@@ -94,7 +95,7 @@ class HeatMap(visualizer.Visualizer):
         self._render_activity()
 
     def _render_history(self):
-        glColor4f(1,1,1,1)
+        glColor4f(0.7,0.7,0.7,1)
         for location, frequency in self._locations.iteritems():
             glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 6 / 640 * self.width)
             glBegin(GL_POINTS)
@@ -102,23 +103,25 @@ class HeatMap(visualizer.Visualizer):
             glEnd()
 
     def _render_activity(self):
+        glColor4f(1,1,1,1)
         for segment in self.playing_segments.values():
             location = self.peers_by_addr[segment.peer.addr].location
             x, y = location
 
-            #n = int(MARKER_PRECISION * (((self.now - segment.peer.arrival_time) * 0.8))) % MARKER_PRECISION
-            n = clamp(int(segment.relative_size() * MARKER_PRECISION), 0, MARKER_PRECISION-1)
-            glPushMatrix()
-            glTranslatef(x * self.width, y * self.height, 0)
-            #self._render_marker_circle(n)
-            glCallList(self._marker_lists[n])
-            glPopMatrix()
+            # #n = int(MARKER_PRECISION * (((self.now - segment.peer.arrival_time) * 0.8))) % MARKER_PRECISION
+            # n = clamp(int(segment.relative_size() * MARKER_PRECISION), 0, MARKER_PRECISION-1)
+            # glPushMatrix()
+            # glTranslatef(x * self.width, y * self.height, 0)
+            # #self._render_marker_circle(n)
+            # glCallList(self._marker_lists[n])
+            # glPopMatrix()
 
-            # size = (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0)) * 8 / 640
-            # glPointSize(size * self.width)
-            # glBegin(GL_POINTS)
-            # glVertex2f(x * self.width, y * self.height)
-            # glEnd()
+            #size = (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0)) * 8 / 640
+            #glPointSize(size * self.width)
+            glPointSize(max(int(segment.relative_size() * 10.0/1024 * self.width), 1))
+            glBegin(GL_POINTS)
+            glVertex2f(x * self.width, y * self.height)
+            glEnd()
 
     def _render_marker_circle(self, n):
         # t = float(n) / MARKER_PRECISION * 2*math.pi
@@ -128,7 +131,7 @@ class HeatMap(visualizer.Visualizer):
         shadow_inner_radius = float(n) / MARKER_PRECISION * 4 / 640
         shadow_outer_radius = float(n) / MARKER_PRECISION * 12 / 640
 
-        glColor4f(0,0,0,0.2)
+        glColor4f(0,0,0,0.5)
         glBegin(GL_QUADS)
         for i in range(20):
             a1 = float(i) / 20 * 2*math.pi
