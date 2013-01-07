@@ -3,6 +3,7 @@ class Gatherer:
     def __init__(self):
         self._pieces = dict()
         self._counter = 1
+        self._gathered_bytes_cached = None
 
     def add(self, new_piece):
         overlapping_pieces = self._overlapping_pieces(new_piece)
@@ -23,6 +24,7 @@ class Gatherer:
         else:
             self._pieces[self._counter] = new_piece
             self._counter += 1
+        self._gathered_bytes_cached = None
 
     def would_append(self, new_piece):
         for key in self._overlapping_pieces(new_piece):
@@ -46,6 +48,14 @@ class Gatherer:
                 (piece1.torrent_begin <= piece2.torrent_begin <= piece1.torrent_end) or
                 (piece1.torrent_begin <= piece2.torrent_end <= piece1.torrent_end))
 
+    def gathered_bytes(self):
+        if self._gathered_bytes_cached is None:
+            if len(self._pieces) == 0:
+                self._gathered_bytes_cached = 0
+            else:
+                self._gathered_bytes_cached = sum([piece.byte_size for piece in self._pieces.values()])
+        return self._gathered_bytes_cached
+        
     def __str__(self):
         return "Gatherer(%s)" % ["Piece(%s,%s)" % (piece.torrent_begin, piece.torrent_end)
                                  for piece in self._pieces.values()]

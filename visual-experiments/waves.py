@@ -13,6 +13,7 @@ WAVEFORM_COLOR = Vector3d(1.0, 1.0, 1.0)
 GATHERED_LINE_WIDTH = 1.0 / 480
 WAVEFORM_LINE_WIDTH = 3.0 / 480
 MAX_GRADIENT_HEIGHT = 3.0 / 480
+FADE_OUT_DURATION = 5.0
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -28,7 +29,7 @@ class Segment(visualizer.Segment):
         glLineWidth(self.amp_controlled_line_width(
                 GATHERED_LINE_WIDTH, WAVEFORM_LINE_WIDTH, amp))
         self.visualizer.set_color(self.amp_controlled_color(
-                GATHERED_COLOR, WAVEFORM_COLOR, amp))
+                self.visualizer.gathered_color, WAVEFORM_COLOR, amp))
 
         glBegin(GL_LINE_STRIP)
         n = 0
@@ -61,6 +62,7 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
+        self.torrent_download_completion_time = None
 
     def pan_segment(self, segment):
         # let orchestra & synth spatialize
@@ -85,8 +87,23 @@ class Waves(visualizer.Visualizer):
 
     def render(self):
         self.update()
+        self._set_gathered_color()
         self._gathered_segments_layer.draw()
         self.draw_playing_segments()
+
+    def _set_gathered_color(self):
+        if self.finished():
+            time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
+            if time_after_completion > FADE_OUT_DURATION:
+                self.gathered_color = (0,0,0)
+            else:
+                self.gathered_color = WAVEFORM_COLOR * pow(1 - time_after_completion/FADE_OUT_DURATION, 0.15)
+            self._gathered_segments_layer.refresh()
+        elif self.torrent_length > 0:
+            torrent_progress = float(self.gatherer.gathered_bytes()) / self.torrent_length
+            self.gathered_color = GATHERED_COLOR + (WAVEFORM_COLOR - GATHERED_COLOR) * pow(torrent_progress, 20)
+        else:
+            self.gathered_color = GATHERED_COLOR
 
     def draw_playing_segments(self):
         glEnable(GL_LINE_SMOOTH)
@@ -112,7 +129,7 @@ class Waves(visualizer.Visualizer):
                 glColor3f(0, 0, 0)
                 glVertex2f(x1, y1)
 
-                glColor3f(*GATHERED_COLOR)
+                glColor3f(*self.gathered_color)
                 glVertex2f(x1, y1d)
                 glVertex2f(x2, y1d)
 
@@ -124,7 +141,7 @@ class Waves(visualizer.Visualizer):
                 glColor3f(0, 0, 0)
                 glVertex2f(x1, y2)
 
-                glColor3f(*GATHERED_COLOR)
+                glColor3f(*self.gathered_color)
                 glVertex2f(x1, y2d)
                 glVertex2f(x2, y2d)
 
@@ -132,7 +149,7 @@ class Waves(visualizer.Visualizer):
                 glVertex2f(x2, y2)
 
 
-                glColor3f(*GATHERED_COLOR)
+                glColor3f(*self.gathered_color)
                 glVertex2f(x1, y1d)
                 glVertex2f(x1, y2d)
                 glVertex2f(x2, y2d)
@@ -141,7 +158,7 @@ class Waves(visualizer.Visualizer):
                 glColor3f(0, 0, 0)
                 glVertex2f(x1, y1)
 
-                glColor3f(*GATHERED_COLOR)
+                glColor3f(*self.gathered_color)
                 glVertex2f(x1, y2)
                 glVertex2f(x2, y2)
 
@@ -159,10 +176,11 @@ class Waves(visualizer.Visualizer):
         segment.waveform.appendleft(value)
 
     def finished(self):
-        if len(self.gatherer.pieces()) == 1:
-            piece = self.gatherer.pieces()[0]
-            return piece.begin == 0 and piece.end == self.torrent_length
+        if self.torrent_download_completion_time:
+            return True
         else:
-            return False
+            if self.torrent_length > 0 and self.gatherer.gathered_bytes() == self.torrent_length:
+                self.torrent_download_completion_time = self.current_time()
+                return True
 
 visualizer.run(Waves)

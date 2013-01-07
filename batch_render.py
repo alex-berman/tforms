@@ -8,11 +8,11 @@ RESOLUTION = "-width 1024 -height 576"
 FPS = 25
 
 sessions = [
-#    ("*chopin", "-z 20"),
-#    ("*adele", "-z 20"),
-#    ("*TDL4", ""),
-    ("*miracle", "-z 5"),
-#    ("*gulliver", ""),
+    ("*chopin", "-z 20"),
+    ("*adele", "-z 20"),
+    ("*TDL4", ""),
+#    ("*miracle", "-z 5"),
+    ("*gulliver", ""),
     ]
 
 for (session, args) in sessions:

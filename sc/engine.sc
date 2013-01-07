@@ -73,13 +73,23 @@ OSCresponder.new(nil, "/load",
   { arg t, r, msg;
 	  var sound_id = msg[1];
 	  var filename = msg[2];
+	  "loading ".post; filename.postln;
 	  if(~filenames[sound_id] == filename,
-		  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames); },
+		  {
+			  if(~info_subscriber != nil,
+				  {
+					  "cached result: ".post; ~sounds[sound_id].numFrames.postln;
+					  ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames);
+				  }, {});
+		  },
 		  {
 			  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {
 				  "loaded ".post; filename.postln;
 				  if(~info_subscriber != nil,
-					  { ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames) }, {});
+					  {
+						  "result: ".post; ~sounds[sound_id].numFrames.postln;
+						  ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames)
+					  }, {});
 				  ~filenames[sound_id] = filename;
 			  });
 		  });
