@@ -95,7 +95,7 @@ class Waves(visualizer.Visualizer):
         if self.finished():
             time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
             if time_after_completion > FADE_OUT_DURATION:
-                self.gathered_color = (0,0,0)
+                self.gathered_color = Vector3d(0,0,0)
             else:
                 self.gathered_color = WAVEFORM_COLOR * pow(1 - time_after_completion/FADE_OUT_DURATION, 0.15)
             self._gathered_segments_layer.refresh()
