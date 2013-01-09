@@ -11,7 +11,7 @@ from logger import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="+")
-parser.add_argument("--pause", type=float, default=1.0)
+parser.add_argument("--pause", type=float, default=5.0)
 Server.add_parser_arguments(parser)
 Orchestra.add_parser_arguments(parser)
 options = parser.parse_args()

@@ -96,7 +96,7 @@ class Waves(visualizer.Visualizer):
         self.draw_playing_segments()
 
     def _set_gathered_color(self):
-        if self.finished():
+        if self._download_completed():
             time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
             if time_after_completion > FADE_OUT_DURATION:
                 self.gathered_color = Vector3d(0,0,0)
@@ -108,6 +108,20 @@ class Waves(visualizer.Visualizer):
             self.gathered_color = GATHERED_COLOR + (WAVEFORM_COLOR - GATHERED_COLOR) * pow(torrent_progress, 20)
         else:
             self.gathered_color = GATHERED_COLOR
+
+    def finished(self):
+        if self._download_completed():
+            time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
+            if time_after_completion > FADE_OUT_DURATION:
+                return True
+
+    def _download_completed(self):
+        if self.torrent_download_completion_time:
+            return True
+        else:
+            if self.torrent_length > 0 and self.gatherer.gathered_bytes() == self.torrent_length:
+                self.torrent_download_completion_time = self.current_time()
+                return True
 
     def draw_playing_segments(self):
         glEnable(GL_LINE_SMOOTH)
@@ -178,13 +192,5 @@ class Waves(visualizer.Visualizer):
 
     def handle_segment_waveform_value(self, segment, value):
         segment.append_to_waveform(value)
-
-    def finished(self):
-        if self.torrent_download_completion_time:
-            return True
-        else:
-            if self.torrent_length > 0 and self.gatherer.gathered_bytes() == self.torrent_length:
-                self.torrent_download_completion_time = self.current_time()
-                return True
 
 visualizer.run(Waves)

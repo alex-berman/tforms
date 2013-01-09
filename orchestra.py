@@ -752,6 +752,8 @@ class Orchestra:
     def reset(self):
         self._free_sounds()
         self._tell_visualizers("/reset")
+        for visualizer in self.visualizers:
+            visualizer.informed_about_torrent = False
 
     def _free_sounds(self):
         if self.synth:
