@@ -176,6 +176,7 @@ class WavPlayer(Player):
 
 class Orchestra:
     SAMPLE_RATE = 44100
+    BYTES_PER_SAMPLE = 2 # mpg123, used by predecode, outputs 16-bit PCM mono
     PLAYABLE_FORMATS = ['mp3', 'flac', 'wav', 'm4b']
     JACK = "jack"
     SSR = "ssr"
@@ -411,15 +412,9 @@ class Orchestra:
 
     def _get_file_duration(self, file_info):
         if "decoded_name" in file_info:
-            cmd = 'soxi -D "%s"' % file_info["decoded_name"]
-            try:
-                stdoutdata, stderrdata = subprocess.Popen(
-                    cmd, shell=True,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-                return float(stdoutdata)
-            except:
-                logger.debug("failed to get duration for %s" % file_info["decoded_name"])
-                return 0
+            statinfo = os.stat(file_info["decoded_name"])
+            wav_header_size = 44
+            return float((statinfo.st_size - wav_header_size) / self.BYTES_PER_SAMPLE) / self.SAMPLE_RATE
 
     def _get_num_channels(self, file_info):
         if "decoded_name" in file_info:
