@@ -8,15 +8,14 @@ import time
 from orchestra import Orchestra, Server
 from session import Session
 from logger import logger
+import glob
 
 parser = ArgumentParser()
-parser.add_argument("sessiondirs", nargs="+")
+parser.add_argument("sessiondirs", nargs="*")
+parser.add_argument("--playlist", type=str)
 parser.add_argument("--pause", type=float, default=5.0)
 Server.add_parser_arguments(parser)
-Orchestra.add_parser_arguments(parser)
-options = parser.parse_args()
-
-assert not options.realtime
+args = parser.parse_args()
 
 def get_chunk_from_queue():
     while True:
@@ -26,10 +25,10 @@ def get_chunk_from_queue():
         except Queue.Empty:
             pass
 
-def play():
+def play(args):
     global orchestra_thread
     quit_on_end = False
-    orchestra.fast_forwarding = options.ff or options.ff_to_start
+    orchestra.fast_forwarding = args.ff or args.ff_to_start
     orchestra_thread = threading.Thread(target=orchestra.play_non_realtime,
                                         args=[quit_on_end])
     orchestra_thread.daemon = True
@@ -40,28 +39,46 @@ def wait_for_play_completion_or_interruption():
     while orchestra_thread.is_alive():
         time.sleep(0.1)
 
-server = Server(options)
+if args.playlist and len(args.sessiondirs) > 0:
+    raise Exception("cannot specify both playlist and sessiondirs")
+
+if args.playlist:
+    playlist_module = __import__(args.playlist)
+    playlist = playlist_module.playlist
+    for item in playlist:
+        item["session"] = glob.glob(item["session"])[0]
+else:
+    if len(args.sessiondirs) > 0:
+        playlist = [{"session": sessiondir,
+                     "args": ""}
+                    for sessiondir in args.sessiondirs]
+    else:
+        raise Exception("please specify playlist or sessiondirs")
+
+server = Server(args)
 count = 0
+orchestra_parser = ArgumentParser()
+Orchestra.add_parser_arguments(orchestra_parser)
+
 while True:
-    sessiondir = options.sessiondirs[count % len(options.sessiondirs)]
+    playlist_item = playlist[count % len(playlist)]
+    sessiondir = playlist_item["session"]
+    session_args = orchestra_parser.parse_args(playlist_item["args"].split())
     logfilename = "%s/session.log" % sessiondir
     print "playing %s" % sessiondir
 
-    tr_log = TrLogReader(logfilename, options.torrentname,
-                         realtime=options.realtime,
-                         pretend_sequential=options.pretend_sequential).get_log(reduced_passivity=True)
-
-    orchestra = Orchestra(sessiondir, tr_log, options)
+    tr_log = TrLogReader(logfilename).get_log(reduced_passivity=True)
+    orchestra = Orchestra(sessiondir, tr_log, session_args)
     server.set_orchestra(orchestra)
 
-    if not options.realtime and len(orchestra.chunks) == 0:
+    if len(orchestra.chunks) == 0:
         raise Exception("No chunks to play. Unsupported file format?")
 
-    play()
+    play(session_args)
     wait_for_play_completion_or_interruption()
 
     print "completed playback"
 
-    time.sleep(options.pause)
+    time.sleep(args.pause)
     orchestra.reset()
     count += 1

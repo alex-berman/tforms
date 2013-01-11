@@ -17,6 +17,7 @@ from space import Space
 from predecode import Predecoder
 from config import DOWNLOAD_LOCATION
 import socket
+import datetime
 
 class VisualizerConnector:
     remote_matcher = re.compile('^remote:(.*)$')
@@ -263,6 +264,7 @@ class Orchestra:
         logger.debug("num selected chunks: %s" % len(self.chunks))
 
         self._interpret_chunks_to_score(options.max_pause_within_segment)
+        print "playback duration: %s" % datetime.timedelta(seconds=self._estimated_playback_duration())
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -284,6 +286,10 @@ class Orchestra:
             self._warned_about_max_sources = False
         else:
             self.ssr = None
+
+    def _estimated_playback_duration(self):
+        last_segment = self.score[-1]
+        return last_segment["onset"] / self.timefactor + last_segment["duration"]
 
     def _interpret_chunks_to_score(self, max_pause_within_segment):
         self.score = Interpreter(max_pause_within_segment).interpret(self.playable_chunks, self.tr_log.files)

@@ -1,4 +1,4 @@
 #!/bin/sh
-./sequencer.py --visualizer="python visual-experiments/waves.py" --output=jack -z 10 \
+./sequencer.py --visualizer="python visual-experiments/waves.py" \
     sessions/*TDL4 \
     sessions/*graham* \
