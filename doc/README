@@ -8,7 +8,7 @@ cd ..
 REQUIREMENTS
 
 Some of the requirements (but there are more):
-python sox mpg123
+python mpg123
 
 For visualizations:
 python-opengl
