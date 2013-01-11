@@ -32,7 +32,6 @@ print "session: %s" % sessiondir
 tr_log = TrLogReader(logfilename, options.torrentname,
                      realtime=options.realtime,
                      pretend_sequential=options.pretend_sequential).get_log()
-tr_log.ignore_non_downloaded_files()
 
 server = Server(options)
 orchestra = Orchestra(sessiondir, tr_log, options)

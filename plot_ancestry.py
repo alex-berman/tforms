@@ -33,7 +33,6 @@ log = TrLogReader(logfilename, args.torrentname, args.filenum).get_log()
 if args.selected_files:
     log.select_files(args.selected_files)
 print >> sys.stderr, "found %d chunks" % len(log.chunks)
-log.ignore_non_downloaded_files()
 
 if args.interpret:
     pieces = Interpreter().interpret(log.chunks)

@@ -136,7 +136,7 @@ class TrLogTests(unittest.TestCase):
         def exists(f):
             return f['exists_on_disk']
         log._file_exists = exists
-        log.ignore_non_downloaded_files()
+        log._ignore_non_downloaded_files()
         self.assertEquals(expected_result, log.chunks)
         self.assertEquals(2000, log.total_file_size())
 

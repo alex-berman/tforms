@@ -192,7 +192,6 @@ tr_log = TrLogReader(logfilename, options.torrentname,
 if options.selected_files:
     tr_log.select_files(options.selected_files)
 print >> sys.stderr, "found %d chunks" % len(tr_log.chunks)
-tr_log.ignore_non_downloaded_files()
 
 if options.interpret:
     pieces = Interpreter().interpret(tr_log.chunks)

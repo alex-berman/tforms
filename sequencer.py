@@ -50,7 +50,6 @@ while True:
     tr_log = TrLogReader(logfilename, options.torrentname,
                          realtime=options.realtime,
                          pretend_sequential=options.pretend_sequential).get_log()
-    tr_log.ignore_non_downloaded_files()
 
     orchestra = Orchestra(sessiondir, tr_log, options)
     server.set_orchestra(orchestra)

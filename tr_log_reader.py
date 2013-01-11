@@ -10,6 +10,8 @@ from config import DOWNLOAD_LOCATION
 _peeraddr_re = re.compile('^\[?([0-9.]+)\]?:')
 
 class TrLog:
+    CACHE_VERSION = 0.2
+
     def lastchunktime(self):
         return self.chunks[-1]["t"]
 
@@ -41,6 +43,7 @@ class TrLog:
         cPickle.dump(self.peers, f)
         cPickle.dump(self.peeraddr_to_id, f)
         cPickle.dump(self.totalsize, f)
+        cPickle.dump(self.CACHE_VERSION, f)
         f.close()
 
     @staticmethod
@@ -52,6 +55,13 @@ class TrLog:
         log.peers = cPickle.load(f)
         log.peeraddr_to_id = cPickle.load(f)
         log.totalsize = cPickle.load(f)
+        try:
+            actual_cache_version = cPickle.load(f)
+            if actual_cache_version != TrLog.CACHE_VERSION:
+                raise Exception("Session cache of unsupported version (expected %s, found %s). Try to delete the cache file %s manually and then retry what you just attempted." % (
+                        TrLog.CACHE_VERSION, actual_cache_version, filename))
+        except EOFError:
+            raise Exception("Failed to get cache version of session log. The log cache (%s) is probably depcrecated. Try to delete cache file manually and then retry what you just attempted." % filename)
         f.close()
         return log
 
@@ -73,7 +83,7 @@ class TrLog:
                 peer_cursor[chunk['peeraddr']] = chunk
         self.chunks = result
 
-    def ignore_non_downloaded_files(self):
+    def _ignore_non_downloaded_files(self):
         for filenum in reversed(range(len(self.files))):
             f = self.files[filenum]
             if not (self._file_exists(f) and self._has_chunks_in_log(filenum)):
@@ -145,6 +155,7 @@ class TrLogReader:
             log.peers = self.peers
             log.peeraddr_to_id = self.peeraddr_to_id
             log.totalsize = self.totalsize
+            log._ignore_non_downloaded_files()
             if use_cache:
                 self._cache_log(log)
             return log

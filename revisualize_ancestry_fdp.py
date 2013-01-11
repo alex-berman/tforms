@@ -128,7 +128,6 @@ print "session: %s" % sessiondir
 
 tr_log = TrLogReader(logfilename).get_log()
 print >> sys.stderr, "found %d chunks" % len(tr_log.chunks)
-tr_log.ignore_non_downloaded_files()
 
 pieces = Interpreter().interpret(tr_log.chunks)
 Ancestry(pieces, options).run()
