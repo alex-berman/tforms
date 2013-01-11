@@ -10,14 +10,14 @@ EXPECTED_TOTALSIZE = 28348491
 
 class TrLogReaderTests(unittest.TestCase):
     def test_file_processing_without_cache(self):
-        tr_log = TrLogReader(FILENAME).get_log(use_cache=False)
+        tr_log = TrLogReader(FILENAME).get_log(use_cache=False, ignore_non_downloaded_files=False)
         self.assertEquals(EXPECTED_FILES, tr_log.files)
         self.assertEquals(EXPECTED_CHUNKS, tr_log.chunks)
         self.assertEquals(EXPECTED_PEERS, tr_log.peers)
         self.assertEquals(EXPECTED_TOTALSIZE, tr_log.totalsize)
 
     def test_loading_from_cache(self):
-        TrLogReader(FILENAME).get_log(use_cache=True)
+        TrLogReader(FILENAME).get_log(use_cache=True, ignore_non_downloaded_files=False)
         expected_cache_filename = FILENAME + ".cache"
         self.assertTrue(os.path.exists(FILENAME + ".cache"))
         tr_log_from_cache = TrLogReader(FILENAME).get_log(use_cache=True)
@@ -29,7 +29,7 @@ class TrLogReaderTests(unittest.TestCase):
 
     def test_chunk_overlapping_multiple_files(self):
         reader = TrLogReader(FILENAME)
-        tr_log = reader.get_log(use_cache=False)
+        tr_log = reader.get_log(use_cache=False, ignore_non_downloaded_files=False)
         reader._chunk_count = 0
         chunk = {'filenum': 0,
                  'begin': 0, 'end': 300,
