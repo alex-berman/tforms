@@ -398,7 +398,6 @@ class Orchestra:
             if "decoded_name" in file_info:
                 file_info["duration"] = self._get_file_duration(file_info)
                 if file_info["duration"] > 0:
-                    file_info["num_channels"] = self._get_num_channels(file_info)
                     file_info["playable_file_index"] = playable_file_index
                     logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
@@ -415,13 +414,6 @@ class Orchestra:
             statinfo = os.stat(file_info["decoded_name"])
             wav_header_size = 44
             return float((statinfo.st_size - wav_header_size) / self.BYTES_PER_SAMPLE) / self.SAMPLE_RATE
-
-    def _get_num_channels(self, file_info):
-        if "decoded_name" in file_info:
-            cmd = 'soxi -c "%s"' % file_info["decoded_name"]
-            stdoutdata, stderrdata = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE).communicate()
-            return int(stdoutdata)
 
     def get_current_log_time(self):
         if self.fast_forwarding:
