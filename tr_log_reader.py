@@ -10,7 +10,7 @@ from config import DOWNLOAD_LOCATION
 _peeraddr_re = re.compile('^\[?([0-9.]+)\]?:')
 
 class TrLog:
-    CACHE_VERSION = 0.2
+    CACHE_VERSION = 0.3
 
     def lastchunktime(self):
         return self.chunks[-1]["t"]
@@ -44,6 +44,7 @@ class TrLog:
         cPickle.dump(self.peeraddr_to_id, f)
         cPickle.dump(self.totalsize, f)
         cPickle.dump(self.CACHE_VERSION, f)
+        cPickle.dump(self.chunks_reduced_passivity, f)
         f.close()
 
     @staticmethod
@@ -58,10 +59,11 @@ class TrLog:
         try:
             actual_cache_version = cPickle.load(f)
             if actual_cache_version != TrLog.CACHE_VERSION:
-                raise Exception("Session cache of unsupported version (expected %s, found %s). Try to delete the cache file %s manually and then retry what you just attempted." % (
+                raise Exception("Session cache of unsupported version (expected %s, found %s). Try to delete the cache file (%s) manually and then retry what you just attempted." % (
                         TrLog.CACHE_VERSION, actual_cache_version, filename))
+            log.chunks_reduced_passivity = cPickle.load(f)
         except EOFError:
-            raise Exception("Failed to get cache version of session log. The log cache (%s) is probably depcrecated. Try to delete cache file manually and then retry what you just attempted." % filename)
+            raise Exception("Failed to read session cache. The cache file (%s) is probably depcrecated. Try to delete cache file manually and then retry what you just attempted." % filename)
         f.close()
         return log
 
@@ -124,6 +126,17 @@ class TrLog:
             f["offset"] -= file_length
         del self.files[filenum]
 
+    def _reduce_max_passivity(self, chunks, max_passivity):
+        previous_t = 0
+        reduced_time = 0
+        result = copy.deepcopy(chunks)
+        for i in range(len(result)):
+            if (result[i]["t"] - reduced_time - previous_t) > max_passivity:
+                reduced_time += result[i]["t"] - reduced_time - previous_t - max_passivity
+            result[i]["t"] -= reduced_time
+            previous_t = result[i]["t"]
+        return result
+
 class TrLogReader:
     NO_MORE_CHUNKS = {}
 
@@ -141,9 +154,13 @@ class TrLogReader:
         self.peeraddr_to_id = {}
         self._chunk_count = 0
 
-    def get_log(self, use_cache=True):
+    def get_log(self,
+                use_cache=True,
+                ignore_non_downloaded_files=True,
+                max_passivity=1.0,
+                reduced_passivity=False):
         if use_cache and os.path.exists(self._cache_filename()):
-            return TrLog.from_cache(self._cache_filename())
+            log = TrLog.from_cache(self._cache_filename())
         else:
             self.logfile = open(self.logfilename, "r")
             self._process_torrent_info()
@@ -155,10 +172,15 @@ class TrLogReader:
             log.peers = self.peers
             log.peeraddr_to_id = self.peeraddr_to_id
             log.totalsize = self.totalsize
-            log._ignore_non_downloaded_files()
+            if ignore_non_downloaded_files:
+                log._ignore_non_downloaded_files()
+            if max_passivity:
+                log.chunks_reduced_passivity = log._reduce_max_passivity(self.chunks, max_passivity)
             if use_cache:
                 self._cache_log(log)
-            return log
+        if reduced_passivity:
+            log.chunks = log.chunks_reduced_passivity
+        return log
 
     def _cache_log(self, log):
         log.save_cache(self._cache_filename())

@@ -140,6 +140,23 @@ class TrLogTests(unittest.TestCase):
         self.assertEquals(expected_result, log.chunks)
         self.assertEquals(2000, log.total_file_size())
 
+    def test_reduce_max_passivity(self):
+        non_reduced_chunks = [
+            {'filenum': 0, 'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 1.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 300, 'end': 400, 't': 20.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 400, 'end': 500, 't': 22.0, 'peeraddr': 'A'}
+            ]
+        expected_result = [
+            {'filenum': 0, 'begin': 100, 'end': 200, 't': 0.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 200, 'end': 300, 't': 1.0, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 300, 'end': 400, 't': 2.5, 'peeraddr': 'A'},
+            {'filenum': 0, 'begin': 400, 'end': 500, 't': 4.0, 'peeraddr': 'A'}
+            ]
+        log = TrLog()
+        actual_result = log._reduce_max_passivity(non_reduced_chunks, 1.5)
+        self.assertEquals(expected_result, actual_result)
+
     def test_select_files(self):
         log = TrLog()
         log.files = [
