@@ -15,10 +15,15 @@ synth = SynthController()
 
 parameters = ["mix", "room", "damp"]
 
+def send_values_to_sc():
+    global values
+    for parameter, value in values.iteritems():
+        synth._send("/set_reverb_%s" % parameter, value)
+
 def value_changed(adj, parameter):
     global values
-    synth._send("/set_reverb_%s" % parameter, adj.value/100)
     values[parameter] = adj.value/100
+    send_values_to_sc()
     save_values()
 
 def destroy(widget, data=None):
@@ -48,6 +53,7 @@ def save_values():
 
 
 load_values()
+send_values_to_sc()
 window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 window.set_default_size(200, 200)
 window.connect("destroy", destroy)
