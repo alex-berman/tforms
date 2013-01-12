@@ -57,6 +57,7 @@ class Server(OscReceiver):
         parser.add_argument("-port", type=int)
         parser.add_argument("--osc-log", dest="osc_log")
         parser.add_argument("--no-synth", action="store_true")
+        parser.add_argument("--locate-peers", action="store_true")
 
     def __init__(self, options):
         self.options = options
@@ -76,6 +77,10 @@ class Server(OscReceiver):
             from synth_controller import SynthController
             self.synth = SynthController()
             self.synth.free_sounds()
+
+        if options.locate_peers:
+            import geo.ip_locator
+            self.ip_locator = geo.ip_locator.IpLocator()
 
     def _setup_osc(self):
         self.host = socket.gethostbyname(socket.gethostname())
@@ -210,7 +215,6 @@ class Orchestra:
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
-        parser.add_argument("--locate-peers", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -230,12 +234,10 @@ class Orchestra:
 
         self.include_non_playable = options.include_non_playable
 
-        if options.locate_peers:
-            import geo.ip_locator
+        if server.options.locate_peers:
             self._peer_location = {}
-            ip_locator = geo.ip_locator.IpLocator()
             for peeraddr in tr_log.peers:
-                self._peer_location[peeraddr] = ip_locator.locate(peeraddr)
+                self._peer_location[peeraddr] = server.ip_locator.locate(peeraddr)
 
         if options.predecode:
             predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
@@ -656,7 +658,7 @@ class Orchestra:
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
-        if self.options.locate_peers and self._peer_location[addr] is not None:
+        if self.server.options.locate_peers and self._peer_location[addr] is not None:
             x, y = self._peer_location[addr]
             location_str = "%s,%s" % (x, y)
         else:
