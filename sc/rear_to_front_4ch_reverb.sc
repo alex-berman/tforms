@@ -41,6 +41,12 @@ SynthDef(\add_reverb, {|out=0, in=0, mix = 0.25, room = 0.15, damp = 0.5, amp = 
 	Out.ar(3, reverb);
 }).send(s);
 
+OSCresponder.new(nil, "/set_reverb_room",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\room, value);
+  }).add;
+
 SystemClock.sched(1.0, {
 	~reverb = Synth(\add_reverb, [\in, ~reverb_bus.index]);
 	~reverb.set(\room, 0.9);
