@@ -492,8 +492,9 @@ class Orchestra:
                     "segment": segment}
             
     def stop(self):
-        if self.server.synth:
-            self.server.synth.stop_all()
+        # stop_all disabled as it also deletes ~reverb
+        # if self.server.synth:
+        #     self.server.synth.stop_all()
         self._playing = False
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
