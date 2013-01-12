@@ -21,18 +21,6 @@ SynthDef(\limiter,
 }).send(s);
 SystemClock.sched(1.0, { Synth(\limiter, []); });
 
-SynthDef(\FreeVerb2x2, {|outbus, mix = 0.4, room = 0.6, damp = 0.1, amp = 1.0|
-	var signal;
-	signal = In.ar(outbus, 2);
-	ReplaceOut.ar(outbus,
-		signal + FreeVerb2.ar(
-			signal[0],
-			signal[1],
-			mix, room, damp, amp));
-}).send(s);
-//WARNING: CPU usage freaks out after a while on my Linux with reverb enabled:
-	//SystemClock.sched(1.0, { Synth(\FreeVerb2x2, [\outbus, 0]) });
-
 ~info_subscriber = nil;
 ~amp_subscriber = nil;
 ~waveform_subscriber = nil;
