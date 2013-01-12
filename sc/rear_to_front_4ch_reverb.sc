@@ -61,5 +61,4 @@ OSCresponder.new(nil, "/set_reverb_damp",
 
 SystemClock.sched(1.0, {
 	~reverb = Synth(\add_reverb, [\in, ~reverb_bus.index]);
-	~reverb.set(\room, 0.9);
 });
