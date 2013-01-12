@@ -14,6 +14,7 @@ parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="*")
 parser.add_argument("--playlist", type=str)
 parser.add_argument("--pause", type=float, default=5.0)
+parser.add_argument("--start", type=int, default=0)
 Server.add_parser_arguments(parser)
 args = parser.parse_args()
 
@@ -61,7 +62,7 @@ else:
         raise Exception("please specify playlist or sessiondirs")
 
 server = Server(args)
-count = 0
+count = args.start
 
 while True:
     playlist_item = playlist[count % len(playlist)]

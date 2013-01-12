@@ -1,6 +1,6 @@
 playlist = [
     {"session": "sessions/*hunger",
-     "args": "-z 10"},
+     "args": "-z 8"},
     {"session": "sessions/*miracle",
-     "args": ""},
+     "args": "-z 5"},
 ]
