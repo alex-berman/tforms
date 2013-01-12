@@ -1,6 +1,12 @@
 playlist = [
     {"session": "sessions/*gatsby-ch1-5",
      "args": "-z 0.5"},
+    {"session": "sessions/*gatsby-ch6-10",
+     "args": "-z 0.5"},
+    {"session": "sessions/*gatsby-ch11-15",
+     "args": "-z 0.5"},
+    {"session": "sessions/*art-of-war",
+     "args": "-z 1"},
     {"session": "sessions/*rings",
      "args": "-z 0.5"},
     {"session": "sessions/*sherlock",
