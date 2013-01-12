@@ -56,6 +56,7 @@ class Server(OscReceiver):
         parser.add_argument("--visualizer", type=str, action="append")
         parser.add_argument("-port", type=int)
         parser.add_argument("--osc-log", dest="osc_log")
+        parser.add_argument("--no-synth", action="store_true")
 
     def __init__(self, options):
         self.options = options
@@ -68,6 +69,13 @@ class Server(OscReceiver):
                 visualizer = VisualizerConnector(visualizer_spec, self)
                 self.visualizers.append(visualizer)
             self._wait_for_visualizers_to_register()
+
+        if options.no_synth:
+            self.synth = None
+        else:
+            from synth_controller import SynthController
+            self.synth = SynthController()
+            self.synth.free_sounds()
 
     def _setup_osc(self):
         self.host = socket.gethostbyname(socket.gethostname())
@@ -202,12 +210,12 @@ class Orchestra:
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
-        parser.add_argument("--no-synth", action="store_true")
         parser.add_argument("--locate-peers", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
 
-    def __init__(self, sessiondir, tr_log, options):
+    def __init__(self, server, sessiondir, tr_log, options):
+        self.server = server
         self.options = options
         self.sessiondir = sessiondir
         self.tr_log = tr_log
@@ -241,12 +249,6 @@ class Orchestra:
         self._log_time_for_last_handled_event = 0
         self.gui = None
         self._check_which_files_are_audio()
-
-        if options.no_synth:
-            self.synth = None
-        else:
-            from synth_controller import SynthController
-            self.synth = SynthController()
 
         self._create_players()
         self._prepare_playable_files()
@@ -286,6 +288,8 @@ class Orchestra:
             self._warned_about_max_sources = False
         else:
             self.ssr = None
+
+        server.set_orchestra(self)
 
     def _estimated_playback_duration(self):
         last_segment = self.score[-1]
@@ -328,11 +332,11 @@ class Orchestra:
             self._ask_synth_to_play_segment(segment, channel=0, pan=player.spatial_position.pan)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
-        if self.synth:
+        if self.server.synth:
             logger.debug("asking synth to play %s" % segment)
             file_info = self.tr_log.files[segment["filenum"]]
 
-            self.synth.play_segment(
+            self.server.synth.play_segment(
                 segment["id"],
                 segment["filenum"],
                 segment["start_time_in_file"] / file_info["duration"],
@@ -372,13 +376,13 @@ class Orchestra:
             raise Exception("playing wav without precoding is not supported")
 
     def _load_sounds(self):
-        if self.synth:
+        if self.server.synth:
             print "loading sounds"
             for filenum in range(len(self.tr_log.files)):
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
                     logger.debug("load_sound(%s)" % file_info["decoded_name"])
-                    result = self.synth.load_sound(filenum, file_info["decoded_name"])
+                    result = self.server.synth.load_sound(filenum, file_info["decoded_name"])
                     logger.debug("result: %s" % result)
             print "OK"
 
@@ -486,8 +490,8 @@ class Orchestra:
                     "segment": segment}
             
     def stop(self):
-        if self.synth:
-            self.synth.stop_all()
+        if self.server.synth:
+            self.server.synth.stop_all()
         self._playing = False
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
@@ -707,8 +711,8 @@ class Orchestra:
                 self.ssr.place_source(sound_source_id, x, y, duration)
         else:
             pan = self._spatial_position_to_stereo_pan(x, y)
-            if self.synth:
-                self.synth.pan(segment_id, pan)
+            if self.server.synth:
+                self.server.synth.pan(segment_id, pan)
 
     def _handle_enable_smooth_movement(self, path, args, types, src, data):
         if self.ssr:
@@ -736,11 +740,11 @@ class Orchestra:
             visualizer.informed_about_torrent = False
 
     def _free_sounds(self):
-        if self.synth:
+        if self.server.synth:
             for filenum in range(len(self.tr_log.files)):
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
-                    self.synth.free_sound(filenum)
+                    self.server.synth.free_sound(filenum)
 
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()

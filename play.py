@@ -34,8 +34,7 @@ tr_log = TrLogReader(logfilename, options.torrentname,
                      pretend_sequential=options.pretend_sequential).get_log(reduced_passivity=True)
 
 server = Server(options)
-orchestra = Orchestra(sessiondir, tr_log, options)
-server.set_orchestra(orchestra)
+orchestra = Orchestra(server, sessiondir, tr_log, options)
 
 if not options.realtime and len(orchestra.chunks) == 0:
     raise Exception("No chunks to play. Unsupported file format?")

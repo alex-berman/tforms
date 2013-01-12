@@ -90,6 +90,18 @@ OSCresponder.new(nil, "/free",
 	  ~filenames[sound_id] = nil;
   }).add;
 
+OSCresponder.new(nil, "/free_all",
+  { arg t, r, msg;
+	  ~filenames.do(
+		  { arg item, sound_id;
+			  if(~filenames[sound_id] != nil, {
+				  "free ".post; ~filenames[sound_id].postln;
+				  ~sounds[sound_id].free;
+				  ~filenames[sound_id] = nil;
+			  }, {});
+		  });
+  }).add;
+
 OSCresponder.new(nil, "/play",
   { arg t, r, msg;
 	  var segment_id = msg[1];

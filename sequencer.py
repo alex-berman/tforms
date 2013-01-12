@@ -50,7 +50,13 @@ if args.playlist:
     playlist_module = __import__(args.playlist)
     playlist = playlist_module.playlist
     for item in playlist:
-        item["session"] = glob.glob(item["session"])[0]
+        matches = glob.glob(item["session"])
+        if len(matches) == 1:
+            item["session"] = matches[0]
+        elif len(matches) == 0:
+            raise Exception("no sessions matching %s" % item["session"])
+        else:
+            raise Exception("more than one session matching %s" % item["session"])
         item["args"] = orchestra_parser.parse_args(item["args"].split())
 
 else:
@@ -71,8 +77,7 @@ while True:
     print "playing %s" % sessiondir
 
     tr_log = TrLogReader(logfilename).get_log(reduced_passivity=True)
-    orchestra = Orchestra(sessiondir, tr_log, playlist_item["args"])
-    server.set_orchestra(orchestra)
+    orchestra = Orchestra(server, sessiondir, tr_log, playlist_item["args"])
 
     if len(orchestra.chunks) == 0:
         raise Exception("No chunks to play. Unsupported file format?")
