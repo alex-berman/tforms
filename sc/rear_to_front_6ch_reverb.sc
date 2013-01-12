@@ -1,4 +1,6 @@
 
+~reverb_bus = Bus.audio(s, 1);
+
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var output_front, output_center, output_rear, pointer, filelength, pitch;
 	var env_front, env_center, env_rear, dir, amp, content;
@@ -25,8 +27,45 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	output_rear = Pan2.ar(rear_content, pan);
 	Out.ar(2, output_rear);
 
+	Out.ar(~reverb_bus, front_content + center_content + rear_content);
+
 	amp = LPF.kr(Amplitude.kr(front_content), 5);
 	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
 
 	SendReply.ar(Impulse.ar(500), "/waveform_private", front_content, segment_id);
 }).send(s);
+
+SynthDef(\add_reverb, {|out=0, in=0, mix = 0.25, room = 0.15, damp = 0.5|
+	var signal, silent_noise, reverb;
+	silent_noise = WhiteNoise.ar(0.00001); // see http://new-supercollider-mailing-lists-forums-use-these.2681727.n2.nabble.com/cpu-problems-with-PV-MagFreeze-and-Freeverb-tp5998599p6013552.html
+	signal = In.ar(~reverb_bus, 1);
+	reverb = FreeVerb.ar(signal + silent_noise,	mix, room, damp);
+	Out.ar(0, reverb);
+	Out.ar(1, reverb);
+	Out.ar(2, reverb);
+	Out.ar(3, reverb);
+	Out.ar(4, reverb);
+	Out.ar(5, reverb);
+}).send(s);
+
+OSCresponder.new(nil, "/set_reverb_mix",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\mix, value);
+  }).add;
+
+OSCresponder.new(nil, "/set_reverb_room",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\room, value);
+  }).add;
+
+OSCresponder.new(nil, "/set_reverb_damp",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\damp, value);
+  }).add;
+
+SystemClock.sched(1.0, {
+	~reverb = Synth(\add_reverb, [\in, ~reverb_bus.index]);
+});
