@@ -103,13 +103,14 @@ class HeatMap(visualizer.Visualizer):
 
     def _render_title(self):
         glColor3f(1,1,1)
-        glLineWidth(2.0)
-        glPointSize(2.0)
+        glLineWidth(1.0)
+        glPointSize(1.0)
         self.draw_text(
             text = self.torrent_title.upper(),
-            scale = 0.2 * 1024 / self.width,
+            scale = 0.2 / 1024 * self.width,
             x = self.width * 0.03,
-            y = self.height * 0.03)
+            y = self.height * 0.03,
+            spacing = 50.0)
 
     def _render_history(self):
         glColor4f(0.8,0.8,0.8,1)

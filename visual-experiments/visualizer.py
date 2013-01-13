@@ -725,11 +725,14 @@ class Visualizer:
             self._synth_instance = SynthController()
         return self._synth_instance
 
-    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN):
+    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None):
         glTranslatef(x, y, 0)
         glScalef(scale, scale, scale)
         for c in text:
-            glutStrokeCharacter(font, ord(c))
+            if c == ' ' and spacing is not None:
+                glTranslatef(spacing, 0, 0)
+            else:
+                glutStrokeCharacter(font, ord(c))
 
     @staticmethod
     def add_parser_arguments(parser):
