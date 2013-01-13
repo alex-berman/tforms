@@ -55,7 +55,7 @@ playlist = [
 
     {"session": "sessions/*hobbit*",
      "args": ["-z", "0.25",
-              "--title=Hobbit by J.R.R Tolkien"]},
+              "--title=Hobbit by J.R.R. Tolkien"]},
 
     {"session": "sessions/*hunger",
      "args": ["-z", "8",
