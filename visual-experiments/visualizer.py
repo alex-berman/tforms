@@ -281,6 +281,7 @@ class Visualizer:
         self.peers_by_addr = {}
         self._segments_by_id = {}
         self.torrent_length = 0
+        self.torrent_title = ""
 
     def enable_3d(self):
         self._3d_enabled = True
@@ -309,7 +310,8 @@ class Visualizer:
         glutMainLoop()
 
     def handle_torrent_message(self, path, args, types, src, data):
-        self.num_files, self.download_duration, self.total_size, num_chunks, num_segments = args
+        (self.num_files, self.download_duration, self.total_size,
+         num_chunks, num_segments, self.torrent_title) = args
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
@@ -405,7 +407,7 @@ class Visualizer:
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = simple_osc_receiver.OscReceiver(log_filename=log_filename)
-        self.server.add_method("/torrent", "ifiii", self.handle_torrent_message)
+        self.server.add_method("/torrent", "ifiiis", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
         self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
@@ -432,6 +434,8 @@ class Visualizer:
         glutSpecialFunc(self._special_key_pressed)
 
     def ReSizeGLScene(self, window_width, window_height):
+        self.window_width = window_width
+        self.window_height = window_height
         if window_height == 0:
             window_height = 1
         glViewport(0, 0, window_width, window_height)
@@ -441,10 +445,13 @@ class Visualizer:
         self.min_dimension = min(self.width, self.height)
         self._refresh_layers()
         if not self._3d_enabled:
-            glMatrixMode(GL_PROJECTION)
-            glLoadIdentity()
-            glOrtho(0.0, window_width, window_height, 0.0, -1.0, 1.0)
-            glMatrixMode(GL_MODELVIEW)
+            self.configure_2d_projection()
+
+    def configure_2d_projection(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0.0, self.window_width, self.window_height, 0.0, -1.0, 1.0)
+        glMatrixMode(GL_MODELVIEW)
 
     def _refresh_layers(self):
         for layer in self._layers:
@@ -717,6 +724,12 @@ class Visualizer:
             from synth_controller import SynthController
             self._synth_instance = SynthController()
         return self._synth_instance
+
+    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN):
+        glTranslatef(x, y, 0)
+        glScalef(scale, scale, scale)
+        for c in text:
+            glutStrokeCharacter(font, ord(c))
 
     @staticmethod
     def add_parser_arguments(parser):

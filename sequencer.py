@@ -59,7 +59,7 @@ if args.playlist:
             raise Exception("no sessions matching %s" % item["session"])
         else:
             raise Exception("more than one session matching %s" % item["session"])
-        item["args"] = orchestra_parser.parse_args(item["args"].split())
+        item["args"] = orchestra_parser.parse_args(item["args"])
 
 else:
     if len(args.sessiondirs) > 0:

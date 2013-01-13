@@ -213,6 +213,7 @@ class Orchestra:
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
+        parser.add_argument("--title", type=str, default="")
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -624,7 +625,8 @@ class Orchestra:
             self.tr_log.lastchunktime(),
             self.tr_log.total_file_size(),
             len(self.chunks),
-            len(self.score))
+            len(self.score),
+            self.options.title)
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:

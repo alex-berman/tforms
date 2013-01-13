@@ -63,6 +63,12 @@ class HeatMap(visualizer.Visualizer):
             self._render_marker_circle(n)
             glEndList()
 
+    def configure_2d_projection(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0.0, self.window_width, 0.0, self.window_height, -1.0, 1.0)
+        glMatrixMode(GL_MODELVIEW)
+
     def _load_locations(self):
         self._locations = collections.defaultdict(int)
         for location in locations.get_locations():
@@ -93,13 +99,24 @@ class HeatMap(visualizer.Visualizer):
         self._update()
         self._history_layer.draw()
         self._render_activity()
+        self._render_title()
+
+    def _render_title(self):
+        glColor3f(1,1,1)
+        glLineWidth(2.0)
+        glPointSize(2.0)
+        self.draw_text(
+            text = self.torrent_title.upper(),
+            scale = 0.2 * 1024 / self.width,
+            x = self.width * 0.03,
+            y = self.height * 0.03)
 
     def _render_history(self):
         glColor4f(0.8,0.8,0.8,1)
         for location, frequency in self._locations.iteritems():
             glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width)
             glBegin(GL_POINTS)
-            glVertex2f(location.x * self.width, location.y * self.height)
+            glVertex2f(location.x * self.width, self.height - location.y * self.height)
             glEnd()
 
     def _render_activity(self):
@@ -120,7 +137,7 @@ class HeatMap(visualizer.Visualizer):
             #glPointSize(size * self.width)
             glPointSize(max(int(segment.relative_size() * 10.0/1024 * self.width), 1))
             glBegin(GL_POINTS)
-            glVertex2f(x * self.width, y * self.height)
+            glVertex2f(x * self.width, self.height - y * self.height)
             glEnd()
 
     def _render_marker_circle(self, n):
