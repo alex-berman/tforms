@@ -1,4 +1,6 @@
 playlist = [
+    {"session": "sessions/*1984-ch1-3",
+     "args": "-z 0.3"},
     {"session": "sessions/*gatsby-ch1-5",
      "args": "-z 0.5"},
     {"session": "sessions/*gatsby-ch6-10",

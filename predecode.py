@@ -22,9 +22,9 @@ class flac_decoder:
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
-    def __init__(self, tr_log, location, sample_rate=None):
+    def __init__(self, tr_log, sample_rate=None):
         self.tr_log = tr_log
-        self.location = location
+        self.location = tr_log.file_location
         self._sample_rate = sample_rate
         self._extension_re = re.compile('\.(\w+)$')
         self._decoders = dict([(extension, self._decoder_for_extension(extension))

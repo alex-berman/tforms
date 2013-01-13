@@ -10,7 +10,7 @@ from config import DOWNLOAD_LOCATION
 _peeraddr_re = re.compile('^\[?([0-9.]+)\]?:')
 
 class TrLog:
-    CACHE_VERSION = 0.3
+    CACHE_VERSION = 0.4
 
     def lastchunktime(self):
         return self.chunks[-1]["t"]
@@ -45,6 +45,7 @@ class TrLog:
         cPickle.dump(self.totalsize, f)
         cPickle.dump(self.CACHE_VERSION, f)
         cPickle.dump(self.chunks_reduced_passivity, f)
+        cPickle.dump(self.file_location, f)
         f.close()
 
     @staticmethod
@@ -62,6 +63,7 @@ class TrLog:
                 raise Exception("Session cache of unsupported version (expected %s, found %s). Try to delete the cache file (%s) manually and then retry what you just attempted." % (
                         TrLog.CACHE_VERSION, actual_cache_version, filename))
             log.chunks_reduced_passivity = cPickle.load(f)
+            log.file_location = cPickle.load(f)
         except EOFError:
             raise Exception("Failed to read session cache. The cache file (%s) is probably depcrecated. Try to delete cache file manually and then retry what you just attempted." % filename)
         f.close()
@@ -92,7 +94,7 @@ class TrLog:
                 self._remove_file(filenum)
 
     def _file_exists(self, f):
-        return os.path.exists("%s/%s" % (DOWNLOAD_LOCATION, f["name"]))
+        return os.path.exists("%s/%s" % (self.file_location, f["name"]))
 
     def _has_chunks_in_log(self, filenum):
         for chunk in self.chunks:
@@ -153,6 +155,7 @@ class TrLogReader:
         self.peers = []
         self.peeraddr_to_id = {}
         self._chunk_count = 0
+        self.file_location = DOWNLOAD_LOCATION
 
     def get_log(self,
                 use_cache=True,
@@ -167,6 +170,7 @@ class TrLogReader:
             self._process_chunks()
             self.logfile.close()
             log = TrLog()
+            log.file_location = self.file_location
             log.files = self.files
             log.chunks = self.chunks
             log.peers = self.peers
@@ -194,19 +198,21 @@ class TrLogReader:
 
     def _process_until_selected_torrent(self):
         logger.debug("selecting torrent")
-        initialized_re = re.compile('initialized torrent (\d+): name=(.*) totalSize=(\d+) fileCount=(\d+) pieceSize=(\d+) pieceCount=(\d+)')
+        initialized_re = re.compile('initialized torrent (\d+): name=(.*) totalSize=(\d+) fileCount=(\d+) pieceSize=(\d+) pieceCount=(\d+)( fileLocation=(.+))?')
         for line in self.logfile:
             line = line.rstrip("\r\n")
             logger.debug("processing: %s" % line)
             m = initialized_re.search(line)
             if m:
-                (id,name,totalsize,filecount,piecesize,piececount) = m.groups()
+                (id,name,totalsize,filecount,piecesize,piececount,foo,file_location) = m.groups()
                 if self.torrent_name == "" or re.search(self.torrent_name, name):
                     self.id = int(id)
                     self.name = name
                     self.totalsize = int(totalsize)
                     self.numfiles = int(filecount)
                     self.piecesize = int(piecesize)
+                    if file_location:
+                        self.file_location = file_location
                     break
         if self.id == None:
             logger.debug("no torrent found")

@@ -15,7 +15,6 @@ from stopwatch import Stopwatch
 from ssr.ssr_control import SsrControl
 from space import Space
 from predecode import Predecoder
-from config import DOWNLOAD_LOCATION
 import socket
 import datetime
 
@@ -205,7 +204,6 @@ class Orchestra:
         parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
         parser.add_argument("--gui", action="store_true", dest="gui_enabled")
         parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
-        parser.add_argument("--file-location", dest="file_location", default=DOWNLOAD_LOCATION)
         parser.add_argument("--fast-forward", action="store_true", dest="ff")
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
@@ -227,7 +225,6 @@ class Orchestra:
         self.timefactor = options.timefactor
         self.quiet = options.quiet
         self.predecode = options.predecode
-        self.file_location = options.file_location
         self._loop = options.loop
         self.looped_duration = options.looped_duration
         self.output = options.output
@@ -240,7 +237,7 @@ class Orchestra:
                 self._peer_location[peeraddr] = server.ip_locator.locate(peeraddr)
 
         if options.predecode:
-            predecoder = Predecoder(tr_log, options.file_location, self.SAMPLE_RATE)
+            predecoder = Predecoder(tr_log, self.SAMPLE_RATE)
             predecoder.decode()
 
         if options.selected_files:
@@ -765,7 +762,7 @@ class Orchestra:
     @classmethod
     def estimate_duration(cls, tr_log, options):
         if options.predecode:
-            predecoder = Predecoder(tr_log, options.file_location, cls.SAMPLE_RATE)
+            predecoder = Predecoder(tr_log, cls.SAMPLE_RATE)
             predecoder.decode()
         cls._get_wav_files_info(tr_log)
         playable_chunks = cls._filter_playable_chunks(tr_log, tr_log.chunks)
