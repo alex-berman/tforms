@@ -86,7 +86,9 @@ OSCresponder.new(nil, "/load",
 OSCresponder.new(nil, "/free",
   { arg t, r, msg;
 	  var sound_id = msg[1];
+	  "freeing ".post; ~filenames[sound_id].postln;
 	  ~sounds[sound_id].free;
+	  ~sounds[sound_id] = nil;
 	  ~filenames[sound_id] = nil;
   }).add;
 
@@ -95,8 +97,9 @@ OSCresponder.new(nil, "/free_all",
 	  ~filenames.do(
 		  { arg item, sound_id;
 			  if(~filenames[sound_id] != nil, {
-				  "free ".post; ~filenames[sound_id].postln;
+				  "freeing ".post; ~filenames[sound_id].postln;
 				  ~sounds[sound_id].free;
+				  ~sounds[sound_id] = nil;
 				  ~filenames[sound_id] = nil;
 			  }, {});
 		  });
