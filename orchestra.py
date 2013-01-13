@@ -250,7 +250,10 @@ class Orchestra:
         self.gui = None
         self._check_which_files_are_audio()
 
-        self._create_players()
+        self._player_class = WavPlayer
+        self.players = []
+        self._player_for_peer = dict()
+
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
         self.playable_chunks = self._filter_playable_chunks(tr_log, tr_log.chunks)
@@ -289,8 +292,6 @@ class Orchestra:
             self._warned_about_max_sources = False
         else:
             self.ssr = None
-
-        server.set_orchestra(self)
 
     @classmethod
     def _estimated_playback_duration(cls, score, options):
@@ -368,11 +369,6 @@ class Orchestra:
         m = Orchestra._extension_re.search(filename)
         if m:
             return m.group(1).lower()
-
-    def _create_players(self):
-        self._player_class = WavPlayer
-        self.players = []
-        self._player_for_peer = dict()
 
     def _prepare_playable_files(self):
         if self.predecode:
@@ -749,6 +745,8 @@ class Orchestra:
         self._tell_visualizers("/reset")
         for visualizer in self.visualizers:
             visualizer.informed_about_torrent = False
+        self.players = []
+        self._player_for_peer = dict()
 
     def _free_sounds(self):
         if self.server.synth:

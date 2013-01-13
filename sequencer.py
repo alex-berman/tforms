@@ -31,7 +31,7 @@ def get_chunk_from_queue():
         except Queue.Empty:
             pass
 
-def play(args):
+def play(orchestra, args):
     global orchestra_thread
     quit_on_end = False
     orchestra.fast_forwarding = args.ff or args.ff_to_start
@@ -74,10 +74,10 @@ for item in playlist:
 
 if args.get_duration:
     total_duration = 0
-    for playlist_item in playlist:
-        tr_log = TrLogReader(playlist_item["logfilename"]).get_log(reduced_passivity=True)
-        duration = Orchestra.estimate_duration(tr_log, playlist_item["args"])
-        print "%-50s%s" % (playlist_item["sessiondir"], datetime.timedelta(seconds=duration))
+    for item in playlist:
+        tr_log = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
+        duration = Orchestra.estimate_duration(tr_log, item["args"])
+        print "%-50s%s" % (item["sessiondir"], datetime.timedelta(seconds=duration))
         total_duration += duration
     print "-" * 64
     print "%-50s%s" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
@@ -87,16 +87,26 @@ else:
     count = args.start
 
     while True:
-        playlist_item = playlist[count % len(playlist)]
-        print "playing %s" % playlist_item["sessiondir"]
+        item = playlist[count % len(playlist)]
+        if not "orchestra" in item:
+            print "preparing %s" % item["sessiondir"]
+            tr_log = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
+            item["orchestra"] = Orchestra(server, item["sessiondir"], tr_log, item["args"])
 
-        tr_log = TrLogReader(playlist_item["logfilename"]).get_log(reduced_passivity=True)
-        orchestra = Orchestra(server, playlist_item["sessiondir"], tr_log, playlist_item["args"])
-
+        print "playing %s" % item["sessiondir"]
+        orchestra = item["orchestra"]
         if len(orchestra.chunks) == 0:
             raise Exception("No chunks to play. Unsupported file format?")
 
-        play(playlist_item["args"])
+        # <TEMP> (quickly skip from item to item, e.g. to provoke memory leak problem)
+        # def stop_orchestra_within_short():
+        #     time.sleep(2.0)
+        #     orchestra.stop()
+        # threading.Thread(target=stop_orchestra_within_short).start()
+        # </TEMP>
+
+        server.set_orchestra(orchestra)
+        play(orchestra, item["args"])
         wait_for_play_completion_or_interruption()
 
         print "completed playback"
