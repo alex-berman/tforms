@@ -46,6 +46,9 @@ class HeatMap(visualizer.Visualizer):
         self._load_locations()
         visualizer.Visualizer.__init__(
             self, args, file_class=File, peer_class=Peer, segment_class=Segment)
+
+    def reset(self):
+        visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
 
     def InitGL(self):
