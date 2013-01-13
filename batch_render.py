@@ -3,7 +3,7 @@
 import subprocess
 
 #RESOLUTION = "-width 1280 -height 720"
-RESOLUTION = "-width 1024 -height 576"
+RESOLUTION = "-width 1024 -height 768"
 #RESOLUTION = "-width 640 -height 360"
 FPS = 25
 
