@@ -549,7 +549,8 @@ class Visualizer:
 
     def keyPressed(self, key, x, y):
         if key == ESCAPE:
-            self._synth().stop_all()
+            # stop_all disabled as it also deletes ~reverb
+            # self._synth().stop_all()
             self.exiting = True
         elif key == 's':
             self._dump_screen()
