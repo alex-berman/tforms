@@ -9,12 +9,14 @@ from orchestra import Orchestra, Server
 from session import Session
 from logger import logger
 import glob
+import datetime
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="*")
 parser.add_argument("--playlist", type=str)
 parser.add_argument("--pause", type=float, default=5.0)
 parser.add_argument("--start", type=int, default=0)
+parser.add_argument("--get-duration", action="store_true")
 Server.add_parser_arguments(parser)
 args = parser.parse_args()
 
@@ -52,7 +54,7 @@ if args.playlist:
     for item in playlist:
         matches = glob.glob(item["session"])
         if len(matches) == 1:
-            item["session"] = matches[0]
+            item["sessiondir"] = matches[0]
         elif len(matches) == 0:
             raise Exception("no sessions matching %s" % item["session"])
         else:
@@ -61,32 +63,44 @@ if args.playlist:
 
 else:
     if len(args.sessiondirs) > 0:
-        playlist = [{"session": sessiondir,
+        playlist = [{"sessiondir": sessiondir,
                      "args": orchestra_parser.parse_args([])}
                     for sessiondir in args.sessiondirs]
     else:
         raise Exception("please specify playlist or sessiondirs")
 
-server = Server(args)
-count = args.start
+for item in playlist:
+    item["logfilename"] = "%s/session.log" % item["sessiondir"]
 
-while True:
-    playlist_item = playlist[count % len(playlist)]
-    sessiondir = playlist_item["session"]
-    logfilename = "%s/session.log" % sessiondir
-    print "playing %s" % sessiondir
+if args.get_duration:
+    total_duration = 0
+    for playlist_item in playlist:
+        tr_log = TrLogReader(playlist_item["logfilename"]).get_log(reduced_passivity=True)
+        duration = Orchestra.estimate_duration(tr_log, playlist_item["args"])
+        print "%-50s%s" % (playlist_item["sessiondir"], datetime.timedelta(seconds=duration))
+        total_duration += duration
+    print "-" * 64
+    print "%-50s%s" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
 
-    tr_log = TrLogReader(logfilename).get_log(reduced_passivity=True)
-    orchestra = Orchestra(server, sessiondir, tr_log, playlist_item["args"])
+else:
+    server = Server(args)
+    count = args.start
 
-    if len(orchestra.chunks) == 0:
-        raise Exception("No chunks to play. Unsupported file format?")
+    while True:
+        playlist_item = playlist[count % len(playlist)]
+        print "playing %s" % playlist_item["sessiondir"]
 
-    play(playlist_item["args"])
-    wait_for_play_completion_or_interruption()
+        tr_log = TrLogReader(playlist_item["logfilename"]).get_log(reduced_passivity=True)
+        orchestra = Orchestra(server, playlist_item["sessiondir"], tr_log, playlist_item["args"])
 
-    print "completed playback"
+        if len(orchestra.chunks) == 0:
+            raise Exception("No chunks to play. Unsupported file format?")
 
-    time.sleep(args.pause)
-    orchestra.reset()
-    count += 1
+        play(playlist_item["args"])
+        wait_for_play_completion_or_interruption()
+
+        print "completed playback"
+
+        time.sleep(args.pause)
+        orchestra.reset()
+        count += 1

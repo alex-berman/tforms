@@ -255,7 +255,7 @@ class Orchestra:
         self._create_players()
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
-        self.playable_chunks = self._filter_playable_chunks(tr_log.chunks)
+        self.playable_chunks = self._filter_playable_chunks(tr_log, tr_log.chunks)
 
         if self.include_non_playable:
             self.chunks = tr_log.chunks
@@ -267,8 +267,9 @@ class Orchestra:
         logger.debug("num playable chunks: %s" % len(self.playable_chunks))
         logger.debug("num selected chunks: %s" % len(self.chunks))
 
-        self._interpret_chunks_to_score(options.max_pause_within_segment)
-        print "playback duration: %s" % datetime.timedelta(seconds=self._estimated_playback_duration())
+        self.score = self._interpret_chunks_to_score(tr_log, self.playable_chunks, options)
+        print "playback duration: %s" % datetime.timedelta(
+            seconds=self._estimated_playback_duration(self.score, options))
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -293,22 +294,27 @@ class Orchestra:
 
         server.set_orchestra(self)
 
-    def _estimated_playback_duration(self):
-        last_segment = self.score[-1]
-        return last_segment["onset"] / self.timefactor + last_segment["duration"]
+    @classmethod
+    def _estimated_playback_duration(cls, score, options):
+        last_segment = score[-1]
+        return last_segment["onset"] / options.timefactor + last_segment["duration"]
 
-    def _interpret_chunks_to_score(self, max_pause_within_segment):
-        self.score = Interpreter(max_pause_within_segment).interpret(self.playable_chunks, self.tr_log.files)
-        for segment in self.score:
-            segment["duration"] /= self.timefactor
+    @classmethod
+    def _interpret_chunks_to_score(cls, tr_log, chunks, options):
+        score = Interpreter(options.max_pause_within_segment).interpret(
+            chunks, tr_log.files)
+        for segment in score:
+            segment["duration"] /= options.timefactor
+        return score
 
-    def _filter_playable_chunks(self, chunks):
-        return filter(lambda chunk: (self._chunk_is_playable(chunk)),
+    @classmethod
+    def _filter_playable_chunks(cls, tr_log, chunks):
+        return filter(lambda chunk: (cls._chunk_is_playable(tr_log, chunk)),
                       chunks)
 
-
-    def _chunk_is_playable(self, chunk):
-        file_info = self.tr_log.files[chunk["filenum"]]
+    @classmethod
+    def _chunk_is_playable(cls, tr_log, chunk):
+        file_info = tr_log.files[chunk["filenum"]]
         return file_info["playable_file_index"] != -1
 
     def _run_scheduler_thread(self):
@@ -372,7 +378,8 @@ class Orchestra:
 
     def _prepare_playable_files(self):
         if self.predecode:
-            self._get_wav_files_info()
+            self._num_playable_files = self._get_wav_files_info(
+                self.tr_log, self.include_non_playable)
             self._load_sounds()
         else:
             raise Exception("playing wav without precoding is not supported")
@@ -388,31 +395,33 @@ class Orchestra:
                     logger.debug("result: %s" % result)
             print "OK"
 
-    def _get_wav_files_info(self):
+    @classmethod
+    def _get_wav_files_info(cls, tr_log, include_non_playable=False):
         playable_file_index = 0
-        for filenum in range(len(self.tr_log.files)):
-            file_info = self.tr_log.files[filenum]
+        for filenum in range(len(tr_log.files)):
+            file_info = tr_log.files[filenum]
             file_info["playable_file_index"] = -1
 
             if "decoded_name" in file_info:
-                file_info["duration"] = self._get_file_duration(file_info)
+                file_info["duration"] = cls._get_file_duration(file_info)
                 if file_info["duration"] > 0:
                     file_info["playable_file_index"] = playable_file_index
                     logger.debug("duration for %r: %r\n" %
                                       (file_info["name"], file_info["duration"]))
                     playable_file_index += 1
 
-            if self.include_non_playable:
+            if include_non_playable:
                 file_info["index"] = filenum
             else:
                 file_info["index"] = file_info["playable_file_index"]
-        self._num_playable_files = playable_file_index
+        return playable_file_index
 
-    def _get_file_duration(self, file_info):
+    @classmethod
+    def _get_file_duration(cls, file_info):
         if "decoded_name" in file_info:
             statinfo = os.stat(file_info["decoded_name"])
             wav_header_size = 44
-            return float((statinfo.st_size - wav_header_size) / self.BYTES_PER_SAMPLE) / self.SAMPLE_RATE
+            return float((statinfo.st_size - wav_header_size) / cls.BYTES_PER_SAMPLE) / cls.SAMPLE_RATE
 
     def get_current_log_time(self):
         if self.fast_forwarding:
@@ -752,6 +761,16 @@ class Orchestra:
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()
         self.server._tell_visualizers(*args)
+
+    @classmethod
+    def estimate_duration(cls, tr_log, options):
+        if options.predecode:
+            predecoder = Predecoder(tr_log, options.file_location, cls.SAMPLE_RATE)
+            predecoder.decode()
+        cls._get_wav_files_info(tr_log)
+        playable_chunks = cls._filter_playable_chunks(tr_log, tr_log.chunks)
+        score = cls._interpret_chunks_to_score(tr_log, playable_chunks, options)
+        return cls._estimated_playback_duration(score, options)
 
 def warn(logger, message):
     logger.debug(message)
