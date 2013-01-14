@@ -57,6 +57,7 @@ class File(visualizer.File):
 
 class Waves(visualizer.Visualizer):
     def __init__(self, args):
+        self._gathered_segments_layer = None
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
                                        segment_class=Segment)
@@ -67,6 +68,8 @@ class Waves(visualizer.Visualizer):
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
         self.torrent_download_completion_time = None
+        if self._gathered_segments_layer:
+            self._gathered_segments_layer.refresh()
 
     def pan_segment(self, segment):
         # let orchestra & synth spatialize
