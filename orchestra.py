@@ -121,7 +121,7 @@ class Server(OscReceiver):
         for args in self._orchestra_queue:
             self._dispatch(*args)
         self._orchestra_queue = []
-        orchestra.load_sounds()
+        orchestra.init_playback()
 
     def _handle_register(self, path, args, types, src, data):
         print "visualizer registered"
@@ -156,6 +156,7 @@ class Player:
         self.spatial_position = orchestra.space.new_peer()
         self.trajectory = orchestra.space.parabolic_trajectory_to_listener(
             self.spatial_position.bearing)
+        self.informed_visualizers = False
 
     def visualize(self, chunk):
         self.orchestra.visualize_chunk(chunk, self)
@@ -247,7 +248,6 @@ class Orchestra:
 
         self.playback_enabled = True
         self.fast_forwarding = False
-        self._log_time_for_last_handled_event = 0
         self.gui = None
         self._check_which_files_are_audio()
 
@@ -278,13 +278,6 @@ class Orchestra:
         self._quitting = False
         self.space = Space()
 
-        if options.ff_to_start:
-            self._ff_to_time = options.start_time
-            self.set_time_cursor(0)
-        else:
-            self._ff_to_time = None
-            self.set_time_cursor(options.start_time)
-
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
@@ -293,6 +286,16 @@ class Orchestra:
             self._warned_about_max_sources = False
         else:
             self.ssr = None
+
+    def init_playback(self):
+        self._load_sounds()
+        self._log_time_for_last_handled_event = 0
+        if self.options.ff_to_start:
+            self._ff_to_time = self.options.start_time
+            self.set_time_cursor(0)
+        else:
+            self._ff_to_time = None
+            self.set_time_cursor(self.options.start_time)
 
     @classmethod
     def _estimated_playback_duration(cls, score, options):
@@ -378,7 +381,7 @@ class Orchestra:
         else:
             raise Exception("playing wav without precoding is not supported")
 
-    def load_sounds(self):
+    def _load_sounds(self):
         if self.server.synth:
             print "loading sounds"
             for filenum in range(len(self.tr_log.files)):
@@ -558,6 +561,7 @@ class Orchestra:
 
     def visualize_chunk(self, chunk, player):
         if len(self.visualizers) > 0:
+            self._inform_visualizers_about_peer(player)
             file_info = self.tr_log.files[chunk["filenum"]]
             self._chunks_by_id[chunk["id"]] = chunk
             self._tell_visualizers(
@@ -569,6 +573,13 @@ class Orchestra:
                 player.id,
                 chunk["t"])
 
+    def _inform_visualizers_about_peer(self, player):
+        if not player.informed_visualizers:
+            self._tell_visualizers(
+                "/peer", player.id, player.addr, player.spatial_position.bearing,
+                player.spatial_position.pan, player.location_str)
+            player.informed_visualizers = True
+
     def visualize_segment(self, segment, player):
         if len(self.visualizers) > 0:
             if self.ssr:
@@ -577,6 +588,7 @@ class Orchestra:
                     print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
                     self._warned_about_max_sources = True
 
+            self._inform_visualizers_about_peer(player)
             file_info = self.tr_log.files[segment["filenum"]]
             self.segments_by_id[segment["id"]] = segment
             self._tell_visualizers(
@@ -663,13 +675,12 @@ class Orchestra:
         count = len(self.players)
         logger.debug("creating player number %d" % count)
         player = self._player_class(self, count)
+        player.addr = addr
         if self.server.options.locate_peers and self._peer_location[addr] is not None:
             x, y = self._peer_location[addr]
-            location_str = "%s,%s" % (x, y)
+            player.location_str = "%s,%s" % (x, y)
         else:
-            location_str = ""
-        self._tell_visualizers(
-            "/peer", player.id, addr, player.spatial_position.bearing, player.spatial_position.pan, location_str)
+            player.location_str = ""
         return player
 
     def set_time_cursor(self, log_time):
@@ -745,8 +756,8 @@ class Orchestra:
         self._tell_visualizers("/reset")
         for visualizer in self.visualizers:
             visualizer.informed_about_torrent = False
-        self.players = []
-        self._player_for_peer = dict()
+        for player in self.players:
+            player.informed_visualizers = False
 
     def _free_sounds(self):
         if self.server.synth:
