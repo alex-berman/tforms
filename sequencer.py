@@ -70,30 +70,28 @@ else:
     else:
         raise Exception("please specify playlist or sessiondirs")
 
+server = Server(args)
+
 for item in playlist:
     item["logfilename"] = "%s/session.log" % item["sessiondir"]
+    print "preparing %s" % item["sessiondir"]
+    item["tr_log"] = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
+    item["orchestra"] = Orchestra(server, item["sessiondir"], item["tr_log"], item["args"])
 
 if args.get_duration:
     total_duration = 0
     for item in playlist:
-        tr_log = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
-        duration = Orchestra.estimate_duration(tr_log, item["args"])
+        duration = Orchestra.estimate_duration(item["tr_log"], item["args"])
         print "%-50s%s" % (item["sessiondir"], datetime.timedelta(seconds=duration))
         total_duration += duration
     print "-" * 64
     print "%-50s%s" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
 
 else:
-    server = Server(args)
     count = args.start
 
     while True:
         item = playlist[count % len(playlist)]
-        if not "orchestra" in item:
-            print "preparing %s" % item["sessiondir"]
-            tr_log = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
-            item["orchestra"] = Orchestra(server, item["sessiondir"], tr_log, item["args"])
-
         print "playing %s" % item["sessiondir"]
         orchestra = item["orchestra"]
         if len(orchestra.chunks) == 0:
