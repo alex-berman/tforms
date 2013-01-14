@@ -17,6 +17,7 @@ parser.add_argument("--playlist", type=str)
 parser.add_argument("--pause", type=float, default=5.0)
 parser.add_argument("--start", type=int, default=0)
 parser.add_argument("--get-duration", action="store_true")
+parser.add_argument("--preview", type=float)
 Server.add_parser_arguments(parser)
 args = parser.parse_args()
 
@@ -100,12 +101,11 @@ else:
 
         server.set_orchestra(orchestra)
 
-        # <TEMP> (quickly skip from item to item, e.g. to provoke memory leak problem)
-        # def stop_orchestra_within_short():
-        #     time.sleep(5.0)
-        #     orchestra.stop()
-        # threading.Thread(target=stop_orchestra_within_short).start()
-        # </TEMP>
+        def stop_orchestra_after_preview():
+            time.sleep(args.preview)
+            orchestra.stop()
+        if args.preview:
+            threading.Thread(target=stop_orchestra_after_preview).start()
 
         play(orchestra, item["args"])
         wait_for_play_completion_or_interruption()
