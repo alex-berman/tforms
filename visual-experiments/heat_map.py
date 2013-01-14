@@ -25,7 +25,7 @@ class Location(Vector2d):
 
 class File(visualizer.File):
     def add_segment(self, segment):
-        self.visualizer.playing_segment(segment) # TEMP
+        #self.visualizer.playing_segment(segment) # TEMP
         location = self.visualizer.peers_by_addr[segment.peer.addr].location
         if location:
             self.visualizer.added_segment(segment)
