@@ -387,9 +387,9 @@ class Orchestra:
             for filenum in range(len(self.tr_log.files)):
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
-                    logger.debug("load_sound(%s)" % file_info["decoded_name"])
+                    logger.info("load_sound(%s)" % file_info["decoded_name"])
                     result = self.server.synth.load_sound(filenum, file_info["decoded_name"])
-                    logger.debug("result: %s" % result)
+                    logger.info("result: %s" % result)
             print "OK"
 
     @classmethod
@@ -427,7 +427,7 @@ class Orchestra:
             return self.log_time_played_from + self.stopwatch.get_elapsed_time() * self.timefactor
 
     def play_non_realtime(self, quit_on_end=False):
-        logger.debug("entering play_non_realtime")
+        logger.info("entering play_non_realtime")
         if self._loop:
             while True:
                 self._play_until_end()
@@ -436,10 +436,10 @@ class Orchestra:
             self._play_until_end()
             if quit_on_end:
                 self._quitting = True
-        logger.debug("leaving play_non_realtime")
+        logger.info("leaving play_non_realtime")
 
     def _play_until_end(self):
-        logger.debug("entering _play_until_end")
+        logger.info("entering _play_until_end")
         self._playing = True
         self.stopwatch.start()
         no_more_events = False
@@ -449,7 +449,7 @@ class Orchestra:
                 self._handle_event(event)
             else:
                 no_more_events = True
-        logger.debug("leaving _play_until_end")
+        logger.info("leaving _play_until_end")
 
     def _get_next_chunk_or_segment(self):
         logger.debug("chunk index = %d, segment index = %d" % (
