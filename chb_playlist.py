@@ -62,6 +62,6 @@ playlist = [
               "--title=Catching Fire by Suzanne Collins"]},
 
     {"session": "sessions/*miracle",
-     "args": ["-z", "5",
+     "args": ["-z", "2",
               "--title=The Miracle of Self-discipline by Tracy Brian"]},
 ]
