@@ -10,7 +10,7 @@ class SynthController:
         self.target = liblo.Address(self.PORT)
         self._lock = threading.Lock()
         self._load_results = {}
-        self._sc_listener = OscReceiver(proto=liblo.UDP)
+        self._sc_listener = OscReceiver(proto=liblo.TCP)
         self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
         self._sc_listener.start()
         self._send("/info_subscribe", self._sc_listener.port)

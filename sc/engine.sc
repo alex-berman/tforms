@@ -29,6 +29,7 @@ OSCresponder.new(nil, "/info_subscribe",
   { arg t, r, msg;
 	  var port = msg[1];
 	  ~info_subscriber = NetAddr.new("127.0.0.1", port);
+	  ~info_subscriber.connect;
   }).add;
 
 OSCresponder.new(nil, "/amp_subscribe",
