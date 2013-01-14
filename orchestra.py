@@ -121,6 +121,7 @@ class Server(OscReceiver):
         for args in self._orchestra_queue:
             self._dispatch(*args)
         self._orchestra_queue = []
+        orchestra.load_sounds()
 
     def _handle_register(self, path, args, types, src, data):
         print "visualizer registered"
@@ -374,11 +375,10 @@ class Orchestra:
         if self.predecode:
             self._num_playable_files = self._get_wav_files_info(
                 self.tr_log, self.include_non_playable)
-            self._load_sounds()
         else:
             raise Exception("playing wav without precoding is not supported")
 
-    def _load_sounds(self):
+    def load_sounds(self):
         if self.server.synth:
             print "loading sounds"
             for filenum in range(len(self.tr_log.files)):

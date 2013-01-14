@@ -98,14 +98,15 @@ else:
         if len(orchestra.chunks) == 0:
             raise Exception("No chunks to play. Unsupported file format?")
 
+        server.set_orchestra(orchestra)
+
         # <TEMP> (quickly skip from item to item, e.g. to provoke memory leak problem)
         # def stop_orchestra_within_short():
-        #     time.sleep(2.0)
+        #     time.sleep(5.0)
         #     orchestra.stop()
         # threading.Thread(target=stop_orchestra_within_short).start()
         # </TEMP>
 
-        server.set_orchestra(orchestra)
         play(orchestra, item["args"])
         wait_for_play_completion_or_interruption()
 
