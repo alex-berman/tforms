@@ -754,6 +754,7 @@ class Orchestra:
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
                     self.server.synth.free_sound(filenum)
+            time.sleep(1.0) # seems to reduce risk for exceeded memory - gives SC time to garbage collect?
 
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()
