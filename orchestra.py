@@ -388,9 +388,18 @@ class Orchestra:
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
                     logger.info("load_sound(%s)" % file_info["decoded_name"])
-                    result = self.server.synth.load_sound(filenum, file_info["decoded_name"])
-                    logger.info("result: %s" % result)
+                    result = self._load_sound_stubbornly(filenum, file_info["decoded_name"])
+                    logger.info("load_sound result: %s" % result)
             print "OK"
+
+    def _load_sound_stubbornly(self, filenum, filename):
+        while True:
+            result = self.server.synth.load_sound(filenum, filename)
+            if result > 0:
+                return result
+            else:
+                warn(logger, "synth returned %s - retrying soon" % result)
+                time.sleep(1.0)
 
     @classmethod
     def _get_wav_files_info(cls, tr_log, include_non_playable=False):
@@ -765,7 +774,6 @@ class Orchestra:
                 file_info = self.tr_log.files[filenum]
                 if file_info["playable_file_index"] != -1:
                     self.server.synth.free_sound(filenum)
-            time.sleep(1.0) # seems to reduce risk for exceeded memory - gives SC time to garbage collect?
 
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()
@@ -782,6 +790,6 @@ class Orchestra:
         return cls._estimated_playback_duration(score, options)
 
 def warn(logger, message):
-    logger.debug(message)
+    logger.info(message)
     print >> sys.stderr, "WARNING: %s" % message
 

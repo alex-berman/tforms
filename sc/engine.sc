@@ -62,6 +62,7 @@ OSCresponder.new(nil, "/load",
   { arg t, r, msg;
 	  var sound_id = msg[1];
 	  var filename = msg[2];
+	  var buf;
 	  "loading ".post; filename.postln;
 	  if(~filenames[sound_id] == filename,
 		  {
@@ -72,14 +73,19 @@ OSCresponder.new(nil, "/load",
 				  }, {});
 		  },
 		  {
-			  ~sounds[sound_id] = Buffer.read(s, filename, 0, -1, {
+			  buf = Buffer.read(s, filename, 0, -1, {
 				  "loaded ".post; filename.postln;
 				  if(~info_subscriber != nil,
 					  {
-						  "result: ".post; ~sounds[sound_id].numFrames.postln;
-						  ~info_subscriber.sendMsg("/loaded", sound_id, ~sounds[sound_id].numFrames)
+						  "result: ".post; buf.numFrames.postln;
+						  ~info_subscriber.sendMsg("/loaded", sound_id, buf.numFrames);
+						  if(buf.numFrames > 0, {
+						  	~sounds[sound_id] = buf;
+							~filenames[sound_id] = filename;
+						  }, {
+							buf.free;
+						  });
 					  }, {});
-				  ~filenames[sound_id] = filename;
 			  });
 		  });
   }).add;

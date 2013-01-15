@@ -18,22 +18,24 @@ class SynthController:
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
         num_frames_loaded = self._get_load_result(sound_id)
-        if num_frames_loaded <= 0:
-            raise Exception("error when loading sound %s: SC reports numFrames=%s" % (
-                    filename, num_frames_loaded))
         return num_frames_loaded
 
-    def _get_load_result(self, sound_id):
+    def _get_load_result(self, sound_id, timeout=10.0):
+        t = time.time()
         while True:
             if sound_id in self._load_results:
                 result = self._load_results[sound_id]
                 del self._load_results[sound_id]
                 return result
-            self._sc_listener.serve()
-            time.sleep(0.01)
+            elif (time.time() - t) > timeout:
+                return None
+            else:
+                self._sc_listener.serve()
+                time.sleep(0.01)
 
     def _handle_loaded(self,path, args, types, src, data):
         sound_id, result = args
+        print "got /loaded %s" % args #TEMP
         self._load_results[sound_id] = result
 
     def free_sound(self, sound_id):
