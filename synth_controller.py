@@ -6,19 +6,14 @@ import subprocess
 import re
 
 class SynthController:
-    def __init__(self, mode):
-        self.mode = mode
-        self._lock = threading.Lock()
-        self._load_results = {}
-        self._sc_listener = OscReceiver(proto=liblo.TCP)
-        self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
+    PORT = 57120
 
-    def launch_engine(self):
+    def launch_engine(self, mode):
         f = open("sc/engine.sc")
         engine = f.read()
         f.close()
 
-        f = open("sc/%s.sc" % self.mode)
+        f = open("sc/%s.sc" % mode)
         engine += f.read()
         f.close()
 
@@ -42,15 +37,27 @@ class SynthController:
             m = re.search('langPort=(\d+)', line)
             if m:
                 lang_port = int(m.group(1))
+                if lang_port != self.PORT:
+                    self.kill_engine()
+                    raise Exception("expected SC langPort to be %s but it says %s" % (
+                            self.PORT, lang_port))
             elif line == "Shared memory server interface initialized":
                 initialized = True
 
-        self.target = liblo.Address(lang_port)
+    def connect(self):
+        self._lock = threading.Lock()
+        self._load_results = {}
+        self._sc_listener = OscReceiver(proto=liblo.TCP)
+        self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
         self._sc_listener.start()
+        self.target = liblo.Address(self.PORT)
         self._send("/info_subscribe", self._sc_listener.port)
 
-    def stop_engine(self):
+    def kill_engine(self):
         self._sc_process.kill()
+        subprocess.call("killall sclang", shell=True)
+        subprocess.call("killall scsynth", shell=True)
+        time.sleep(1.0) # time to release langPort
 
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)

@@ -723,6 +723,7 @@ class Visualizer:
         if self._synth_instance is None:
             from synth_controller import SynthController
             self._synth_instance = SynthController()
+            self._synth_instance.connect()
         return self._synth_instance
 
     def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None):
