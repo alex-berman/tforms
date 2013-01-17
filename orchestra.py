@@ -57,6 +57,7 @@ class Server(OscReceiver):
         parser.add_argument("--osc-log", dest="osc_log")
         parser.add_argument("--no-synth", action="store_true")
         parser.add_argument("--locate-peers", action="store_true")
+        parser.add_argument("--sc-mode", type=str, default="default_stereo")
 
     def __init__(self, options):
         self.options = options
@@ -74,7 +75,8 @@ class Server(OscReceiver):
             self.synth = None
         else:
             from synth_controller import SynthController
-            self.synth = SynthController()
+            self.synth = SynthController(self.options.sc_mode)
+            self.synth.launch_engine()
             self.synth.free_sounds()
 
         if options.locate_peers:
@@ -141,6 +143,7 @@ class Server(OscReceiver):
 
     def shutdown(self):
         self._tell_visualizers("/shutdown")
+        self.synth.kill_engine()
 
     def _tell_visualizers(self, *args):
         for visualizer in self.visualizers:

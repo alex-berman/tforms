@@ -2,18 +2,55 @@ import liblo
 import threading
 from osc_receiver import OscReceiver
 import time
+import subprocess
+import re
 
 class SynthController:
-    PORT = 57120
-
-    def __init__(self):
-        self.target = liblo.Address(self.PORT)
+    def __init__(self, mode):
+        self.mode = mode
         self._lock = threading.Lock()
         self._load_results = {}
         self._sc_listener = OscReceiver(proto=liblo.TCP)
         self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
+
+    def launch_engine(self):
+        f = open("sc/engine.sc")
+        engine = f.read()
+        f.close()
+
+        f = open("sc/%s.sc" % self.mode)
+        engine += f.read()
+        f.close()
+
+        out = open("sc/_compiled.sc", "w")
+
+        f = open("sc/boot.sc")
+        for line in f:
+            line = line.replace("//$ENGINE", engine)
+            print >>out, line,
+        f.close()
+
+        out.close()
+
+        self._sc_process = subprocess.Popen("sclang sc/_compiled.sc", shell=True,
+                                            stdout=subprocess.PIPE)
+        lang_port = None
+        initialized = False
+        while lang_port is None or not initialized:
+            line = self._sc_process.stdout.readline().strip()
+            print "SC: %s" % line
+            m = re.search('langPort=(\d+)', line)
+            if m:
+                lang_port = int(m.group(1))
+            elif line == "Shared memory server interface initialized":
+                initialized = True
+
+        self.target = liblo.Address(lang_port)
         self._sc_listener.start()
         self._send("/info_subscribe", self._sc_listener.port)
+
+    def stop_engine(self):
+        self._sc_process.kill()
 
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
