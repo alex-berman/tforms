@@ -61,6 +61,8 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
                                        segment_class=Segment)
+
+    def synth_address_received(self):
         self.subscribe_to_waveform()
 
     def reset(self):

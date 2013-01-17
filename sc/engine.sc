@@ -28,6 +28,7 @@ SystemClock.sched(1.0, { Synth(\limiter, []); });
 OSCresponder.new(nil, "/info_subscribe",
   { arg t, r, msg;
 	  var port = msg[1];
+	  "info_subscribe to port ".post; port.postln;
 	  ~info_subscriber = NetAddr.new("127.0.0.1", port);
 	  ~info_subscriber.connect;
   }).add;

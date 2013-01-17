@@ -404,6 +404,14 @@ class Visualizer:
     def handle_segment_waveform_value(self, segment, value):
         pass
 
+    def handle_synth_address(self, path, args, types, src, data):
+        self._synth_instance = None
+        self._synth_port = args[0]
+        self.synth_address_received()
+
+    def synth_address_received(self):
+        pass
+
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = simple_osc_receiver.OscReceiver(log_filename=log_filename)
@@ -414,6 +422,7 @@ class Visualizer:
         self.server.add_method("/peer", "isffs", self.handle_peer_message)
         self.server.add_method("/reset", "", self.handle_reset)
         self.server.add_method("/shutdown", "", self.handle_shutdown)
+        self.server.add_method("/synth_address", "i", self.handle_synth_address)
         self.server.start()
         self.waveform_server = None
 
@@ -723,7 +732,7 @@ class Visualizer:
         if self._synth_instance is None:
             from synth_controller import SynthController
             self._synth_instance = SynthController()
-            self._synth_instance.connect()
+            self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
     def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None):

@@ -288,7 +288,9 @@ class Orchestra:
             from synth_controller import SynthController
             self.synth = SynthController()
             self.synth.launch_engine(self.server.options.sc_mode)
-            self.synth.connect()
+            self.synth.connect(self.synth.lang_port)
+            self.synth.subscribe_to_info()
+            self._tell_visualizers("/synth_address", self.synth.lang_port)
 
         self._load_sounds()
         self._log_time_for_last_handled_event = 0
