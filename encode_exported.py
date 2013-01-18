@@ -23,7 +23,7 @@ def call_ffmpeg():
 
     cmd += ["-vcodec", "libx264",
             "-vpre", "lossless_max",
-            "%s/rendered_%s.mp4" % (args.sessiondir, args.visualizer)]
+            args.output]
 
     print " ".join(cmd)
     subprocess.call(cmd)
@@ -38,6 +38,7 @@ parser.add_argument("visualizer")
 parser.add_argument("-fps", type=float, default=25)
 parser.add_argument("-fade-out", type=float)
 parser.add_argument("-f", "--force", action="store_true")
+parser.add_argument("-o", "--output", type=str)
 args = parser.parse_args()
 
 export_dir = "%s/rendered_%s" % (args.sessiondir, args.visualizer)
