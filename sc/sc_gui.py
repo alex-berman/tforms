@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 from synth_controller import SynthController
 
 synth = SynthController()
+synth.connect(SynthController.DEFAULT_PORT)
 
 parameters = ["mix", "room", "damp"]
 

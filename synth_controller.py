@@ -6,6 +6,8 @@ import subprocess
 import re
 
 class SynthController:
+    DEFAULT_PORT = 57120
+
     def __init__(self):
         self._sc_process = None
 
