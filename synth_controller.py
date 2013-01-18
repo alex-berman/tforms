@@ -41,7 +41,7 @@ class SynthController:
             m = re.search('langPort=(\d+)', line)
             if m:
                 self.lang_port = int(m.group(1))
-            elif line == "Shared memory server interface initialized":
+            elif line == "Receiving notification messages from server localhost":
                 initialized = True
         self._sc_output_thread = threading.Thread(target=self._read_sc_output)
         self._sc_output_thread.daemon = True
