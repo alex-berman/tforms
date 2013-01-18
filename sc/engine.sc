@@ -176,3 +176,25 @@ OSCresponder.new(nil, "/stop_all",
 	{ arg t, r, msg;
 		s.freeAll;
 	}).add;
+
+
+
+~reverb_bus = Bus.audio(s, 1);
+
+OSCresponder.new(nil, "/set_reverb_mix",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\mix, value);
+  }).add;
+
+OSCresponder.new(nil, "/set_reverb_room",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\room, value);
+  }).add;
+
+OSCresponder.new(nil, "/set_reverb_damp",
+  { arg t, r, msg;
+	  var value = msg[1];
+	  ~reverb.set(\damp, value);
+  }).add;

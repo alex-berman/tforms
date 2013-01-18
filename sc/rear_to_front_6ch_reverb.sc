@@ -1,6 +1,3 @@
-
-~reverb_bus = Bus.audio(s, 1);
-
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var output_front, output_center, output_rear, pointer, filelength, pitch;
 	var env_front, env_center, env_rear, dir, amp, content;
@@ -35,7 +32,8 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	SendReply.ar(Impulse.ar(500), "/waveform_private", front_content, segment_id);
 }).send(s);
 
-SynthDef(\add_reverb, {|out=0, in=0, mix = 0.25, room = 0.15, damp = 0.5|
+SynthDef(\add_reverb, {
+	arg mix = 0.32, room = 0.9, damp = 1.0;
 	var signal, silent_noise, reverb;
 	silent_noise = WhiteNoise.ar(0.00001); // see http://new-supercollider-mailing-lists-forums-use-these.2681727.n2.nabble.com/cpu-problems-with-PV-MagFreeze-and-Freeverb-tp5998599p6013552.html
 	signal = In.ar(~reverb_bus, 1);
@@ -48,24 +46,6 @@ SynthDef(\add_reverb, {|out=0, in=0, mix = 0.25, room = 0.15, damp = 0.5|
 	Out.ar(5, reverb);
 }).send(s);
 
-OSCresponder.new(nil, "/set_reverb_mix",
-  { arg t, r, msg;
-	  var value = msg[1];
-	  ~reverb.set(\mix, value);
-  }).add;
-
-OSCresponder.new(nil, "/set_reverb_room",
-  { arg t, r, msg;
-	  var value = msg[1];
-	  ~reverb.set(\room, value);
-  }).add;
-
-OSCresponder.new(nil, "/set_reverb_damp",
-  { arg t, r, msg;
-	  var value = msg[1];
-	  ~reverb.set(\damp, value);
-  }).add;
-
 SystemClock.sched(1.0, {
-	~reverb = Synth(\add_reverb, [\in, ~reverb_bus.index]);
+	~reverb = Synth(\add_reverb);
 });

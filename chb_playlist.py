@@ -4,10 +4,6 @@ playlist = [
     # dorian gray
     # jane austen
 
-    {"session": "sessions/*neuromancer-ch1-3",
-     "args": ["-z", "3",
-              "--title=Neuromancer by William Gibson (chapters 1-3)"]},
-
     {"session": "sessions/*brave-ch1-4",
      "args": ["-z", "0.5",
               "--title=Brave New World by Aldous Huxley (chapters 1-4)"]},
@@ -64,4 +60,8 @@ playlist = [
     {"session": "sessions/*miracle",
      "args": ["-z", "2",
               "--title=The Miracle of Self-discipline by Tracy Brian"]},
+
+    {"session": "sessions/*neuromancer-ch1-3",
+     "args": ["-z", "3",
+              "--title=Neuromancer by William Gibson (chapters 1-3)"]},
 ]
