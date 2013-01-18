@@ -1,8 +1,23 @@
 playlist = [
-    # VALIS
-    # gulliver
-    # dorian gray
-    # jane austen
+    {"session": "sessions/*valis",
+     "args": ["-z", "2",
+              "--title=VALIS by Philip K Dick"]},
+
+    {"session": "sessions/*gulliver",
+     "args": ["-z", "1",
+              "--title=Gulliver's Travels By Jonathan Swift"]},
+
+    {"session": "sessions/*emma",
+     "args": ["-z", "0.25",
+              "--title=Emma by Jane Austen"]},
+
+    {"session": "sessions/*potter",
+     "args": ["-z", "2",
+              "--title=Harry Potter and the Half-Blood Prince by J. K. Rowling"]},
+
+    {"session": "sessions/*ulysses",
+     "args": ["-z", "10",
+              "--title=Ulysses by James Joyce (in Polish)"]},
 
     {"session": "sessions/*brave-ch1-4",
      "args": ["-z", "0.5",
