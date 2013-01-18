@@ -289,7 +289,19 @@ class Visualizer:
     def run(self):
         window_width = self.width + self.margin*2
         window_height = self.height + self.margin*2
+
         glutInit(sys.argv)
+
+        if self.args.left is None:
+            left = (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2
+        else:
+            left = self.args.left
+
+        if self.args.top is None:
+            top = (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2
+        else:
+            top = self.args.top
+
         glutInitDisplayMode(self.gl_display_mode)
         if self.args.fullscreen:
             glutGameModeString("%dx%d:32@75" % (window_width, window_height))
@@ -297,9 +309,6 @@ class Visualizer:
             glutSetCursor(GLUT_CURSOR_NONE)
         else:
             glutInitWindowSize(window_width, window_height)
-            glutInitWindowPosition(
-                (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2,
-                (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2)
             glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
         glutIdleFunc(self.DrawGLScene)
@@ -307,6 +316,7 @@ class Visualizer:
         glutKeyboardFunc(self.keyPressed)
         self.InitGL()
         self.ReSizeGLScene(window_width, window_height)
+        glutPositionWindow(left, top)
         glutMainLoop()
 
     def handle_torrent_message(self, path, args, types, src, data):
@@ -751,6 +761,8 @@ class Visualizer:
         parser.add_argument('-sync', action='store_true')
         parser.add_argument('-width', dest='width', type=int, default=1024)
         parser.add_argument('-height', dest='height', type=int, default=768)
+        parser.add_argument("-left", type=int)
+        parser.add_argument("-top", type=int)
         parser.add_argument('-margin', dest='margin', type=int, default=0)
         parser.add_argument('-show-fps', dest='show_fps', action='store_true')
         parser.add_argument('-osc-log', dest='osc_log')
