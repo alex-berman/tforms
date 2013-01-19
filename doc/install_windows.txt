@@ -1,10 +1,12 @@
-Requirements for running visual-experiments\geo.py on Windows:
+Requirements for running visual-experiments\heat_map.py on Windows:
 
-numpy
-http://sourceforge.net/projects/numpy/files/latest/download?source=files
+python 2.7
+http://www.python.org/download/releases/2.7.3/
 
 pyopengl
 http://pypi.python.org/pypi/PyOpenGL/3.0.2
+
+locations.dat: most easily fetched via samba (\\192.XXX.XXX.XXX\TorrentialForms)
 
 pyopengl might also need glut32.dll:
 - download glut-3.7.6-bin.zip from http://user.xmission.com/~nate/glut.html
