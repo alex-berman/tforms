@@ -373,10 +373,14 @@ class Stairs(visualizer.Visualizer):
         if self.args.waveform:
             self.gathered_color_v = CURSOR_COLOR_V * GATHERED_OPACITY + STEPS_COLOR_V * (1 - GATHERED_OPACITY)
             self.gathered_color_h = CURSOR_COLOR_H * GATHERED_OPACITY + STEPS_COLOR_H * (1 - GATHERED_OPACITY)
-            self.subscribe_to_waveform()
         else:
             self.gathered_color_v = GATHERED_COLOR_V
             self.gathered_color_h = GATHERED_COLOR_H
+
+    def synth_address_received(self):
+        if self.args.waveform:
+            self.subscribe_to_waveform()
+        else:
             self.subscribe_to_amp()
 
     def gather(self, segment):

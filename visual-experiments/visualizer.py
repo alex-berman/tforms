@@ -610,50 +610,53 @@ class Visualizer:
         self.orchestra.place_segment(segment_id, -x, y, duration)
 
     def _mouse_clicked(self, button, state, x, y):
-        if button == GLUT_LEFT_BUTTON:
-            self._dragging_orientation = (state == GLUT_DOWN)
-        else:
-            self._dragging_orientation = False
-            if button == GLUT_RIGHT_BUTTON:
-                self._dragging_y_position = (state == GLUT_DOWN)
-        if state == GLUT_DOWN:
-            self._drag_x_previous = x
-            self._drag_y_previous = y
+        if self._3d_enabled:
+            if button == GLUT_LEFT_BUTTON:
+                self._dragging_orientation = (state == GLUT_DOWN)
+            else:
+                self._dragging_orientation = False
+                if button == GLUT_RIGHT_BUTTON:
+                    self._dragging_y_position = (state == GLUT_DOWN)
+            if state == GLUT_DOWN:
+                self._drag_x_previous = x
+                self._drag_y_previous = y
 
     def _mouse_moved(self, x, y):
-        if self._dragging_orientation:
-            self._disable_camera_script()
-            self._set_camera_orientation(
-                self._camera_y_orientation + x - self._drag_x_previous,
-                self._camera_x_orientation - y + self._drag_y_previous)
-            self._print_camera_settings()
-        elif self._dragging_y_position:
-            self._disable_camera_script()
-            self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
-            self._print_camera_settings()
-        self._drag_x_previous = x
-        self._drag_y_previous = y
+        if self._3d_enabled:
+            if self._dragging_orientation:
+                self._disable_camera_script()
+                self._set_camera_orientation(
+                    self._camera_y_orientation + x - self._drag_x_previous,
+                    self._camera_x_orientation - y + self._drag_y_previous)
+                self._print_camera_settings()
+            elif self._dragging_y_position:
+                self._disable_camera_script()
+                self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
+                self._print_camera_settings()
+            self._drag_x_previous = x
+            self._drag_y_previous = y
 
     def _disable_camera_script(self):
         self._camera_script = None
 
     def _special_key_pressed(self, key, x, y):
-        r = math.radians(self._camera_y_orientation)
-        new_position = self._camera_position
-        if key == GLUT_KEY_LEFT:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_RIGHT:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_UP:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        elif key == GLUT_KEY_DOWN:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        self._set_camera_position(new_position)
-        self._print_camera_settings()
+        if self._3d_enabled:
+            r = math.radians(self._camera_y_orientation)
+            new_position = self._camera_position
+            if key == GLUT_KEY_LEFT:
+                new_position.x += CAMERA_KEY_SPEED * math.cos(r)
+                new_position.z += CAMERA_KEY_SPEED * math.sin(r)
+            elif key == GLUT_KEY_RIGHT:
+                new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
+                new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
+            elif key == GLUT_KEY_UP:
+                new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+                new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            elif key == GLUT_KEY_DOWN:
+                new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+                new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            self._set_camera_position(new_position)
+            self._print_camera_settings()
 
     def _print_camera_settings(self):
         print
