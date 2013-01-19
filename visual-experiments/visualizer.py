@@ -208,6 +208,7 @@ class Visualizer:
         self.fovy = 45
         self.near = 0.1
         self.far = 100.0
+        self._fullscreen = False
 
         if args.camera_script:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
@@ -287,37 +288,48 @@ class Visualizer:
         self._3d_enabled = True
 
     def run(self):
-        window_width = self.width + self.margin*2
-        window_height = self.height + self.margin*2
+        self.window_width = self.width + self.margin*2
+        self.window_height = self.height + self.margin*2
 
         glutInit(sys.argv)
 
         if self.args.left is None:
-            left = (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2
+            self._left = (glutGet(GLUT_SCREEN_WIDTH) - self.window_width) / 2
         else:
-            left = self.args.left
+            self._left = self.args.left
 
         if self.args.top is None:
-            top = (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2
+            self._top = (glutGet(GLUT_SCREEN_HEIGHT) - self.window_height) / 2
         else:
-            top = self.args.top
+            self._top = self.args.top
 
         glutInitDisplayMode(self.gl_display_mode)
-        if self.args.fullscreen:
-            glutGameModeString("%dx%d:32@75" % (window_width, window_height))
-            glutEnterGameMode()
-            glutSetCursor(GLUT_CURSOR_NONE)
-        else:
-            glutInitWindowSize(window_width, window_height)
-            glutCreateWindow("")
+        glutInitWindowSize(self.window_width, self.window_height)
+        self._non_fullscreen_window = glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
         glutIdleFunc(self.DrawGLScene)
         glutReshapeFunc(self.ReSizeGLScene)
         glutKeyboardFunc(self.keyPressed)
         self.InitGL()
-        self.ReSizeGLScene(window_width, window_height)
-        glutPositionWindow(left, top)
+        glutPositionWindow(self._left, self._top)
+
+        if self.args.fullscreen:
+            self._open_fullscreen_window()
+            self._fullscreen = True
+
+        self.ReSizeGLScene(self.window_width, self.window_height)
         glutMainLoop()
+
+    def _open_fullscreen_window(self):
+        glutGameModeString("%dx%d:32@75" % (self.window_width, self.window_height))
+        glutEnterGameMode()
+        glutSetCursor(GLUT_CURSOR_NONE)
+        glutDisplayFunc(self.DrawGLScene)
+        glutIdleFunc(self.DrawGLScene)
+        glutReshapeFunc(self.ReSizeGLScene)
+        glutKeyboardFunc(self.keyPressed)
+        self.InitGL()
+        glutPositionWindow(self._left, self._top)
 
     def handle_torrent_message(self, path, args, types, src, data):
         (self.num_files, self.download_duration, self.total_size,
@@ -580,6 +592,15 @@ class Visualizer:
             self.exiting = True
         elif key == 's':
             self._dump_screen()
+        elif key == 'f':
+            if self._fullscreen:
+                glutSetCursor(GLUT_CURSOR_INHERIT)
+                glutLeaveGameMode()
+                glutSetWindow(self._non_fullscreen_window)
+                self._fullscreen = False
+            else:
+                self._open_fullscreen_window()
+                self._fullscreen = True
 
     def _dump_screen(self):
         self._screen_dumper.export_frame()
