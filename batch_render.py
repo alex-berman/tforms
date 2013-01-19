@@ -4,25 +4,24 @@ import subprocess
 import os
 import glob
 
-#RESOLUTION = "-width 1280 -height 720"
 RESOLUTION = "-width 720 -height 576"
-#RESOLUTION = "-width 640 -height 360"
 FPS = 25
 
 sessions = [
-    # ("*chopin", "-z 20"),
-    # ("*adele", "-z 20"),
-    # ("*TDL4", ""),
-    ("*lord-rings", "-z 7"),
-    ("*miracle", "-z 5"),
-    ("*gulliver", ""),
-    ("*potter", ""),
-    ("*frankenstein", ""),
-    ("*learn*", ""),
-    ("*hunger", ""),
+    ("*valis", "-z 15", [1, 2]),
+    ("*ulysses", "-z 100", [1]),
+    ("*lord-rings", "-z 10", [1, 2]),
+    ("*miracle", "-z 10", [1, 2]),
+    ("*gulliver", "-z 2", [1, 2]),
+    ("*potter", "-z 5", [2]),
+    ("*frankenstein", "-z 5", [1, 2]),
+    ("*learn*", "", [1, 2]),
+    ("*hunger", "-z 40", [1, 2]),
+    ("*chopin", "-z 20", [1, 2]),
+    ("*adele", "-z 20", [1]),
     ]
 
-for (session_pattern, args) in sessions:
+for (session_pattern, args, timefactors) in sessions:
     matches = glob.glob("sessions/%s" % session_pattern)
     if len(matches) == 1:
         session_dir = matches[0]
@@ -39,12 +38,12 @@ for (session_pattern, args) in sessions:
         cmd = "./revisualize_ancestry.py --geometry=circle %s %s %s --node-style=circle --unfold=forward -interpret --sway --sway-magnitude=0.003 --edge-style=line --line-width=1 --node-size-envelope=0.3,25,0.5 --sway-envelope=0,50,0.5 --node-size=0.003 -export -export-fps=%s" % (session_dir, args, RESOLUTION, FPS)
         subprocess.call(cmd, shell=True)
 
-    video_filename = "rendered/%s_ancestry.mp4" % os.path.basename(session_dir)
-    print "encoding into %s" % video_filename
-    if os.path.exists(video_filename):
-        print "video file exists - skipping"
-    else:
-        cmd = "./encode_exported.py -f -fps %s -fade-out 3.0 %s Ancestry -o %s" % (
-            FPS, session_dir, video_filename)
-        print cmd
-        subprocess.call(cmd, shell=True)
+    for timefactor in timefactors:
+        video_filename = "rendered/%s_ancestry_z%s.mp4" % (os.path.basename(session_dir), timefactor)
+        print "encoding into %s" % video_filename
+        if os.path.exists(video_filename):
+            print "video file exists - skipping"
+        else:
+            cmd = "./encode_exported.py -f -fps %s -fade-out 3.0 %s Ancestry -o %s" % (
+                FPS * timefactor, session_dir, video_filename)
+            subprocess.call(cmd, shell=True)
