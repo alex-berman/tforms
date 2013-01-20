@@ -195,6 +195,7 @@ class TrLogReader:
     def _process_torrent_info(self):
         self._process_until_selected_torrent()
         self._process_files_info()
+        self._warn_if_any_unsupported_values()
 
     def _process_until_selected_torrent(self):
         logger.debug("selecting torrent")
@@ -233,8 +234,19 @@ class TrLogReader:
                 self._process_file_info_line(m)
                 if len(self.files) == self.numfiles:
                     return
+
         raise Exception("failed to find file info about all %d files (only found %d)" % (
                 self.numfiles, len(self.files)))
+
+    def _warn_if_any_unsupported_values(self):
+        files_with_long_value = filter(
+            lambda f: any(filter(lambda value: isinstance(value, long),
+                                 f.values())),
+            self.files)
+        if len(files_with_long_value):
+            print >>sys.stderr, "WARNING: these files require long (unsupported) rather than int type:"
+            for f in files_with_long_value:
+                print f["name"]
 
     def _process_chunks(self):
         self.numdata = 0
