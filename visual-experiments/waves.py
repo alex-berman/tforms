@@ -69,7 +69,6 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
-        self.torrent_download_completion_time = None
         if self._gathered_segments_layer:
             self._gathered_segments_layer.refresh()
 
@@ -101,7 +100,7 @@ class Waves(visualizer.Visualizer):
         self.draw_playing_segments()
 
     def _set_gathered_color(self):
-        if self._download_completed():
+        if self.download_completed():
             time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
             if time_after_completion > FADE_OUT_DURATION:
                 self.gathered_color = Vector3d(0,0,0)
@@ -115,17 +114,9 @@ class Waves(visualizer.Visualizer):
             self.gathered_color = GATHERED_COLOR
 
     def finished(self):
-        if self._download_completed():
+        if self.download_completed():
             time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
             if time_after_completion > FADE_OUT_DURATION:
-                return True
-
-    def _download_completed(self):
-        if self.torrent_download_completion_time:
-            return True
-        else:
-            if self.torrent_length > 0 and self.gatherer.gathered_bytes() == self.torrent_length:
-                self.torrent_download_completion_time = self.current_time()
                 return True
 
     def draw_playing_segments(self):

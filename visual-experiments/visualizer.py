@@ -283,6 +283,9 @@ class Visualizer:
         self._segments_by_id = {}
         self.torrent_length = 0
         self.torrent_title = ""
+        self.torrent_download_completion_time = None
+        self.num_segments = 0
+        self.num_received_segments = 0
 
     def enable_3d(self):
         self._3d_enabled = True
@@ -333,7 +336,7 @@ class Visualizer:
 
     def handle_torrent_message(self, path, args, types, src, data):
         (self.num_files, self.download_duration, self.total_size,
-         num_chunks, num_segments, self.torrent_title) = args
+         num_chunks, self.num_segments, self.torrent_title) = args
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
@@ -390,8 +393,8 @@ class Visualizer:
         f.add_segment(segment)
 
         self.pan_segment(segment)
-
         peer.add_segment(segment)
+        self.num_received_segments += 1
 
     def added_file(self, f):
         pass
@@ -777,6 +780,14 @@ class Visualizer:
                 glTranslatef(spacing, 0, 0)
             else:
                 glutStrokeCharacter(font, ord(c))
+
+    def download_completed(self):
+        if self.torrent_download_completion_time:
+            return True
+        else:
+            if self.num_segments > 0 and self.num_received_segments == self.num_segments:
+                self.torrent_download_completion_time = self.current_time()
+                return True
 
     @staticmethod
     def add_parser_arguments(parser):
