@@ -1,22 +1,21 @@
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
-	var output_front, output_rear, pointer, filelength, pitch, env_front, env_rear, dir, pan_env, content;
+	var output_front, output_rear, pointer, filelength, pitch, env_front, env_rear, dir, content;
 	var front_content, rear_content;
 	var amp;
 	pointer = Line.kr(0, 1, duration);
 	pitch = 1.0;
 	content = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
-	pan_env = EnvGen.kr(Env([pan, 0], [duration], 'linear'), doneAction: 2);
 
 	env_front = EnvGen.kr(Env([0.001, 1.0, 0.001],
 		[0.996*duration, 0.004*duration], 'sine'), doneAction: 2);
 	front_content = env_front * content;
-	output_front = Pan2.ar(front_content, pan_env);
+	output_front = Pan2.ar(front_content, pan);
 	Out.ar(0, output_front);
 
 	env_rear = EnvGen.kr(Env([0.001, 1.0, 0.001],
 		[0.5*duration, 0.5*duration], 'sine'), doneAction: 2);
 	rear_content = env_rear * content;
-	output_rear = Pan2.ar(rear_content, pan_env);
+	output_rear = Pan2.ar(rear_content, pan);
 	Out.ar(2, output_rear);
 
 	Out.ar(~reverb_bus, front_content + rear_content);
