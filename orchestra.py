@@ -23,6 +23,7 @@ class VisualizerConnector:
     shell_matcher = re.compile('^(shell:)?(.*)$')
 
     def __init__(self, spec, server):
+        self.spec = spec
         self.server = server
         remote_match = self.remote_matcher.match(spec)
         shell_match = self.shell_matcher.match(spec)
@@ -33,8 +34,9 @@ class VisualizerConnector:
             command_line = shell_match.group(2)
             self._spawn_visualizer(command_line)
         else:
-            raise Exception("failed to parse visualizer spec '%s'" % spec)
+            raise Exception("failed to parse visualizer spec %r" % spec)
         self.informed_about_torrent = False
+        self._remote_end_disconnected = False
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)
@@ -47,7 +49,12 @@ class VisualizerConnector:
             log_filename=self.server.options.osc_log)
 
     def send(self, *args):
-        self._sender.send(*args)
+        if not self._remote_end_disconnected:
+            try:
+                self._sender.send(*args)
+            except IOError:
+                warn(logger, "failed to send to visualizer %r - ignoring it from now on" % self.spec)
+                self._remote_end_disconnected = True
 
 class Server(OscReceiver):
     @staticmethod
@@ -120,9 +127,10 @@ class Server(OscReceiver):
         orchestra.init_playback()
 
     def _handle_register(self, path, args, types, src, data):
-        print "visualizer registered"
         visualizer_port = args[0]
-        self.visualizers[self._num_registered_visualizers].connect_to(visualizer_port)
+        connector = self.visualizers[self._num_registered_visualizers]
+        connector.connect_to(visualizer_port)
+        print "visualizer registered: %r" % connector.spec
         self._num_registered_visualizers += 1
 
     def _handle(self, *args):
