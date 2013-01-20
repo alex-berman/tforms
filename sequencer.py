@@ -10,6 +10,7 @@ from session import Session
 from logger import logger
 import glob
 import datetime
+from shuffler import Shuffler
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="*")
@@ -88,10 +89,18 @@ if args.get_duration:
     print "%-50s%s" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
 
 else:
-    count = args.start
+    if args.start:
+        count = args.start
+        print "WARNING: shuffle disabled"
+    else:
+        shuffler = Shuffler(range(len(playlist)))
 
     while True:
-        item = playlist[count % len(playlist)]
+        if args.start:
+            item = playlist[count % len(playlist)]
+            count += 1
+        else:
+            item = playlist[shuffler.next()]
         print "playing %s" % item["sessiondir"]
         orchestra = item["orchestra"]
         if len(orchestra.chunks) == 0:
@@ -112,4 +121,3 @@ else:
 
         time.sleep(args.pause)
         orchestra.reset()
-        count += 1

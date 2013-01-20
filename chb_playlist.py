@@ -10,7 +10,11 @@ playlist = [
     #sounds good
     {"session": "sessions/*emma",
      "args": ["-z", "0.15",
-              "--title=Emma by Jane Austen"]},
+              "--title=Emma by Jane Austen (chapters 1-5)"]},
+
+    {"session": "sessions/*emma-ch6-10",
+     "args": ["-z", "8",
+              "--title=Emma by Jane Austen (chapters 6-10)"]},
 
     {"session": "sessions/*potter-goblet-ch11",
      "args": ["-z", "1",
