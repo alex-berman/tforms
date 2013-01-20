@@ -50,6 +50,7 @@ class HeatMap(visualizer.Visualizer):
     def reset(self):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
+        self._first_segment_received = False
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
@@ -86,6 +87,7 @@ class HeatMap(visualizer.Visualizer):
             self._history_layer.refresh()
 
     def added_segment(self, segment):
+        self._first_segment_received = True
         self.playing_segments[segment.id] = segment
 
     def added_peer(self, peer):
@@ -102,7 +104,8 @@ class HeatMap(visualizer.Visualizer):
         self._update()
         self._history_layer.draw()
         self._render_activity()
-        self._render_title()
+        if self._first_segment_received:
+            self._render_title()
 
     def _render_title(self):
         glColor3f(1,1,1)
