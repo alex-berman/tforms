@@ -35,8 +35,12 @@ class VisualizerConnector:
             self._spawn_visualizer(command_line)
         else:
             raise Exception("failed to parse visualizer spec %r" % spec)
+        self._reset()
+
+    def _reset(self):
         self.informed_about_torrent = False
-        self._remote_end_disconnected = False
+        self.informed_about_peer = {}
+        self.connected = False
 
     def _spawn_visualizer(self, command_line):
         command_line_with_port = "%s -port %d" % (command_line, self.server.port)
@@ -47,14 +51,16 @@ class VisualizerConnector:
             host=self.host,
             port=port,
             log_filename=self.server.options.osc_log)
+        self.connected = True
 
     def send(self, *args):
-        if not self._remote_end_disconnected:
+        if self.connected:
             try:
                 self._sender.send(*args)
+                return True
             except IOError:
                 warn(logger, "failed to send to visualizer %r - ignoring it from now on" % self.spec)
-                self._remote_end_disconnected = True
+                self._reset()
 
 class Server(OscReceiver):
     @staticmethod
@@ -128,10 +134,14 @@ class Server(OscReceiver):
 
     def _handle_register(self, path, args, types, src, data):
         visualizer_port = args[0]
-        connector = self.visualizers[self._num_registered_visualizers]
-        connector.connect_to(visualizer_port)
-        print "visualizer registered: %r" % connector.spec
-        self._num_registered_visualizers += 1
+        for connector in self.visualizers:
+            if not connector.connected:
+                connector.connect_to(visualizer_port)
+                print "visualizer registered: %r" % connector.spec
+                self._num_registered_visualizers = len(filter(lambda visualizer: visualizer.connected,
+                                                              self.visualizers))
+                return
+        warn(logger, "cannot register visualizer: all connectors already connected!")
 
     def _handle(self, *args):
         if self._orchestra:
@@ -160,7 +170,6 @@ class Player:
         self.spatial_position = orchestra.space.new_peer()
         self.trajectory = orchestra.space.parabolic_trajectory_to_listener(
             self.spatial_position.bearing)
-        self.informed_visualizers = False
 
     def visualize(self, chunk):
         self.orchestra.visualize_chunk(chunk, self)
@@ -595,13 +604,6 @@ class Orchestra:
                 player.id,
                 chunk["t"])
 
-    def _inform_visualizers_about_peer(self, player):
-        if not player.informed_visualizers:
-            self._tell_visualizers(
-                "/peer", player.id, player.addr, player.spatial_position.bearing,
-                player.spatial_position.pan, player.location_str)
-            player.informed_visualizers = True
-
     def visualize_segment(self, segment, player):
         if len(self.visualizers) > 0:
             if self.ssr:
@@ -648,23 +650,33 @@ class Orchestra:
             if not visualizer.informed_about_torrent:
                 self._send_torrent_info_to_visualizer(visualizer)
 
+    def _inform_visualizers_about_peer(self, player):
+        for visualizer in self.visualizers:
+            if player.id not in visualizer.informed_about_peer:
+                if visualizer.send(
+                    "/peer", player.id, player.addr, player.spatial_position.bearing,
+                    player.spatial_position.pan, player.location_str):
+                    visualizer.informed_about_peer[player.id] = True
+
     def _send_torrent_info_to_visualizer(self, visualizer):
-        visualizer.send(
+        if not visualizer.send(
             "/torrent",
             self._num_selected_files,
             self.tr_log.lastchunktime(),
             self.tr_log.total_file_size(),
             len(self.chunks),
             len(self.score),
-            self.options.title)
+            self.options.title):
+            return
         for filenum in range(len(self.tr_log.files)):
             file_info = self.tr_log.files[filenum]
             if self.include_non_playable or file_info["playable_file_index"] != -1:
-                visualizer.send(
+                if not visualizer.send(
                     "/file",
                     file_info["index"],
                     file_info["offset"],
-                    file_info["length"])
+                    file_info["length"]):
+                    return
         visualizer.informed_about_torrent = True
 
     def get_player_for_chunk(self, chunk):
@@ -779,8 +791,7 @@ class Orchestra:
         self._tell_visualizers("/reset")
         for visualizer in self.visualizers:
             visualizer.informed_about_torrent = False
-        for player in self.players:
-            player.informed_visualizers = False
+            visualizer.informed_about_peer = {}
 
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()

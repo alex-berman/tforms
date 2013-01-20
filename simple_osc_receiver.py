@@ -20,9 +20,11 @@ class OscReceiver:
             port = 0
         self._handlers = {}
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.bind((socket.gethostbyname(socket.gethostname()), port))
+        hostname = socket.gethostbyname(socket.gethostname())
+        self._socket.bind((hostname, port))
         self._socket.listen(5)
         self.port = self._socket.getsockname()[1]
+        print "listening at %s:%s" % (hostname, self.port)
         self._queue = []
         self._lock = threading.Lock()
 
