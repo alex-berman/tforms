@@ -1,24 +1,30 @@
 playlist = [
+    #too fast
     {"session": "sessions/*valis",
-     "args": ["-z", "2",
+     "args": ["-z", "1",
               "--title=VALIS by Philip K Dick"]},
 
+    #+20 sounds great, more chapters?
     {"session": "sessions/*gulliver",
      "args": ["-z", "1",
               "--title=Gulliver's Travels By Jonathan Swift"]},
 
+    #sounds good
     {"session": "sessions/*emma",
-     "args": ["-z", "0.25",
+     "args": ["-z", "0.15",
               "--title=Emma by Jane Austen"]},
 
+    #too fast, split it
     {"session": "sessions/*potter",
      "args": ["-z", "2",
               "--title=Harry Potter and the Half-Blood Prince by J. K. Rowling"]},
 
+    #too fast, but perhas ok
     {"session": "sessions/*ulysses",
      "args": ["-z", "10",
               "--title=Ulysses by James Joyce (in Polish)"]},
 
+    #-12
     {"session": "sessions/*brave-ch1-4",
      "args": ["-z", "0.5",
               "--title=Brave New World by Aldous Huxley (chapters 1-4)"]},
