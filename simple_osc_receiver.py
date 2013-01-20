@@ -56,7 +56,8 @@ class OscReceiver:
         assert comma_prefixed_type_tag_string.startswith(",")
         type_tag_string = comma_prefixed_type_tag_string[1:]
         if handler.typespec != type_tag_string:
-            raise Exception("type tag mismatch")
+            raise Exception("type tag mismatch for %r (expected %r, received %r)" % (
+                    address_pattern, handler.typespec, type_tag_string))
 
         args = []
         type_tags = list(type_tag_string)
