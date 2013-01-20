@@ -208,6 +208,7 @@ class Visualizer:
         self.fovy = 45
         self.near = 0.1
         self.far = 100.0
+        self._fullscreen = False
 
         if args.camera_script:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
@@ -287,37 +288,48 @@ class Visualizer:
         self._3d_enabled = True
 
     def run(self):
-        window_width = self.width + self.margin*2
-        window_height = self.height + self.margin*2
+        self.window_width = self.width + self.margin*2
+        self.window_height = self.height + self.margin*2
 
         glutInit(sys.argv)
 
         if self.args.left is None:
-            left = (glutGet(GLUT_SCREEN_WIDTH) - window_width) / 2
+            self._left = (glutGet(GLUT_SCREEN_WIDTH) - self.window_width) / 2
         else:
-            left = self.args.left
+            self._left = self.args.left
 
         if self.args.top is None:
-            top = (glutGet(GLUT_SCREEN_HEIGHT) - window_height) / 2
+            self._top = (glutGet(GLUT_SCREEN_HEIGHT) - self.window_height) / 2
         else:
-            top = self.args.top
+            self._top = self.args.top
 
         glutInitDisplayMode(self.gl_display_mode)
-        if self.args.fullscreen:
-            glutGameModeString("%dx%d:32@75" % (window_width, window_height))
-            glutEnterGameMode()
-            glutSetCursor(GLUT_CURSOR_NONE)
-        else:
-            glutInitWindowSize(window_width, window_height)
-            glutCreateWindow("")
+        glutInitWindowSize(self.window_width, self.window_height)
+        self._non_fullscreen_window = glutCreateWindow("")
         glutDisplayFunc(self.DrawGLScene)
         glutIdleFunc(self.DrawGLScene)
         glutReshapeFunc(self.ReSizeGLScene)
         glutKeyboardFunc(self.keyPressed)
         self.InitGL()
-        self.ReSizeGLScene(window_width, window_height)
-        glutPositionWindow(left, top)
+        glutPositionWindow(self._left, self._top)
+
+        if self.args.fullscreen:
+            self._open_fullscreen_window()
+            self._fullscreen = True
+
+        self.ReSizeGLScene(self.window_width, self.window_height)
         glutMainLoop()
+
+    def _open_fullscreen_window(self):
+        glutGameModeString("%dx%d:32@75" % (self.window_width, self.window_height))
+        glutEnterGameMode()
+        glutSetCursor(GLUT_CURSOR_NONE)
+        glutDisplayFunc(self.DrawGLScene)
+        glutIdleFunc(self.DrawGLScene)
+        glutReshapeFunc(self.ReSizeGLScene)
+        glutKeyboardFunc(self.keyPressed)
+        self.InitGL()
+        glutPositionWindow(self._left, self._top)
 
     def handle_torrent_message(self, path, args, types, src, data):
         (self.num_files, self.download_duration, self.total_size,
@@ -580,6 +592,15 @@ class Visualizer:
             self.exiting = True
         elif key == 's':
             self._dump_screen()
+        elif key == 'f':
+            if self._fullscreen:
+                glutSetCursor(GLUT_CURSOR_INHERIT)
+                glutLeaveGameMode()
+                glutSetWindow(self._non_fullscreen_window)
+                self._fullscreen = False
+            else:
+                self._open_fullscreen_window()
+                self._fullscreen = True
 
     def _dump_screen(self):
         self._screen_dumper.export_frame()
@@ -610,50 +631,53 @@ class Visualizer:
         self.orchestra.place_segment(segment_id, -x, y, duration)
 
     def _mouse_clicked(self, button, state, x, y):
-        if button == GLUT_LEFT_BUTTON:
-            self._dragging_orientation = (state == GLUT_DOWN)
-        else:
-            self._dragging_orientation = False
-            if button == GLUT_RIGHT_BUTTON:
-                self._dragging_y_position = (state == GLUT_DOWN)
-        if state == GLUT_DOWN:
-            self._drag_x_previous = x
-            self._drag_y_previous = y
+        if self._3d_enabled:
+            if button == GLUT_LEFT_BUTTON:
+                self._dragging_orientation = (state == GLUT_DOWN)
+            else:
+                self._dragging_orientation = False
+                if button == GLUT_RIGHT_BUTTON:
+                    self._dragging_y_position = (state == GLUT_DOWN)
+            if state == GLUT_DOWN:
+                self._drag_x_previous = x
+                self._drag_y_previous = y
 
     def _mouse_moved(self, x, y):
-        if self._dragging_orientation:
-            self._disable_camera_script()
-            self._set_camera_orientation(
-                self._camera_y_orientation + x - self._drag_x_previous,
-                self._camera_x_orientation - y + self._drag_y_previous)
-            self._print_camera_settings()
-        elif self._dragging_y_position:
-            self._disable_camera_script()
-            self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
-            self._print_camera_settings()
-        self._drag_x_previous = x
-        self._drag_y_previous = y
+        if self._3d_enabled:
+            if self._dragging_orientation:
+                self._disable_camera_script()
+                self._set_camera_orientation(
+                    self._camera_y_orientation + x - self._drag_x_previous,
+                    self._camera_x_orientation - y + self._drag_y_previous)
+                self._print_camera_settings()
+            elif self._dragging_y_position:
+                self._disable_camera_script()
+                self._camera_position.y += CAMERA_Y_SPEED * (y - self._drag_y_previous)
+                self._print_camera_settings()
+            self._drag_x_previous = x
+            self._drag_y_previous = y
 
     def _disable_camera_script(self):
         self._camera_script = None
 
     def _special_key_pressed(self, key, x, y):
-        r = math.radians(self._camera_y_orientation)
-        new_position = self._camera_position
-        if key == GLUT_KEY_LEFT:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_RIGHT:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
-        elif key == GLUT_KEY_UP:
-            new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        elif key == GLUT_KEY_DOWN:
-            new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
-            new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
-        self._set_camera_position(new_position)
-        self._print_camera_settings()
+        if self._3d_enabled:
+            r = math.radians(self._camera_y_orientation)
+            new_position = self._camera_position
+            if key == GLUT_KEY_LEFT:
+                new_position.x += CAMERA_KEY_SPEED * math.cos(r)
+                new_position.z += CAMERA_KEY_SPEED * math.sin(r)
+            elif key == GLUT_KEY_RIGHT:
+                new_position.x -= CAMERA_KEY_SPEED * math.cos(r)
+                new_position.z -= CAMERA_KEY_SPEED * math.sin(r)
+            elif key == GLUT_KEY_UP:
+                new_position.x += CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+                new_position.z += CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            elif key == GLUT_KEY_DOWN:
+                new_position.x -= CAMERA_KEY_SPEED * math.cos(r + math.pi/2)
+                new_position.z -= CAMERA_KEY_SPEED * math.sin(r + math.pi/2)
+            self._set_camera_position(new_position)
+            self._print_camera_settings()
 
     def _print_camera_settings(self):
         print
