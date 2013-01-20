@@ -1,13 +1,11 @@
 playlist = [
-    #too fast
-    {"session": "sessions/*valis",
-     "args": ["-z", "1",
-              "--title=VALIS by Philip K Dick"]},
-
-    #+20 sounds great, more chapters?
     {"session": "sessions/*gulliver",
-     "args": ["-z", "1",
-              "--title=Gulliver's Travels By Jonathan Swift"]},
+     "args": ["-z", "0.5",
+              "--title=Gulliver's Travels By Jonathan Swift (chapters 1-6)"]},
+
+    {"session": "sessions/*gulliver-ch7-10",
+     "args": ["-z", "0.25",
+              "--title=Gulliver's Travels By Jonathan Swift (chapters 7-10)"]},
 
     #sounds good
     {"session": "sessions/*emma",
@@ -19,12 +17,11 @@ playlist = [
      "args": ["-z", "2",
               "--title=Harry Potter and the Half-Blood Prince by J. K. Rowling"]},
 
-    #too fast, but perhas ok
+    #too fast, but perhaps ok
     {"session": "sessions/*ulysses",
      "args": ["-z", "10",
               "--title=Ulysses by James Joyce (in Polish)"]},
 
-    #-12
     {"session": "sessions/*brave-ch1-4",
      "args": ["-z", "0.5",
               "--title=Brave New World by Aldous Huxley (chapters 1-4)"]},
@@ -85,4 +82,11 @@ playlist = [
     {"session": "sessions/*neuromancer-ch1-3",
      "args": ["-z", "3",
               "--title=Neuromancer by William Gibson (chapters 1-3)"]},
+
+
+    #DO NOT SOUND SO GOOD:
+    #too fast
+    # {"session": "sessions/*valis",
+    #  "args": ["-z", "1",
+    #           "--title=VALIS by Philip K Dick"]},
 ]

@@ -58,6 +58,8 @@ class Server(OscReceiver):
         parser.add_argument("--no-synth", action="store_true")
         parser.add_argument("--locate-peers", action="store_true")
         parser.add_argument("--sc-mode", type=str, default="default_stereo")
+        parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
+        parser.add_argument("--force-predecode", action="store_true")
 
     def __init__(self, options):
         self.options = options
@@ -199,7 +201,6 @@ class Orchestra:
         parser.add_argument("-q", "--quiet", action="store_true", dest="quiet")
         parser.add_argument("--pretend-sequential", action="store_true", dest="pretend_sequential")
         parser.add_argument("--gui", action="store_true", dest="gui_enabled")
-        parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
         parser.add_argument("--fast-forward", action="store_true", dest="ff")
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
@@ -221,7 +222,6 @@ class Orchestra:
         self.realtime = options.realtime
         self.timefactor = options.timefactor
         self.quiet = options.quiet
-        self.predecode = options.predecode
         self._loop = options.loop
         self.looped_duration = options.looped_duration
         self.output = options.output
@@ -233,9 +233,10 @@ class Orchestra:
             for peeraddr in tr_log.peers:
                 self._peer_location[peeraddr] = server.ip_locator.locate(peeraddr)
 
-        if options.predecode:
+        self.predecode = server.options.predecode
+        if self.predecode:
             predecoder = Predecoder(tr_log, self.SAMPLE_RATE)
-            predecoder.decode()
+            predecoder.decode(server.options.force_predecode)
 
         if options.selected_files:
             tr_log.select_files(options.selected_files)
@@ -779,7 +780,7 @@ class Orchestra:
 
     @classmethod
     def estimate_duration(cls, tr_log, options):
-        if options.predecode:
+        if cls.predecode:
             predecoder = Predecoder(tr_log, cls.SAMPLE_RATE)
             predecoder.decode()
         cls._get_wav_files_info(tr_log)
