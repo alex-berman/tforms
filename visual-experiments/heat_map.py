@@ -9,11 +9,13 @@ sys.path.append("visual-experiments")
 import rectangular_visualizer as visualizer
 from vector import Vector2d
 from OpenGL.GL import *
+from math_tools import sigmoid
 
 sys.path.append("geo")
 import locations
 
 MARKER_PRECISION = 20
+MAX_FADE_TIME = 0.3
 
 def clamp(value, min_value, max_value):
     return max(min(max_value, value), min_value)
@@ -37,8 +39,18 @@ class Peer(visualizer.Peer):
         self.visualizer.added_peer(self)
 
 class Segment(visualizer.Segment):
+    def __init__(self, *args):
+        visualizer.Segment.__init__(self, *args)
+        self._fade_time = min(self.duration/2, MAX_FADE_TIME)
+
     def relative_size(self):
-        return math.sin(self.relative_age() * 2*math.pi)
+        age = self.age()
+        if age < self._fade_time:
+            return sigmoid(age / self._fade_time)
+        elif age > (self.duration - self._fade_time):
+            return 1 - sigmoid(1 - (self.duration - age) / self._fade_time)
+        else:
+            return 1
 
 class HeatMap(visualizer.Visualizer):
     def __init__(self, args):
