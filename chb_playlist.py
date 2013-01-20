@@ -12,10 +12,17 @@ playlist = [
      "args": ["-z", "0.15",
               "--title=Emma by Jane Austen"]},
 
-    #too fast, split it
+    {"session": "sessions/*potter-goblet-ch11",
+     "args": ["-z", "1",
+              "--title=Harry Potter and the Goblet of Fire by J. K. Rowling (chapter 11)"]},
+
+    {"session": "sessions/*potter-goblet-ch3",
+     "args": ["-z", "1",
+              "--title=Harry Potter and the Goblet of Fire by J. K. Rowling (chapter 3)"]},
+
     {"session": "sessions/*potter",
      "args": ["-z", "2",
-              "--title=Harry Potter and the Half-Blood Prince by J. K. Rowling"]},
+              "--title=Harry Potter and the Half-Blood Prince by J. K. Rowling (chapter 8)"]},
 
     #too fast, but perhaps ok
     {"session": "sessions/*ulysses",
