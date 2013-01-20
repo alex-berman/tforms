@@ -28,7 +28,7 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 }).send(s);
 
 SynthDef(\add_reverb, {
-	arg mix = 0.32, room = 0.9, damp = 1.0;
+	arg mix = 0.25, room = 0.85, damp = 1.0;
 	var signal, silent_noise, reverb;
 	silent_noise = WhiteNoise.ar(0.00001); // see http://new-supercollider-mailing-lists-forums-use-these.2681727.n2.nabble.com/cpu-problems-with-PV-MagFreeze-and-Freeverb-tp5998599p6013552.html
 	signal = In.ar(~reverb_bus, 1);
