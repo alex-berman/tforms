@@ -150,7 +150,8 @@ class HeatMap(visualizer.Visualizer):
         radius = float(n) / MARKER_PRECISION * 10.0/1024 * self.width
 
         glColor4f(1,1,1,1)
-        glBegin(GL_QUADS)
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex2f(0, 0)
         for i in range(20):
             a1 = float(i) / 20 * 2*math.pi
             a2 = float(i+1) / 20 * 2*math.pi
@@ -159,8 +160,6 @@ class HeatMap(visualizer.Visualizer):
             x2 = radius * math.cos(a2)
             y2 = radius * math.sin(a2)
             glVertex2f(x1, y1)
-            glVertex2f(0, 0)
-            glVertex2f(0, 0)
             glVertex2f(x2, y2)
         glEnd()
 
