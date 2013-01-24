@@ -59,6 +59,11 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.__init__(
             self, args, file_class=File, peer_class=Peer, segment_class=Segment)
 
+    @staticmethod
+    def add_parser_arguments(parser):
+        visualizer.Visualizer.add_parser_arguments(parser)
+        parser.add_argument("--test-title", dest="test_title", type=str)
+
     def reset(self):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
@@ -116,17 +121,21 @@ class HeatMap(visualizer.Visualizer):
         self._update()
         self._history_layer.draw()
         self._render_activity()
-        if self._first_segment_received:
+        if self._first_segment_received or self.args.test_title:
             self._render_title()
 
     def _render_title(self):
         glColor3f(1,1,1)
         glLineWidth(1.0)
         glPointSize(1.0)
+        if self.args.test_title:
+            title = self.args.test_title
+        else:
+            title = self.torrent_title
         self.draw_text(
-            text = self.torrent_title.upper(),
-            scale = 0.2 / 1024 * self.width,
-            x = self.width * 0.03,
+            text = title.upper(),
+            scale = 0.07 / 1024 * self.width,
+            x = self.width * 0.08,
             y = self.height * 0.03,
             spacing = 50.0)
 
