@@ -11,7 +11,7 @@ class Handler:
         self.user_data = user_data
 
 class OscReceiver:
-    def __init__(self, port=None, log_filename=None, proto=osc.TCP):
+    def __init__(self, port=None, log_filename=None, proto=osc.TCP, listen=None):
         if proto != osc.TCP:
             raise Exception("simple OSC receiver only supports TCP")
         if log_filename:
@@ -20,7 +20,10 @@ class OscReceiver:
             port = 0
         self._handlers = {}
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        hostname = socket.gethostbyname(socket.gethostname())
+        if listen:
+            hostname = listen
+        else:
+            hostname = socket.gethostbyname(socket.gethostname())
         self._socket.bind((hostname, port))
         self._socket.listen(5)
         self.port = self._socket.getsockname()[1]

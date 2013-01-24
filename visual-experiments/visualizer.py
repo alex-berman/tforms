@@ -439,7 +439,8 @@ class Visualizer:
 
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
-        self.server = simple_osc_receiver.OscReceiver(log_filename=log_filename)
+        self.server = simple_osc_receiver.OscReceiver(
+            listen=self.args.listen, log_filename=log_filename)
         self.server.add_method("/torrent", "ifiiis", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
@@ -793,6 +794,7 @@ class Visualizer:
     def add_parser_arguments(parser):
         parser.add_argument("-host", type=str, default="localhost")
         parser.add_argument('-port', type=int)
+        parser.add_argument("-listen", type=str)
         parser.add_argument('-sync', action='store_true')
         parser.add_argument('-width', dest='width', type=int, default=1024)
         parser.add_argument('-height', dest='height', type=int, default=768)
