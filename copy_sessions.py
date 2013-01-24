@@ -42,7 +42,8 @@ for item in playlist:
 
     logfilename = "%s/session.log" % sessiondir
     tr_log = TrLogReader(logfilename).get_log()
-    copy_dir(sessiondir, "%s/%s" % (args.project_target, sessiondir))
+    #copy_dir(sessiondir, "%s/%s" % (args.project_target, sessiondir))
+    copy_file("%s/session.log" % sessiondir, "%s/%s/session.log" % (args.project_target, sessiondir))
     for f in tr_log.files:
         copy_file("%s/%s" % (tr_log.file_location, f["name"]),
                   "%s/%s/%s" % (args.project_target, tr_log.file_location, f["name"]))
