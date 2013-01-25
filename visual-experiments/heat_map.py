@@ -58,12 +58,18 @@ class HeatMap(visualizer.Visualizer):
         self._load_locations()
         visualizer.Visualizer.__init__(
             self, args, file_class=File, peer_class=Peer, segment_class=Segment)
+        self._set_horizontal_scope()
 
+    def _set_horizontal_scope(self):
+        self._hscope_min, self._hscope_max = map(float, self.args.hscope.split(":"))
+        self._hscope_size = self._hscope_max - self._hscope_min
+        
     @staticmethod
     def add_parser_arguments(parser):
         visualizer.Visualizer.add_parser_arguments(parser)
         parser.add_argument("--disable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
+        parser.add_argument("--hscope", type=str, default="0:1")
 
     def reset(self):
         visualizer.Visualizer.reset(self)
@@ -145,8 +151,13 @@ class HeatMap(visualizer.Visualizer):
         for location, frequency in self._locations.iteritems():
             glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width)
             glBegin(GL_POINTS)
-            glVertex2f(location.x * self.width, self.height - location.y * self.height)
+            self._location_vertex(location)
             glEnd()
+
+    def _location_vertex(self, location):
+        glVertex2f(
+            (location.x - self._hscope_min) / self._hscope_size * self.width,
+            self.height - location.y * self.height)
 
     def _render_activity(self):
         glColor4f(1,1,1,1)
@@ -166,7 +177,7 @@ class HeatMap(visualizer.Visualizer):
             #glPointSize(size * self.width)
             glPointSize(max(int(segment.relative_size() * 10.0/1024 * self.width), 1))
             glBegin(GL_POINTS)
-            glVertex2f(x * self.width, self.height - y * self.height)
+            self._location_vertex(location)
             glEnd()
 
     def _render_marker_circle(self, n):
