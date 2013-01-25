@@ -774,6 +774,7 @@ class Visualizer:
         return self._synth_instance
 
     def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None):
+        glPushMatrix()
         glTranslatef(x, y, 0)
         glScalef(scale, scale, scale)
         for c in text:
@@ -781,6 +782,7 @@ class Visualizer:
                 glTranslatef(spacing, 0, 0)
             else:
                 glutStrokeCharacter(font, ord(c))
+        glPopMatrix()
 
     def download_completed(self):
         if self.torrent_download_completion_time:
