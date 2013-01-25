@@ -88,14 +88,14 @@ playlist = [
 
     {"session": "sessions/*miracle",
      "args": ["-z", "2",
-              "--title=The Miracle of Self-discipline by Tracy Brian"]},
-
-    {"session": "sessions/*neuromancer-ch1-3",
-     "args": ["-z", "3",
-              "--title=Neuromancer by William Gibson (chapters 1-3)"]},
+              "--title=The Miracle of Self-discipline by Brian Tracy"]},
 
 
     #DO NOT SOUND SO GOOD:
+
+    # {"session": "sessions/*neuromancer-ch1-3",
+    #  "args": ["-z", "3",
+    #           "--title=Neuromancer by William Gibson (chapters 1-3)"]},
     #too fast
     # {"session": "sessions/*valis",
     #  "args": ["-z", "1",
