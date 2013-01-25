@@ -84,7 +84,7 @@ playlist = [
 
     {"session": "sessions/*hunger",
      "args": ["-z", "8",
-              "--title=Suzanne Collins: Catching Fire"]},
+              "--title=Suzanne Collins: The Hunger Games - Catching Fire"]},
 
     {"session": "sessions/*miracle",
      "args": ["-z", "2",
