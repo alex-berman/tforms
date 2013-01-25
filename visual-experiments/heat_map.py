@@ -146,7 +146,7 @@ class HeatMap(visualizer.Visualizer):
         for n in range(weight):
             self.draw_text(
                 text = title.upper(),
-                scale = 0.07 / 1024 * self.width,
+                scale = 0.14 / 1024 * self.width,
                 x = x,
                 y = y,
                 spacing = 50.0)
@@ -154,15 +154,17 @@ class HeatMap(visualizer.Visualizer):
     def _render_history(self):
         glColor4f(0.8,0.8,0.8,1)
         for location, frequency in self._locations.iteritems():
-            glPointSize(pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width)
+            point_size = pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width
+            #point_size = max(point_size, 3)
+            glPointSize(point_size)
             glBegin(GL_POINTS)
-            self._location_vertex(location)
+            self._location_vertex(location.x, location.y)
             glEnd()
 
-    def _location_vertex(self, location):
+    def _location_vertex(self, location_x, location_y):
         glVertex2f(
-            (location.x - self._hscope_min) / self._hscope_size * self.width,
-            self.height - location.y * self.height)
+            (location_x - self._hscope_min) / self._hscope_size * self.width,
+            self.height - location_y * self.height)
 
     def _render_activity(self):
         glColor4f(1,1,1,1)
@@ -182,7 +184,7 @@ class HeatMap(visualizer.Visualizer):
             #glPointSize(size * self.width)
             glPointSize(max(int(segment.relative_size() * 10.0/1024 * self.width), 1))
             glBegin(GL_POINTS)
-            self._location_vertex(location)
+            self._location_vertex(x, y)
             glEnd()
 
     def _render_marker_circle(self, n):
