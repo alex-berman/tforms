@@ -62,7 +62,8 @@ class HeatMap(visualizer.Visualizer):
     @staticmethod
     def add_parser_arguments(parser):
         visualizer.Visualizer.add_parser_arguments(parser)
-        parser.add_argument("--test-title", dest="test_title", type=str)
+        parser.add_argument("--disable-title", action="store_true")
+        parser.add_argument("--test-title", type=str)
 
     def reset(self):
         visualizer.Visualizer.reset(self)
@@ -121,7 +122,7 @@ class HeatMap(visualizer.Visualizer):
         self._update()
         self._history_layer.draw()
         self._render_activity()
-        if self._first_segment_received or self.args.test_title:
+        if not self.args.disable_title and (self._first_segment_received or self.args.test_title):
             self._render_title()
 
     def _render_title(self):
