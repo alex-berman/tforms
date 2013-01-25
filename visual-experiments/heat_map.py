@@ -140,12 +140,16 @@ class HeatMap(visualizer.Visualizer):
         else:
             title = self.torrent_title
 
+        if ":" in title:
+            author, book = title.split(":")
+            title = "%s: %s" % (author.upper(), book)
+
         weight = 3
         x = self.width * 0.08
         y = self.height * 0.03
         for n in range(weight):
             self.draw_text(
-                text = title.upper(),
+                text = title,
                 scale = 0.14 / 1024 * self.width,
                 x = x,
                 y = y,
