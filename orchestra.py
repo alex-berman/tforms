@@ -93,7 +93,7 @@ class Server(OscReceiver):
     def _setup_osc(self):
         self.host = socket.gethostbyname(socket.gethostname())
         self._orchestra_queue = []
-        OscReceiver.__init__(self, port=self.options.port)
+        OscReceiver.__init__(self, port=self.options.port, name="Server")
         self.add_method("/register", "i", self._handle_register)
         self.add_method("/visualizing", "i", self._handle, "_handle_visualizing_message")
         self.add_method("/set_listener_position", "ff", self._handle, "_handle_set_listener_position")
@@ -103,7 +103,8 @@ class Server(OscReceiver):
         self.add_method("/start_segment_movement_from_peer", "if", self._handle, "_handle_start_segment_movement_from_peer")
         self.start()
         self._num_registered_visualizers = 0
-        server_thread = threading.Thread(target=self._serve_osc)
+        server_thread = threading.Thread(name="%s.server_thread" % self.__class__.__name__,
+                                         target=self._serve_osc)
         server_thread.daemon = True
         server_thread.start()
 

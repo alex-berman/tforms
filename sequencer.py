@@ -37,7 +37,8 @@ def play(orchestra, args):
     global orchestra_thread
     quit_on_end = False
     orchestra.fast_forwarding = args.ff or args.ff_to_start
-    orchestra_thread = threading.Thread(target=orchestra.play_non_realtime,
+    orchestra_thread = threading.Thread(name="sequencer.orchestra_thread",
+                                        target=orchestra.play_non_realtime,
                                         args=[quit_on_end])
     orchestra_thread.daemon = True
     orchestra_thread.start()
@@ -46,6 +47,7 @@ def wait_for_play_completion_or_interruption():
     global orchestra_thread
     while orchestra_thread.is_alive():
         time.sleep(0.1)
+    orchestra_thread.join()
 
 if args.playlist and len(args.sessiondirs) > 0:
     raise Exception("cannot specify both playlist and sessiondirs")
@@ -96,6 +98,9 @@ else:
         shuffler = Shuffler(range(len(playlist)))
 
     while True:
+        # print "\n\n\nnum threads: %s\n\n" % threading.active_count()
+        # print "\nthreads:%s\n" % "\n".join(map(str, threading.enumerate()))
+
         if args.start:
             item = playlist[count % len(playlist)]
             count += 1

@@ -10,6 +10,7 @@ class SynthController:
 
     def __init__(self):
         self._sc_process = None
+        self._sc_listener = None
 
     def launch_engine(self, mode):
         self.kill_engine()
@@ -45,7 +46,8 @@ class SynthController:
                 self.lang_port = int(m.group(1))
             elif line == "Receiving notification messages from server localhost":
                 initialized = True
-        self._sc_output_thread = threading.Thread(target=self._read_sc_output)
+        self._sc_output_thread = threading.Thread(name="SynthController._sc_output_thread",
+                                                  target=self._read_sc_output)
         self._sc_output_thread.daemon = True
         self._sc_output_thread.start()
 
@@ -61,9 +63,10 @@ class SynthController:
 
     def subscribe_to_info(self):
         self._load_results = {}
-        self._sc_listener = OscReceiver(proto=liblo.TCP)
-        self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
-        self._sc_listener.start()
+        if not self._sc_listener:
+            self._sc_listener = OscReceiver(proto=liblo.TCP, name="SynthController")
+            self._sc_listener.add_method("/loaded", "ii", self._handle_loaded)
+            self._sc_listener.start()
         self._send("/info_subscribe", self._sc_listener.port)
 
     def kill_engine(self):
@@ -71,6 +74,8 @@ class SynthController:
             self._engine_running = False
             self._sc_process.kill()
             self._sc_process = None
+        if self._sc_listener:
+            self._sc_listener.stop()
         subprocess.call("killall sclang", shell=True)
         subprocess.call("killall scsynth", shell=True)
 

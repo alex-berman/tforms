@@ -11,7 +11,12 @@ class Handler:
         self.user_data = user_data
 
 class OscReceiver:
-    def __init__(self, port=None, log_filename=None, proto=osc.TCP, listen=None):
+    def __init__(self, port=None, log_filename=None, proto=osc.TCP, listen=None, name=None):
+        if name:
+            self._name = name
+        else:
+            self._name = self.__class__.__name__
+
         if proto != osc.TCP:
             raise Exception("simple OSC receiver only supports TCP")
         if log_filename:
@@ -35,7 +40,8 @@ class OscReceiver:
         self._handlers[path] = Handler(typespec, callback_func, user_data)
 
     def start(self):
-        serve_thread = threading.Thread(target=self._serve)
+        serve_thread = threading.Thread(name="%s.serve_thread" % self._name,
+                                        target=self._serve)
         serve_thread.daemon = True
         serve_thread.start()
 

@@ -440,7 +440,7 @@ class Visualizer:
     def setup_osc(self, log_filename):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = simple_osc_receiver.OscReceiver(
-            listen=self.args.listen, log_filename=log_filename)
+            listen=self.args.listen, log_filename=log_filename, name="Visualizer")
         self.server.add_method("/torrent", "ifiiis", self.handle_torrent_message)
         self.server.add_method("/file", "iii", self.handle_file_message)
         self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)

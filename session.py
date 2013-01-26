@@ -18,7 +18,7 @@ class Session(threading.Thread):
             (log_pipe_reader_fd, log_pipe_writer_fd) = os.pipe()
             self.log_pipe_reader = os.fdopen(log_pipe_reader_fd, "r")
             self.log_pipe_writer = os.fdopen(log_pipe_writer_fd, "w")
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="Session")
         self.daemon = True
 
     def get_log_reader(self):

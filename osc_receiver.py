@@ -4,8 +4,14 @@ import threading
 import traceback_printer
 
 class OscReceiver(liblo.Server):
-    def __init__(self, port=None, log_filename=None, proto=liblo.TCP):
+    def __init__(self, port=None, log_filename=None, proto=liblo.TCP, name=None):
+        if name:
+            self._name = name
+        else:
+            self._name = self.__class__.__name__
+
         liblo.Server.__init__(self, port, proto)
+        self._running = False
         if log_filename:
             self.read_log(log_filename)
             self.log = True
@@ -25,12 +31,14 @@ class OscReceiver(liblo.Server):
 
     def start(self):
         if not self.log:
-            serve_thread = threading.Thread(target=self._serve)
+            self._running = True
+            serve_thread = threading.Thread(name="%s.server_thread" % self._name,
+                                            target=self._serve)
             serve_thread.daemon = True
             serve_thread.start()
 
     def _serve(self):
-        while True:
+        while self._running:
             self.recv()
 
     def serve(self):
@@ -69,3 +77,6 @@ class OscReceiver(liblo.Server):
         except Exception as err:
             traceback_printer.print_traceback()
             raise err
+
+    def stop(self):
+        self._running = False
