@@ -2,7 +2,7 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var output_front, output_rear, pointer, filelength, pitch, env_front, env_rear, dir, content;
 	var front_content, rear_content;
 	var amp;
-	pointer = Line.kr(0, 1, duration);
+	pointer = Line.kr(begin, end, duration);
 	pitch = 1.0;
 	content = Warp1.ar(1, buffer, pointer, pitch, 0.1, -1, 8, 0.1, 2);
 
