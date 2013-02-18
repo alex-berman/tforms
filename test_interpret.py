@@ -183,7 +183,7 @@ class InterpretTestCase(unittest.TestCase):
         self.chunks = map(self._set_filenum_and_peer, chunks)
 
     def given_max_segment_duration(self, duration):
-        interpret.MAX_SEGMENT_DURATION = duration
+        self.interpreter.max_segment_duration = duration
 
     def _set_filenum_and_peer(self, chunk):
         if not "filenum" in chunk:

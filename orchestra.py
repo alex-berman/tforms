@@ -223,7 +223,8 @@ class Orchestra:
         parser.add_argument("--fast-forward-to-start", action="store_true", dest="ff_to_start")
         parser.add_argument("--quit-at-end", action="store_true", dest="quit_at_end")
         parser.add_argument("--loop", dest="loop", action="store_true")
-        parser.add_argument("--max-pause-within-segment", dest="max_pause_within_segment", type=float)
+        parser.add_argument("--max-pause-within-segment", type=float)
+        parser.add_argument("--max-segment-duration", type=float)
         parser.add_argument("--looped-duration", dest="looped_duration", type=float)
         parser.add_argument("-o", "--output", dest="output", type=str, default=Orchestra.JACK)
         parser.add_argument("--include-non-playable", action="store_true")
@@ -327,7 +328,8 @@ class Orchestra:
 
     @classmethod
     def _interpret_chunks_to_score(cls, tr_log, chunks, options):
-        score = Interpreter(options.max_pause_within_segment).interpret(
+        score = Interpreter(options.max_pause_within_segment,
+                            options.max_segment_duration).interpret(
             chunks, tr_log.files)
         for segment in score:
             segment["duration"] /= options.timefactor
