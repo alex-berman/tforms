@@ -75,6 +75,18 @@ else:
 
 server = Server(args)
 
+def log_open_files():
+    global logger
+    import subprocess
+    n = 0
+    p = subprocess.Popen("ls -l /proc/self/fd/", shell=True, stdout=subprocess.PIPE)
+    logger.info("output from ls -l /proc/self/fd/:")
+    for line in p.stdout:
+        line = line.strip()
+        logger.info(line)
+        n += 1
+    logger.info("num open files: %s" % n)
+
 for item in playlist:
     item["logfilename"] = "%s/session.log" % item["sessiondir"]
     print "preparing %s" % item["sessiondir"]
@@ -100,6 +112,7 @@ else:
     while True:
         # print "\n\n\nnum threads: %s\n\n" % threading.active_count()
         # print "\nthreads:%s\n" % "\n".join(map(str, threading.enumerate()))
+        log_open_files()
 
         if args.start:
             item = playlist[count % len(playlist)]
