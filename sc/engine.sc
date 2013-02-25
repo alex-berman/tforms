@@ -177,6 +177,10 @@ OSCresponder.new(nil, "/stop_all",
 		s.freeAll;
 	}).add;
 
+OSCresponder.new(nil, "/shutdown",
+	{ arg t, r, msg;
+		0.exit;
+	}).add;
 
 
 ~reverb_bus = Bus.audio(s, 1);

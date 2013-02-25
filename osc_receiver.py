@@ -12,6 +12,7 @@ class OscReceiver(liblo.Server):
 
         liblo.Server.__init__(self, port, proto)
         self._running = False
+        self._freed = False
         if log_filename:
             self.read_log(log_filename)
             self.log = True
@@ -31,6 +32,8 @@ class OscReceiver(liblo.Server):
 
     def start(self):
         if not self.log:
+            if self._freed:
+                raise Exception("Cannot call OscReceiver.start a second time. You need to create a new OscReceiver instance.")
             self._running = True
             serve_thread = threading.Thread(name="%s.server_thread" % self._name,
                                             target=self._serve)
@@ -40,6 +43,8 @@ class OscReceiver(liblo.Server):
     def _serve(self):
         while self._running:
             self.recv()
+        self.free()
+        self._freed = True
 
     def serve(self):
         with self._lock:

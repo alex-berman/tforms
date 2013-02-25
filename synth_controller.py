@@ -11,6 +11,7 @@ class SynthController:
     def __init__(self):
         self._sc_process = None
         self._sc_listener = None
+        self._listening_to_engine = False
 
     def launch_engine(self, mode):
         self.kill_engine()
@@ -34,8 +35,9 @@ class SynthController:
         out.close()
 
         self._sc_process = subprocess.Popen("sclang sc/_compiled.sc", shell=True,
+                                            stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE)
-        self._engine_running = True
+        self._listening_to_engine = True
         self.lang_port = None
         initialized = False
         while self.lang_port is None or not initialized:
@@ -52,10 +54,12 @@ class SynthController:
         self._sc_output_thread.start()
 
     def _read_sc_output(self):
-        while self._engine_running:
+        while self._listening_to_engine:
             line = self._sc_process.stdout.readline()
             if line:
                 print "SC: %s" % line,
+        self._sc_process.stdin.close()
+        self._sc_process.stdout.close()
 
     def connect(self, port):
         self._lock = threading.Lock()
@@ -70,14 +74,15 @@ class SynthController:
         self._send("/info_subscribe", self._sc_listener.port)
 
     def kill_engine(self):
-        if self._sc_process:
-            self._engine_running = False
-            self._sc_process.kill()
-            self._sc_process = None
         if self._sc_listener:
             self._sc_listener.stop()
-        subprocess.call("killall sclang", shell=True)
-        subprocess.call("killall scsynth", shell=True)
+        if self._sc_process:
+            self._sc_process.stdin.write("thisProcess.shutdown;\n")
+            self._sc_process.stdin.write("0.exit;\n")
+        if self._listening_to_engine:
+            self._listening_to_engine = False
+            self._send("/shutdown")
+        self.target = None
 
     def load_sound(self, sound_id, filename):
         self._send("/load", sound_id, filename)
