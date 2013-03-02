@@ -292,6 +292,7 @@ class Orchestra:
         self._quitting = False
         self.space = Space()
 
+        self._scheduler_lock = threading.Lock()
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
@@ -352,7 +353,8 @@ class Orchestra:
 
     def _process_scheduled_events(self):
         while not self._quitting:
-            self.scheduler.run()
+            with self._scheduler_lock:
+                self.scheduler.run()
             time.sleep(0.01)
 
     def _handle_visualizing_message(self, path, args, types, src, data):
@@ -381,9 +383,10 @@ class Orchestra:
                 self.looped_duration,            
                 channel,
                 pan)
-        self.scheduler.enter(
-            segment["playback_duration"], 1,
-            self.stopped_playing, [segment])
+        with self._scheduler_lock:
+            self.scheduler.enter(
+                segment["playback_duration"], 1,
+                self.stopped_playing, [segment])
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
