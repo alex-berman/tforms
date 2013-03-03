@@ -17,6 +17,7 @@ from space import Space
 from predecode import Predecoder
 import socket
 import datetime
+import Queue
 
 class VisualizerConnector:
     remote_matcher = re.compile('^remote:(.*)$')
@@ -292,7 +293,7 @@ class Orchestra:
         self._quitting = False
         self.space = Space()
 
-        self._scheduler_lock = threading.Lock()
+        self._scheduler_queue = Queue.Queue()
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self._run_scheduler_thread()
 
@@ -353,9 +354,13 @@ class Orchestra:
 
     def _process_scheduled_events(self):
         while not self._quitting:
-            with self._scheduler_lock:
-                self.scheduler.run()
-            time.sleep(0.01)
+            while True:
+                try:
+                    delay, priority, action, arguments = self._scheduler_queue.get(True, 0.0001)
+                except Queue.Empty:
+                    break
+                self.scheduler.enter(delay, priority, action, arguments)
+            self.scheduler.run()
 
     def _handle_visualizing_message(self, path, args, types, src, data):
         segment_id = args[0]
@@ -383,10 +388,8 @@ class Orchestra:
                 self.looped_duration,            
                 channel,
                 pan)
-        with self._scheduler_lock:
-            self.scheduler.enter(
-                segment["playback_duration"], 1,
-                self.stopped_playing, [segment])
+        self._scheduler_queue.put(
+            (segment["playback_duration"], 1, self.stopped_playing, [segment]))
 
     def _check_which_files_are_audio(self):
         for file_info in self.tr_log.files:
