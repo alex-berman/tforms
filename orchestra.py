@@ -356,7 +356,7 @@ class Orchestra:
         while not self._quitting:
             while True:
                 try:
-                    delay, priority, action, arguments = self._scheduler_queue.get(True, 0.0001)
+                    delay, priority, action, arguments = self._scheduler_queue.get(True, 0.01)
                 except Queue.Empty:
                     break
                 self.scheduler.enter(delay, priority, action, arguments)
