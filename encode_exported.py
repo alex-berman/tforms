@@ -22,7 +22,8 @@ def call_ffmpeg():
             "fade=out:%d:%d" % (start_frame, num_fade_frames)]
 
     cmd += ["-vcodec", "libx264",
-            "-vpre", "lossless_max",
+            "-vpre", "veryslow",
+            "-crf", "0",
             args.output]
 
     print " ".join(cmd)
