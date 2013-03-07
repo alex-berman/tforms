@@ -4,8 +4,11 @@ import subprocess
 import os
 import glob
 
-RESOLUTION = "-width 720 -height 576"
-FPS = 25
+# RESOLUTION = "-width 720 -height 576"
+# FPS = 25
+
+RESOLUTION = "-width 640 -height 360"
+FPS = 30
 
 sessions = [
     ("*valis", "-z 15", [1, 2]),
@@ -44,6 +47,8 @@ for (session_pattern, args, timefactors) in sessions:
         if os.path.exists(video_filename):
             print "video file exists - skipping"
         else:
-            cmd = "./encode_exported.py -f -fps %s -fade-out 3.0 %s Ancestry -o %s" % (
+            # cmd = "./encode_exported.py -f -fps %s -fade-out 3.0 %s Ancestry -o %s" % (
+            #     FPS * timefactor, session_dir, video_filename)
+            cmd = "./encode_exported.py -f -fps %s %s Ancestry -o %s" % (
                 FPS * timefactor, session_dir, video_filename)
             subprocess.call(cmd, shell=True)
