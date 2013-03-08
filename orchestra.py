@@ -8,7 +8,7 @@ import re
 from osc_receiver import OscReceiver
 import threading
 import sched
-from logger import logger
+from logger_factory import logger
 from osc_sender import OscSender
 from interpret import Interpreter
 from stopwatch import Stopwatch
@@ -87,6 +87,10 @@ class Server(OscReceiver):
                 self.visualizers.append(visualizer)
             self._wait_for_visualizers_to_register()
 
+        if not options.no_synth:
+            from synth_controller import SynthController
+            SynthController.kill_potential_engine_from_previous_process()
+
         if options.locate_peers:
             import geo.ip_locator
             self.ip_locator = geo.ip_locator.IpLocator()
@@ -129,9 +133,10 @@ class Server(OscReceiver):
         self._orchestra = orchestra
         orchestra.server = self
         orchestra.visualizers = self.visualizers
-        for args in self._orchestra_queue:
-            self._dispatch(*args)
-        self._orchestra_queue = []
+        if self.options.visualizer:
+            for args in self._orchestra_queue:
+                self._dispatch(*args)
+            self._orchestra_queue = []
         orchestra.init_playback()
 
     def _handle_register(self, path, args, types, src, data):
@@ -254,13 +259,23 @@ class Orchestra:
                 self._peer_location[peeraddr] = server.ip_locator.locate(peeraddr)
 
         if options.pretend_audio_filename:
-            tr_log.file_location = os.path.dirname(options.pretend_audio_filename)
-            tr_log.files = self._fileinfo_for_pretended_audio_files()
+            self._pretended_file = self._fileinfo_for_pretended_audio_file()
+            self._pretended_file["duration"] = self._get_file_duration(self._pretended_file)
+            self._pretended_files = [self._pretended_file]
+            self._files_to_play = self._pretended_files
+        else:
+            self._files_to_play = self.tr_log.files
 
         self.predecode = server.options.predecode
         if self.predecode:
-            predecoder = Predecoder(tr_log, self.SAMPLE_RATE)
+            predecoder = Predecoder(
+                tr_log.files, sample_rate=self.SAMPLE_RATE, location=tr_log.file_location)
             predecoder.decode(server.options.force_predecode)
+
+            if options.pretend_audio_filename:
+                predecoder = Predecoder(
+                    self._pretended_files, sample_rate=self.SAMPLE_RATE)
+                predecoder.decode(server.options.force_predecode)
 
         if options.selected_files:
             tr_log.select_files(options.selected_files)
@@ -276,10 +291,7 @@ class Orchestra:
 
         self._prepare_playable_files()
         self.stopwatch = Stopwatch()
-        if options.pretend_audio_filename:
-            self.playable_chunks = tr_log.chunks
-        else:
-            self.playable_chunks = self._filter_playable_chunks(tr_log, tr_log.chunks)
+        self.playable_chunks = self._filter_playable_chunks(tr_log, tr_log.chunks)
 
         if self.include_non_playable:
             self.chunks = tr_log.chunks
@@ -422,8 +434,8 @@ class Orchestra:
     def _load_sounds(self):
         if self.synth:
             print "loading sounds"
-            for filenum in range(len(self.tr_log.files)):
-                file_info = self.tr_log.files[filenum]
+            for filenum in range(len(self._files_to_play)):
+                file_info = self._files_to_play[filenum]
                 if file_info["playable_file_index"] != -1:
                     logger.info("load_sound(%s)" % file_info["decoded_name"])
                     result = self._load_sound_stubbornly(filenum, file_info["decoded_name"])
@@ -816,19 +828,20 @@ class Orchestra:
     @classmethod
     def estimate_duration(cls, tr_log, options):
         if cls.predecode:
-            predecoder = Predecoder(tr_log, cls.SAMPLE_RATE)
+            predecoder = Predecoder(
+                tr_log.files, sample_rate=cls.SAMPLE_RATE, location=tr_log.file_location)
             predecoder.decode()
         cls._get_wav_files_info(tr_log)
         playable_chunks = cls._filter_playable_chunks(tr_log, tr_log.chunks)
         score = cls._interpret_chunks_to_score(tr_log, playable_chunks, options)
         return cls._estimated_playback_duration(score, options)
 
-    def _fileinfo_for_pretended_audio_files(self):
-        fileinfo = {"offset": 0,
-                    "length": os.stat(self.options.pretend_audio_filename).st_size,
-                    "name": os.path.basename(self.options.pretend_audio_filename)}
-        return [fileinfo]
-
+    def _fileinfo_for_pretended_audio_file(self):
+        return {"offset": 0,
+                "length": os.stat(self.options.pretend_audio_filename).st_size,
+                "name": self.options.pretend_audio_filename,
+                "playable_file_index": 0}
+        
 def warn(logger, message):
     logger.info(message)
     print >> sys.stderr, "WARNING: %s" % message
