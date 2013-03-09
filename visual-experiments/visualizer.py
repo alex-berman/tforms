@@ -178,6 +178,8 @@ class Visualizer:
                  chunk_class=Chunk,
                  segment_class=Segment,
                  peer_class=Peer):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
         self.file_class = file_class
         self.chunk_class = chunk_class
         self.segment_class = segment_class
@@ -241,6 +243,8 @@ class Visualizer:
                 shutil.rmtree(export_dir)
             os.mkdir(export_dir)
             self.exporter = Exporter(export_dir, self.margin, self.margin, self.width, self.height)
+
+        self._initialized = True
 
     def _get_orchestra_port(self):
         if self.args.host == "localhost":

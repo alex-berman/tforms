@@ -237,7 +237,8 @@ class HeatMap(visualizer.Visualizer):
         for segment_id in outdated:
             del self.playing_segments[segment_id]
 
-parser = ArgumentParser()
-HeatMap.add_parser_arguments(parser)
-options = parser.parse_args()
-HeatMap(options).run()
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    HeatMap.add_parser_arguments(parser)
+    options = parser.parse_args()
+    HeatMap(options).run()
