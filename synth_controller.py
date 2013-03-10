@@ -8,13 +8,18 @@ import re
 class SynthController:
     DEFAULT_PORT = 57120
 
+    @staticmethod
+    def kill_potential_engine_from_previous_process():
+        subprocess.call("killall --quiet sclang", shell=True)
+        subprocess.call("killall --quiet scsynth", shell=True)
+
     def __init__(self):
         self._sc_process = None
         self._sc_listener = None
         self._listening_to_engine = False
 
     def launch_engine(self, mode):
-        self.kill_engine()
+        self.stop_engine()
 
         f = open("sc/engine.sc")
         engine = f.read()
@@ -73,7 +78,7 @@ class SynthController:
             self._sc_listener.start()
         self._send("/info_subscribe", self._sc_listener.port)
 
-    def kill_engine(self):
+    def stop_engine(self):
         if self._sc_listener:
             self._sc_listener.stop()
         if self._sc_process:

@@ -7,7 +7,7 @@ import threading
 import time
 from orchestra import Orchestra, Server
 from session import Session
-from logger import logger
+from logger_factory import logger
 import glob
 import datetime
 from shuffler import Shuffler

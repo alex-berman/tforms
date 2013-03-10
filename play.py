@@ -8,13 +8,17 @@ import time
 from orchestra import Orchestra, Server
 from session import Session
 import subprocess
-from logger import logger
+import logger_factory
+from logger_factory import logger
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
 Server.add_parser_arguments(parser)
 Orchestra.add_parser_arguments(parser)
+logger_factory.add_parser_arguments(parser)
 options = parser.parse_args()
+
+logger.setLevel(options.log_level)
 
 if options.realtime:
     if options.max_passivity:

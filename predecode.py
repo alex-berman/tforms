@@ -3,7 +3,7 @@
 import os
 import subprocess
 import re
-from logger import logger
+from logger_factory import logger
 import tempfile
 
 class mp3_decoder:
@@ -25,9 +25,9 @@ class flac_decoder:
 class Predecoder:
     DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
 
-    def __init__(self, tr_log, sample_rate=None):
-        self.tr_log = tr_log
-        self.location = tr_log.file_location
+    def __init__(self, files, location=None, sample_rate=None):
+        self._files = files
+        self._location = location
         self._sample_rate = sample_rate
         self._extension_re = re.compile('\.(\w+)$')
         self._decoders = dict([(extension, self._decoder_for_extension(extension))
@@ -38,11 +38,14 @@ class Predecoder:
         return globals()[class_name]()
 
     def decode(self, force=False):
-        for file_info in self.tr_log.files:
+        for file_info in self._files:
             self._decode_file_unless_already_decoded(file_info, force)
 
     def _decode_file_unless_already_decoded(self, file_info, force):
-        source_filename = self.location + os.sep + file_info['name']
+        if self._location:
+            source_filename = self._location + os.sep + file_info['name']
+        else:
+            source_filename = file_info['name']
         if self._extension(source_filename) == 'wav':
             file_info["decoded_name"] = source_filename
         elif self._decodable(source_filename):
