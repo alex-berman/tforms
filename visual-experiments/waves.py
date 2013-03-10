@@ -189,4 +189,5 @@ class Waves(visualizer.Visualizer):
     def handle_segment_waveform_value(self, segment, value):
         segment.append_to_waveform(value)
 
-visualizer.run(Waves)
+if __name__ == "__main__":
+    visualizer.run(Waves)

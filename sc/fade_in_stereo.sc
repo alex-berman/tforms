@@ -1,4 +1,3 @@
-
 SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	var out, pointer, filelength, pitch, env, dir, amp, pan_env;
 	pointer = Line.kr(begin, end, duration);

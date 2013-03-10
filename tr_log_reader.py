@@ -4,7 +4,7 @@ import os
 import Queue
 import cPickle
 import copy
-from logger import logger
+from logger_factory import logger
 from config import DOWNLOAD_LOCATION
 
 _peeraddr_re = re.compile('^\[?([0-9.]+)\]?:')
