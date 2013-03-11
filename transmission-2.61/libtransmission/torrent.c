@@ -3328,9 +3328,10 @@ void torrentialForms_exportMetaInfo(const tr_torrent *tor) {
   if(tor->info.fileCount == 0)
     return;
 
-  fprintf(stderr, "initialized torrent %d: name=%s totalSize=%llu fileCount=%d pieceSize=%u pieceCount=%d\n",
+  fprintf(stderr, "initialized torrent %d: name=%s totalSize=%llu fileCount=%d pieceSize=%u pieceCount=%d fileLocation=%s\n",
 	  tor->uniqueId, tor->info.name, tor->info.totalSize, tor->info.fileCount,
-	  tor->info.pieceSize, tor->info.pieceCount);
+	  tor->info.pieceSize, tor->info.pieceCount,
+	  tr_sessionGetDownloadDir(tor->session));
 
   for(i = 0; i < tor->info.fileCount; i++) {
     file = tor->info.files[i];
