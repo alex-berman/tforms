@@ -290,6 +290,7 @@ class Visualizer:
         self.torrent_download_completion_time = None
         self.num_segments = 0
         self.num_received_segments = 0
+        self._notified_finished = False
 
     def enable_3d(self):
         self._3d_enabled = True
@@ -545,12 +546,16 @@ class Visualizer:
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
-        if (self.export or self.args.exit_when_finished) and self.finished():
+        finished = self.finished()
+        if (self.export or self.args.exit_when_finished) and finished:
             self.exiting = True
         if self.export:
             self.exporter.export_frame()
 
         self._frame_count += 1
+        if finished and not self._notified_finished:
+            self.orchestra.notify_finished()
+            self._notified_finished = True
 
     def finished(self):
         return False
@@ -792,9 +797,12 @@ class Visualizer:
         if self.torrent_download_completion_time:
             return True
         else:
-            if self.num_segments > 0 and self.num_received_segments == self.num_segments:
+            if self.num_segments > 0 and self.num_received_segments == self.num_segments and not self.active():
                 self.torrent_download_completion_time = self.current_time()
                 return True
+
+    def active(self):
+        return False
 
     @staticmethod
     def add_parser_arguments(parser):

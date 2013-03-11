@@ -106,6 +106,7 @@ class Server(OscReceiver):
         self.add_method("/place_segment", "ifff", self._handle, "_handle_place_segment")
         self.add_method("/enable_smooth_movement", "", self._handle, "_handle_enable_smooth_movement")
         self.add_method("/start_segment_movement_from_peer", "if", self._handle, "_handle_start_segment_movement_from_peer")
+        self.add_method("/finished", "", self._handle, "_handle_finished")
         self.start()
         self._num_registered_visualizers = 0
         server_thread = threading.Thread(name="%s.server_thread" % self.__class__.__name__,
@@ -487,12 +488,15 @@ class Orchestra:
 
     def play_non_realtime(self, quit_on_end=False):
         logger.info("entering play_non_realtime")
+        self._num_finished_visualizers = 0
         if self._loop:
             while True:
                 self._play_until_end()
+                self._wait_for_visualizers_to_finish()
                 self.set_time_cursor(0)
         else:
             self._play_until_end()
+            self._wait_for_visualizers_to_finish()
             if quit_on_end:
                 self._quitting = True
         logger.info("leaving play_non_realtime")
@@ -841,6 +845,13 @@ class Orchestra:
                 "length": os.stat(self.options.pretend_audio_filename).st_size,
                 "name": self.options.pretend_audio_filename,
                 "playable_file_index": 0}
+
+    def _handle_finished(self, path, args, types, src, data):
+        self._num_finished_visualizers += 1
+
+    def _wait_for_visualizers_to_finish(self):
+        while self._num_finished_visualizers < len(self.visualizers):
+            time.sleep(0.1)
         
 def warn(logger, message):
     logger.info(message)

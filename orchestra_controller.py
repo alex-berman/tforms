@@ -25,3 +25,6 @@ class OrchestraController(simple_osc_sender.OscSender):
 
     def start_segment_movement_from_peer(self, segment_id, duration):
         self.send("/start_segment_movement_from_peer", segment_id, duration)
+
+    def notify_finished(self):
+        self.send("/finished")

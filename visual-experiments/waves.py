@@ -113,6 +113,9 @@ class Waves(visualizer.Visualizer):
         else:
             self.gathered_color = GATHERED_COLOR
 
+    def active(self):
+        return len(self.playing_segments) > 0
+
     def finished(self):
         if self.download_completed():
             time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
