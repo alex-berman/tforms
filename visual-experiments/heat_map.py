@@ -229,6 +229,9 @@ class HeatMap(visualizer.Visualizer):
         glEnd()
 
     def _update(self):
+        self._delete_outdated_segments()
+
+    def _delete_outdated_segments(self):
         outdated = []
         for segment in self.playing_segments.values():
             if not segment.is_playing():

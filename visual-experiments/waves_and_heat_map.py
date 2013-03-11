@@ -43,6 +43,10 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         waves.Waves.render(self, *args)
         heat_map.HeatMap.render(self, *args)
 
+    def _delete_outdated_segments(self):
+        # this is done by Waves.update() and should only be done there
+        pass
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     WavesAndHeatMap.add_parser_arguments(parser)
