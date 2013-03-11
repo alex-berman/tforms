@@ -815,7 +815,7 @@ class Orchestra:
 
     def reset(self):
         if self.synth:
-            self.synth.kill_engine()
+            self.synth.stop_engine()
         self._tell_visualizers("/reset")
         for visualizer in self.visualizers:
             visualizer.informed_about_torrent = False
