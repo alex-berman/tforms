@@ -3,23 +3,23 @@
 ~synths = Dictionary[];
 
 
-// SynthDef(\limiter,
-// { arg gain=1.0, threshold=0.2;
-//   var input, effect;
-//   var sig;
-//   input=In.ar(0,5);
-//   sig = gain*input;
-//   effect = Compander.ar(
-//     sig, sig,
-//     thresh: threshold,
-//     slopeBelow: 1.0,
-//     slopeAbove: 0.1,
-//     clampTime: 0.001,
-//     relaxTime: 0.01
-//   );
-//   ReplaceOut.ar(0,effect);
-// }).send(s);
-// SystemClock.sched(1.0, { Synth(\limiter, []); });
+SynthDef(\limiter,
+{ arg gain=1.0, threshold=0.2;
+  var input, effect;
+  var sig;
+  input=In.ar(0,4);
+  sig = gain*input;
+  effect = Compander.ar(
+    sig, sig,
+    thresh: threshold,
+    slopeBelow: 1.0,
+    slopeAbove: 0.1,
+    clampTime: 0.001,
+    relaxTime: 0.01
+  );
+  ReplaceOut.ar(0,effect);
+}).send(s);
+SystemClock.sched(1.0, { Synth(\limiter, []); });
 
 ~info_subscriber = nil;
 ~amp_subscriber = nil;
