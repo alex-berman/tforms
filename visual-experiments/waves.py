@@ -130,11 +130,21 @@ class PeerInfoRenderer:
     def __init__(self, peer, y, visualizer):
         self.peer = peer
         self.visualizer = visualizer
-        self._text = peer.addr
+        self._text = self._anonymize_addr(peer.addr)
         self._scale = 0.07 / 1024 * self.visualizer.width
         self._h_margin = 10.0 / 640 * self.visualizer.height
         self._v_margin = 10.0 / 640 * self.visualizer.height
         self.y = y - self._scale * 33.33
+
+    def _anonymize_addr(self, addr):
+        parts = addr.split(".")
+        parts[-1] = self._anonymize_addr_part(parts[-1])
+        return ".".join(parts)
+
+    def _anonymize_addr_part(self, string):
+        chars = list(string)
+        chars[random.randint(0, len(chars)-1)] = "X"
+        return "".join(chars)
 
     def render(self, h_align, v_align):
         glLineWidth(1.0)
