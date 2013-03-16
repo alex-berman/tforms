@@ -6,6 +6,7 @@ from OpenGL.GLUT import *
 from vector import Vector3d
 from gatherer import Gatherer
 from math_tools import sigmoid
+import random
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30.0 / 480
@@ -59,8 +60,17 @@ class Segment(visualizer.Segment):
             self._render_peer_info()
 
     def _try_allocate_place_for_peer_info(self):
-        for h_align in ["left", "right"]:
-            for v_align in ["top", "bottom"]:
+        v_aligns = ["top", "bottom"]
+        random.shuffle(v_aligns)
+        h_aligns = set(["left", "right"])
+        while len(h_aligns) > 0:
+            if self.peer.side in h_aligns:
+                h_align = self.peer.side
+            else:
+                h_align = random.choice(list(h_aligns))
+            h_aligns.remove(h_align)
+
+            for v_align in v_aligns:
                 if self._try_allocate_place_for_peer_info_with_align(h_align, v_align):
                     self._peer_info_h_align = h_align
                     self._peer_info_v_align = v_align
