@@ -1,6 +1,8 @@
+from argparse import ArgumentParser
 import rectangular_visualizer as visualizer
 import collections
 from OpenGL.GL import *
+from OpenGL.GLUT import *
 from vector import Vector3d
 from gatherer import Gatherer
 from math_tools import sigmoid
@@ -14,6 +16,15 @@ GATHERED_LINE_WIDTH = 1.0 / 480
 WAVEFORM_LINE_WIDTH = 3.0 / 480
 MAX_GRADIENT_HEIGHT = 3.0 / 480
 FADE_OUT_DURATION = 5.0
+MAX_PEER_INFO_FADE_TIME = 0.3
+
+class Peer(visualizer.Peer):
+    def __init__(self, *args):
+        visualizer.Peer.__init__(self, *args)
+        if self.pan < 0:
+            self.side = "left"
+        else:
+            self.side = "right"
 
 class Segment(visualizer.Segment):
     def __init__(self, *args):
@@ -23,8 +34,14 @@ class Segment(visualizer.Segment):
         self.amp = 0
         self.pan = 0.5
         self.y = self.visualizer.byte_to_py(self.torrent_begin)
+        self._peer_info_fade_time = min(self.duration/2, MAX_PEER_INFO_FADE_TIME)
 
     def render(self):
+        self._render_waveform()
+        if self.visualizer.args.peer_info:
+            self._render_peer_info()
+
+    def _render_waveform(self):
         amp = max([abs(value) for value in self.waveform])
         glLineWidth(self.amp_controlled_line_width(
                 GATHERED_LINE_WIDTH, WAVEFORM_LINE_WIDTH, amp))
@@ -46,11 +63,37 @@ class Segment(visualizer.Segment):
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
         return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.height
 
+    def _render_peer_info(self):
+        glColor4f(1,1,1, self._text_opacity())
+        glLineWidth(1.0)
+        glPointSize(1.0)
+        if self.peer.side == "left":
+            x = 10
+        else:
+            x = self.visualizer.width - 10
+        self.visualizer.draw_text(
+            text = self.peer.addr,
+            scale = 0.1 / 1024 * self.visualizer.width,
+            x = x,
+            y = self.y + 10.0 / 640 * self.visualizer.height,
+            font = GLUT_STROKE_MONO_ROMAN,
+            align = self.peer.side)
+
+    def _text_opacity(self):
+        age = self.age()
+        if age < self._peer_info_fade_time:
+            return sigmoid(age / self._peer_info_fade_time)
+        elif age > (self.duration - self._peer_info_fade_time):
+            return 1 - sigmoid(1 - (self.duration - age) / self._peer_info_fade_time)
+        else:
+            return 1
+
+
 class File(visualizer.File):
     def add_segment(self, segment):
         self.visualizer.playing_segment(segment)
         self.visualizer.playing_segments[segment.id] = segment
-        if segment.peer.pan < 0:
+        if segment.peer.side == "left":
             segment.append_to_waveform = segment.waveform.appendleft
         else:
             segment.append_to_waveform = segment.waveform.append
@@ -60,7 +103,19 @@ class Waves(visualizer.Visualizer):
         self._gathered_segments_layer = None
         visualizer.Visualizer.__init__(self, args,
                                        file_class=File,
+                                       peer_class=Peer,
                                        segment_class=Segment)
+        
+    @staticmethod
+    def add_parser_arguments(parser):
+        visualizer.Visualizer.add_parser_arguments(parser)
+        parser.add_argument("--peer-info", action="store_true")
+
+    def configure_2d_projection(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0.0, self.window_width, 0.0, self.window_height, -1.0, 1.0)
+        glMatrixMode(GL_MODELVIEW)
 
     def synth_address_received(self):
         self.subscribe_to_waveform()
@@ -193,4 +248,7 @@ class Waves(visualizer.Visualizer):
         segment.append_to_waveform(value)
 
 if __name__ == "__main__":
-    visualizer.run(Waves)
+    parser = ArgumentParser()
+    Waves.add_parser_arguments(parser)
+    options = parser.parse_args()
+    Waves(options).run()

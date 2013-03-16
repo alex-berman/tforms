@@ -33,6 +33,7 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
 
     @staticmethod
     def add_parser_arguments(parser):
+        waves.Waves.add_parser_arguments(parser)
         heat_map.HeatMap.add_parser_arguments(parser)
 
     def reset(self, *args):

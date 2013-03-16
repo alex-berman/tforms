@@ -782,10 +782,18 @@ class Visualizer:
             self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
-    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None):
+    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None, align="left"):
         glPushMatrix()
         glTranslatef(x, y, 0)
         glScalef(scale, scale, scale)
+        if align == "right":
+            width = 0
+            for c in text:
+                if c == ' ' and spacing is not None:
+                    width += spacing
+                else:
+                    width += glutStrokeWidth(font, ord(c))
+            glTranslatef(-width, 0, 0)
         for c in text:
             if c == ' ' and spacing is not None:
                 glTranslatef(spacing, 0, 0)
@@ -806,6 +814,8 @@ class Visualizer:
 
     @staticmethod
     def add_parser_arguments(parser):
+        if hasattr(parser, "_tforms_added_default_parser_arguments"):
+            return
         parser.add_argument("-host", type=str, default="localhost")
         parser.add_argument('-port', type=int)
         parser.add_argument("-listen", type=str)
@@ -828,6 +838,7 @@ class Visualizer:
         parser.add_argument("-profile", action="store_true")
         parser.add_argument("-check-opengl-errors", action="store_true")
         parser.add_argument("-exit-when-finished", action="store_true")
+        parser._tforms_added_default_parser_arguments = True
 
 def run(visualizer_class):
     print "Hit ESC key to quit."
