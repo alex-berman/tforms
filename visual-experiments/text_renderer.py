@@ -36,6 +36,8 @@ class GlutTextRenderer(TextRenderer):
         self.scale = self.size / (self.TOP + self.BOTTOM)
 
     def stroke(self):
+        glLineWidth(1.0)
+        glPointSize(1.0)
         for c in self.text:
             if c == ' ' and self.spacing is not None:
                 glTranslatef(self.spacing, 0, 0)

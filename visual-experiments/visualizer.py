@@ -789,12 +789,12 @@ class Visualizer:
             self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
-    def draw_text(self, text, scale, x, y, font=None, spacing=None,
+    def draw_text(self, text, size, x, y, font=None, spacing=None,
                   v_align="left", h_align="top"):
-        self.text_renderer(text, scale, font).render(x, y, v_align, h_align)
+        self.text_renderer(text, size, font).render(x, y, v_align, h_align)
 
-    def text_renderer(self, text, scale, font=None):
-        return self._text_renderer_class(text, scale, font)
+    def text_renderer(self, text, size, font=None):
+        return self._text_renderer_class(text, size, font)
 
     def download_completed(self):
         if self.torrent_download_completion_time:

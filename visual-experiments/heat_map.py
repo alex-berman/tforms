@@ -133,8 +133,6 @@ class HeatMap(visualizer.Visualizer):
 
     def _render_title(self):
         glColor3f(1,1,1)
-        glLineWidth(1.0)
-        glPointSize(1.0)
         if self.args.test_title:
             title = self.args.test_title
         else:
@@ -150,7 +148,7 @@ class HeatMap(visualizer.Visualizer):
         for n in range(weight):
             self.draw_text(
                 text = title,
-                scale = 0.14 / 1024 * self.width,
+                size = 21.3 / 1024 * self.width,
                 x = x,
                 y = y,
                 spacing = 50.0)
