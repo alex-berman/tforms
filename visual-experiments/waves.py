@@ -130,13 +130,13 @@ class PeerInfoRenderer:
     def __init__(self, peer, y, visualizer):
         self.peer = peer
         self.visualizer = visualizer
-        self._scale = 0.07 / 1024 * self.visualizer.width
+        self._height = 8.0
         self._h_margin = 10.0 / 640 * self.visualizer.height
         self._v_margin = 10.0 / 640 * self.visualizer.height
-        self.y = y - self._scale * 33.33
+        self.y = y - 2
         self._text_renderer = visualizer.text_renderer(
             self._make_text(),
-            self._scale,
+            self._height,
             font = GLUT_STROKE_MONO_ROMAN)
 
     def _make_text(self):
@@ -174,7 +174,7 @@ class PeerInfoRenderer:
             return self.y - self._v_margin
 
     def size(self):
-        return self._text_renderer.get_size()
+        return self._text_renderer.get_width(), self._height
 
 class File(visualizer.File):
     def add_segment(self, segment):
