@@ -130,11 +130,21 @@ class PeerInfoRenderer:
     def __init__(self, peer, y, visualizer):
         self.peer = peer
         self.visualizer = visualizer
-        self._text = self._anonymize_addr(peer.addr)
         self._scale = 0.07 / 1024 * self.visualizer.width
         self._h_margin = 10.0 / 640 * self.visualizer.height
         self._v_margin = 10.0 / 640 * self.visualizer.height
         self.y = y - self._scale * 33.33
+        self._text_renderer = visualizer.text_renderer(
+            self._make_text(),
+            self._scale,
+            font = GLUT_STROKE_MONO_ROMAN)
+
+    def _make_text(self):
+        addr = self._anonymize_addr(self.peer.addr)
+        if self.peer.place_name:
+            return "%s %s" % (self.peer.place_name, addr)
+        else:
+            return addr
 
     def _anonymize_addr(self, addr):
         parts = addr.split(".")
@@ -155,13 +165,7 @@ class PeerInfoRenderer:
         else:
             x = self.visualizer.width - self._h_margin
 
-        self.visualizer.draw_text(
-            text = self._text,
-            scale = self._scale,
-            x = x, y = self.v_position(v_align),
-            font = GLUT_STROKE_MONO_ROMAN,
-            h_align = h_align,
-            v_align = v_align)
+        self._text_renderer.render(x, self.v_position(v_align), v_align, h_align)
 
     def v_position(self, v_align):
         if v_align == "top":
@@ -170,9 +174,7 @@ class PeerInfoRenderer:
             return self.y - self._v_margin
 
     def size(self):
-        return self.visualizer.get_text_size(
-            text = self._text,
-            scale = self._scale)
+        return self._text_renderer.get_size()
 
 class File(visualizer.File):
     def add_segment(self, segment):

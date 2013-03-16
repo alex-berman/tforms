@@ -13,4 +13,5 @@ class IpLocator:
         if gir:
             x = self._gps.x(gir['longitude'])
             y = self._gps.y(gir['latitude'])
-            return x, y
+            place_name = gir['city']
+            return x, y, place_name

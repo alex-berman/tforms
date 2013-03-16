@@ -25,6 +25,7 @@ import simple_osc_receiver
 from stopwatch import Stopwatch
 import traceback_printer
 from camera_script_interpreter import CameraScriptInterpreter
+text_renderer_module = __import__("text_renderer")
 
 logging.basicConfig(filename="visualizer.log", 
                     level=logging.DEBUG, 
@@ -48,6 +49,10 @@ ACCUM_JITTER = [
 	( 0.102254,  0.299133),
 	( 0.164216, -0.054399)
 ]
+
+TEXT_RENDERERS = {
+    "glut": "GlutTextRenderer"
+}
 
 class File:
     def __init__(self, visualizer, filenum, offset, length):
@@ -147,8 +152,10 @@ class Peer:
         self.pan = pan
         if location == "":
             self.location = None
+            self.place_name = None
         else:
-            self.location = map(float, location.split(","))
+            x, y, self.place_name = location.split(",")
+            self.location = map(float, (x, y))
 
     def add_segment(self, segment):
         pass
@@ -211,6 +218,7 @@ class Visualizer:
         self.near = 0.1
         self.far = 100.0
         self._fullscreen = False
+        self._text_renderer_class = getattr(text_renderer_module, TEXT_RENDERERS[args.text_renderer])
 
         if args.camera_script:
             self._camera_script = CameraScriptInterpreter(args.camera_script)
@@ -781,35 +789,12 @@ class Visualizer:
             self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
-    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None,
+    def draw_text(self, text, scale, x, y, font=None, spacing=None,
                   v_align="left", h_align="top"):
-        width, height = self.get_text_size(text, scale, font, spacing)
-        glPushMatrix()
-        glTranslatef(x, y, 0)
-        glScalef(scale, scale, scale)
-        if h_align == "right":
-            glTranslatef(-width, 0, 0)
-        if v_align == "top":
-            glTranslatef(0, -height, 0)
-        for c in text:
-            if c == ' ' and spacing is not None:
-                glTranslatef(spacing, 0, 0)
-            else:
-                glutStrokeCharacter(font, ord(c))
-        glPopMatrix()
+        self.text_renderer(text, scale, font).render(x, y, v_align, h_align)
 
-    def get_text_size(self, text, scale, font=GLUT_STROKE_ROMAN, spacing=None):
-        height = (119.05 + 33.33) * scale #http://www.opengl.org/resources/libraries/glut/spec3/node78.html
-        glPushMatrix()
-        glScalef(scale, scale, scale)
-        width = 0
-        for c in text:
-            if c == ' ' and spacing is not None:
-                width += spacing
-            else:
-                width += glutStrokeWidth(font, ord(c))
-        glPopMatrix()
-        return width, height
+    def text_renderer(self, text, scale, font=None):
+        return self._text_renderer_class(text, scale, font)
 
     def download_completed(self):
         if self.torrent_download_completion_time:
@@ -848,6 +833,7 @@ class Visualizer:
         parser.add_argument("-profile", action="store_true")
         parser.add_argument("-check-opengl-errors", action="store_true")
         parser.add_argument("-exit-when-finished", action="store_true")
+        parser.add_argument("--text-renderer", choices=[TEXT_RENDERERS.keys()], default="glut")
         parser._tforms_added_default_parser_arguments = True
 
 def run(visualizer_class):
