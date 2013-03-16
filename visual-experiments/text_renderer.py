@@ -14,7 +14,7 @@ class TextRenderer:
         self.scale = 1
 
     def render(self, x, y, v_align="left", h_align="top"):
-        width = self.get_width()
+        width, height = self.get_size()
         glPushMatrix()
         glTranslatef(x, y, 0)
         glScalef(self.scale, self.scale, self.scale)
@@ -23,7 +23,17 @@ class TextRenderer:
         if v_align == "top":
             glTranslatef(0, -self.size, 0)
         self.stroke()
+        #self._draw_bbox() # TEMP
         glPopMatrix()
+
+    def _draw_bbox(self):
+        width, height = self.get_size()
+        glBegin(GL_LINE_LOOP)
+        glVertex2f(0, 0)
+        glVertex2f(width, 0)
+        glVertex2f(width, height)
+        glVertex2f(0, height)
+        glEnd()
 
 class GlutTextRenderer(TextRenderer):
     TOP = 119.05 # http://www.opengl.org/resources/libraries/glut/spec3/node78.html
@@ -44,7 +54,7 @@ class GlutTextRenderer(TextRenderer):
             else:
                 glutStrokeCharacter(self.font, ord(c))
 
-    def get_width(self):
+    def get_size(self):
         glPushMatrix()
         glScalef(self.scale, self.scale, self.scale)
         width = 0
@@ -54,4 +64,37 @@ class GlutTextRenderer(TextRenderer):
             else:
                 width += glutStrokeWidth(self.font, ord(c))
         glPopMatrix()
-        return width
+        return width, self.size
+
+
+ftgl_fonts = {}
+
+class FtglTextRenderer(TextRenderer):
+    RESOLUTION = 72
+
+    def __init__(self, *args):
+        TextRenderer.__init__(self, *args)
+        if not self.font:
+            raise Exception("font required")
+        self._font_object = self._prepare_font(self.font)
+        self.text = self.text.encode("utf8")
+
+    def _prepare_font(self, name):
+        try:
+            return ftgl_fonts[name]
+        except KeyError:
+            font = FTGL.OutlineFont(name)
+            font.FaceSize(int(self.size), self.RESOLUTION)
+            ftgl_fonts[name] = font
+            return font
+
+    def stroke(self):
+        glLineWidth(1.0)
+        glPointSize(1.0)
+        self._font_object.Render(self.text)
+
+    def get_size(self):
+        llx, lly, llz, urx, ury, urz = self._font_object.BBox(self.text)
+        width = urx - llx
+        height = ury - lly
+        return width, height

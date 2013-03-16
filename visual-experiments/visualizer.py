@@ -51,7 +51,8 @@ ACCUM_JITTER = [
 ]
 
 TEXT_RENDERERS = {
-    "glut": "GlutTextRenderer"
+    "glut": "GlutTextRenderer",
+    "ftgl": "FtglTextRenderer"
 }
 
 class File:
@@ -155,6 +156,7 @@ class Peer:
             self.place_name = None
         else:
             x, y, self.place_name = location.split(",")
+            self.place_name = self.place_name.decode("unicode_escape")
             self.location = map(float, (x, y))
 
     def add_segment(self, segment):
@@ -791,9 +793,13 @@ class Visualizer:
 
     def draw_text(self, text, size, x, y, font=None, spacing=None,
                   v_align="left", h_align="top"):
+        if font is None:
+            font = self.args.font
         self.text_renderer(text, size, font).render(x, y, v_align, h_align)
 
     def text_renderer(self, text, size, font=None):
+        if font is None:
+            font = self.args.font
         return self._text_renderer_class(text, size, font)
 
     def download_completed(self):
@@ -833,7 +839,8 @@ class Visualizer:
         parser.add_argument("-profile", action="store_true")
         parser.add_argument("-check-opengl-errors", action="store_true")
         parser.add_argument("-exit-when-finished", action="store_true")
-        parser.add_argument("--text-renderer", choices=[TEXT_RENDERERS.keys()], default="glut")
+        parser.add_argument("--text-renderer", choices=TEXT_RENDERERS.keys(), default="glut")
+        parser.add_argument("--font", type=str)
         parser._tforms_added_default_parser_arguments = True
 
 def run(visualizer_class):

@@ -14,4 +14,6 @@ class IpLocator:
             x = self._gps.x(gir['longitude'])
             y = self._gps.y(gir['latitude'])
             place_name = gir['city']
+            if place_name:
+                place_name = place_name.decode("unicode_escape")
             return x, y, place_name
