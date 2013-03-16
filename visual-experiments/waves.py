@@ -34,12 +34,48 @@ class Segment(visualizer.Segment):
         self.amp = 0
         self.pan = 0.5
         self.y = self.visualizer.byte_to_py(self.torrent_begin)
-        self._peer_info_fade_time = min(self.duration/2, MAX_PEER_INFO_FADE_TIME)
+        if self.visualizer.args.peer_info:
+            self._prepare_peer_info()
 
+    def _prepare_peer_info(self):
+        if self._allocate_place_for_peer_info():
+            self._peer_info_fade_time = min(self.duration/2, MAX_PEER_INFO_FADE_TIME)
+
+    def _allocate_place_for_peer_info(self):
+        self._peer_info_renderer = PeerInfoRenderer(self.peer, self.y, self.visualizer)
+        self._peer_info_size = self._peer_info_renderer.size()
+        for h_align in ["left", "right"]:
+            for v_align in ["top", "bottom"]:
+                if self._try_allocate_place_for_peer_info(h_align, v_align):
+                    self._peer_info_h_align = h_align
+                    self._peer_info_v_align = v_align
+                    return True
+
+    def _try_allocate_place_for_peer_info(self, h_align, v_align):
+        allocator = self.visualizer.allocators[h_align]
+        width, height = self._peer_info_renderer.size()
+        y1 = self._peer_info_renderer.v_position(v_align)
+        y2 = y1 + height
+        self._peer_info_allocation_id = allocator.allocate(y1, y2)
+        if self._peer_info_allocation_id:
+            return True
+
+    def free(self):
+        if self.visualizer.args.peer_info and self._peer_info_allocation_id:
+            allocator = self.visualizer.allocators[self._peer_info_h_align]
+            allocator.free(self._peer_info_allocation_id)
+            
     def render(self):
         self._render_waveform()
         if self.visualizer.args.peer_info:
             self._render_peer_info()
+
+    def _render_peer_info(self):
+        if self._peer_info_allocation_id:
+            glColor4f(1,1,1, self._text_opacity())
+            self._peer_info_renderer.render(
+                self._peer_info_h_align,
+                self._peer_info_v_align)
 
     def _render_waveform(self):
         amp = max([abs(value) for value in self.waveform])
@@ -63,22 +99,6 @@ class Segment(visualizer.Segment):
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
         return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.height
 
-    def _render_peer_info(self):
-        glColor4f(1,1,1, self._text_opacity())
-        glLineWidth(1.0)
-        glPointSize(1.0)
-        if self.peer.side == "left":
-            x = 10
-        else:
-            x = self.visualizer.width - 10
-        self.visualizer.draw_text(
-            text = self.peer.addr,
-            scale = 0.1 / 1024 * self.visualizer.width,
-            x = x,
-            y = self.y + 10.0 / 640 * self.visualizer.height,
-            font = GLUT_STROKE_MONO_ROMAN,
-            align = self.peer.side)
-
     def _text_opacity(self):
         age = self.age()
         if age < self._peer_info_fade_time:
@@ -88,6 +108,43 @@ class Segment(visualizer.Segment):
         else:
             return 1
 
+class PeerInfoRenderer:
+    def __init__(self, peer, y, visualizer):
+        self.peer = peer
+        self.visualizer = visualizer
+        self._text = peer.addr
+        self._scale = 0.07 / 1024 * self.visualizer.width
+        self._h_margin = 10.0 / 640 * self.visualizer.height
+        self._v_margin = 10.0 / 640 * self.visualizer.height
+        self.y = y - self._scale * 33.33
+
+    def render(self, h_align, v_align):
+        glLineWidth(1.0)
+        glPointSize(1.0)
+
+        if h_align == "left":
+            x = self._h_margin
+        else:
+            x = self.visualizer.width - self._h_margin
+
+        self.visualizer.draw_text(
+            text = self._text,
+            scale = self._scale,
+            x = x, y = self.v_position(v_align),
+            font = GLUT_STROKE_MONO_ROMAN,
+            h_align = h_align,
+            v_align = v_align)
+
+    def v_position(self, v_align):
+        if v_align == "top":
+            return self.y + self._v_margin
+        else:
+            return self.y - self._v_margin
+
+    def size(self):
+        return self.visualizer.get_text_size(
+            text = self._text,
+            scale = self._scale)
 
 class File(visualizer.File):
     def add_segment(self, segment):
@@ -105,6 +162,9 @@ class Waves(visualizer.Visualizer):
                                        file_class=File,
                                        peer_class=Peer,
                                        segment_class=Segment)
+        if self.args.peer_info:
+            self.allocators = {"left":  RasterAllocator(),
+                               "right": RasterAllocator()}
         
     @staticmethod
     def add_parser_arguments(parser):
@@ -145,6 +205,7 @@ class Waves(visualizer.Visualizer):
 
         if len(outdated) > 0:
             for segment_id in outdated:
+                self.playing_segments[segment_id].free()
                 del self.playing_segments[segment_id]
             self._gathered_segments_layer.refresh()
 
@@ -246,6 +307,29 @@ class Waves(visualizer.Visualizer):
 
     def handle_segment_waveform_value(self, segment, value):
         segment.append_to_waveform(value)
+
+class RasterAllocator:
+    def __init__(self):
+        self._allocations = {}
+        self._id_count = 0
+
+    def allocate(self, begin, end):
+        for allocation in self._allocations.values():
+            if self._overlap(allocation["begin"], allocation["end"], begin, end):
+                return False
+        allocation_id = self._id_count
+        self._allocations[allocation_id] = {"begin": begin, "end": end}
+        self._id_count += 1
+        return allocation_id
+
+    def _overlap(self, begin1, end1, begin2, end2):
+        return ((begin2 <= begin1 <= end2) or
+                (begin2 <= end1 <= end2) or
+                (begin1 <= begin2 <= end1) or
+                (begin1 <= end2 <= end1))
+
+    def free(self, allocation_id):
+        del self._allocations[allocation_id]
 
 if __name__ == "__main__":
     parser = ArgumentParser()

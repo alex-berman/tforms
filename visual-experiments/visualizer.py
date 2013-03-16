@@ -68,7 +68,7 @@ class File:
 
 class Chunk:
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id, t,
+                 filenum, f, peer, t,
                  arrival_time, visualizer):
         self.id = chunk_id
         self.begin = begin
@@ -76,7 +76,7 @@ class Chunk:
         self.byte_size = byte_size
         self.filenum = filenum
         self.f = f
-        self.peer_id = peer_id
+        self.peer = peer
         self.t = t
         self.arrival_time = arrival_time
         self.visualizer = visualizer
@@ -114,10 +114,10 @@ class Chunk:
 
 class Segment(Chunk):
     def __init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id, t, duration,
+                 filenum, f, peer, t, duration,
                  arrival_time, visualizer):
         Chunk.__init__(self, chunk_id, begin, end, byte_size,
-                 filenum, f, peer_id, t,
+                 filenum, f, peer, t,
                  arrival_time, visualizer)
         self.duration = duration
 
@@ -357,11 +357,12 @@ class Visualizer:
         (chunk_id, torrent_position, byte_size, filenum, peer_id, t) = args
         if filenum in self.files:
             f = self.files[filenum]
+            peer = self.peers[peer_id]
             begin = torrent_position - f.offset
             end = begin + byte_size
             chunk = self.chunk_class(
                 chunk_id, begin, end, byte_size, filenum, f,
-                peer_id, t, self.current_time(), self)
+                peer, t, self.current_time(), self)
             self.files[filenum].add_chunk(chunk)
         else:
             print "ignoring chunk from undeclared file %s" % filenum
@@ -371,11 +372,12 @@ class Visualizer:
          peer_id, t, duration) = args
         if filenum in self.files:
             f = self.files[filenum]
+            peer = self.peers[peer_id]
             begin = torrent_position - f.offset
             end = begin + byte_size
             segment = self.segment_class(
                 segment_id, begin, end, byte_size, filenum, f,
-                peer_id, t, duration, self.current_time(), self)
+                peer, t, duration, self.current_time(), self)
             self._segments_by_id[segment_id] = segment
 
             self.add_segment(segment)
@@ -389,16 +391,13 @@ class Visualizer:
         self.peers_by_addr[addr] = peer
 
     def add_segment(self, segment):
-        peer = self.peers[segment.peer_id]
-        segment.peer = peer
-
         f = self.files[segment.filenum]
         segment.f = f
         segment.pan = 0.5
         f.add_segment(segment)
 
         self.pan_segment(segment)
-        peer.add_segment(segment)
+        segment.peer.add_segment(segment)
         self.num_received_segments += 1
 
     def added_file(self, f):
@@ -782,24 +781,35 @@ class Visualizer:
             self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
-    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None, align="left"):
+    def draw_text(self, text, scale, x, y, font=GLUT_STROKE_ROMAN, spacing=None,
+                  v_align="left", h_align="top"):
+        width, height = self.get_text_size(text, scale, font, spacing)
         glPushMatrix()
         glTranslatef(x, y, 0)
         glScalef(scale, scale, scale)
-        if align == "right":
-            width = 0
-            for c in text:
-                if c == ' ' and spacing is not None:
-                    width += spacing
-                else:
-                    width += glutStrokeWidth(font, ord(c))
+        if h_align == "right":
             glTranslatef(-width, 0, 0)
+        if v_align == "top":
+            glTranslatef(0, -height, 0)
         for c in text:
             if c == ' ' and spacing is not None:
                 glTranslatef(spacing, 0, 0)
             else:
                 glutStrokeCharacter(font, ord(c))
         glPopMatrix()
+
+    def get_text_size(self, text, scale, font=GLUT_STROKE_ROMAN, spacing=None):
+        height = (119.05 + 33.33) * scale #http://www.opengl.org/resources/libraries/glut/spec3/node78.html
+        glPushMatrix()
+        glScalef(scale, scale, scale)
+        width = 0
+        for c in text:
+            if c == ' ' and spacing is not None:
+                width += spacing
+            else:
+                width += glutStrokeWidth(font, ord(c))
+        glPopMatrix()
+        return width, height
 
     def download_completed(self):
         if self.torrent_download_completion_time:
