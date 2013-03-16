@@ -16,7 +16,9 @@ GATHERED_LINE_WIDTH = 1.0 / 480
 WAVEFORM_LINE_WIDTH = 3.0 / 480
 MAX_GRADIENT_HEIGHT = 3.0 / 480
 FADE_OUT_DURATION = 5.0
-MAX_PEER_INFO_FADE_TIME = 0.3
+PEER_INFO_AMP_THRESHOLD = 0.1
+PEER_INFO_FADE_IN = 1.0
+PEER_INFO_FADE_OUT = 0.3
 
 class Peer(visualizer.Peer):
     def __init__(self, *args):
@@ -38,20 +40,33 @@ class Segment(visualizer.Segment):
             self._prepare_peer_info()
 
     def _prepare_peer_info(self):
-        if self._allocate_place_for_peer_info():
-            self._peer_info_fade_time = min(self.duration/2, MAX_PEER_INFO_FADE_TIME)
-
-    def _allocate_place_for_peer_info(self):
         self._peer_info_renderer = PeerInfoRenderer(self.peer, self.y, self.visualizer)
         self._peer_info_size = self._peer_info_renderer.size()
+        self._peer_info_fade_in = min(self.duration/2, PEER_INFO_FADE_IN)
+        self._peer_info_fade_out = min(self.duration/2, PEER_INFO_FADE_IN)
+        self._peer_info_allocation_id = None
+            
+    def render(self):
+        self._amp = max([abs(value) for value in self.waveform])
+        self._render_waveform()
+        if self.visualizer.args.peer_info:
+            self._potentially_render_peer_info()
+
+    def _potentially_render_peer_info(self):
+        if not self._peer_info_allocation_id and self._amp > PEER_INFO_AMP_THRESHOLD:
+            self._try_allocate_place_for_peer_info()
+        if self._peer_info_allocation_id:
+            self._render_peer_info()
+
+    def _try_allocate_place_for_peer_info(self):
         for h_align in ["left", "right"]:
             for v_align in ["top", "bottom"]:
-                if self._try_allocate_place_for_peer_info(h_align, v_align):
+                if self._try_allocate_place_for_peer_info_with_align(h_align, v_align):
                     self._peer_info_h_align = h_align
                     self._peer_info_v_align = v_align
                     return True
 
-    def _try_allocate_place_for_peer_info(self, h_align, v_align):
+    def _try_allocate_place_for_peer_info_with_align(self, h_align, v_align):
         allocator = self.visualizer.allocators[h_align]
         width, height = self._peer_info_renderer.size()
         y1 = self._peer_info_renderer.v_position(v_align)
@@ -64,25 +79,18 @@ class Segment(visualizer.Segment):
         if self.visualizer.args.peer_info and self._peer_info_allocation_id:
             allocator = self.visualizer.allocators[self._peer_info_h_align]
             allocator.free(self._peer_info_allocation_id)
-            
-    def render(self):
-        self._render_waveform()
-        if self.visualizer.args.peer_info:
-            self._render_peer_info()
 
     def _render_peer_info(self):
-        if self._peer_info_allocation_id:
-            glColor4f(1,1,1, self._text_opacity())
-            self._peer_info_renderer.render(
-                self._peer_info_h_align,
-                self._peer_info_v_align)
+        glColor4f(1,1,1, self._text_opacity())
+        self._peer_info_renderer.render(
+            self._peer_info_h_align,
+            self._peer_info_v_align)
 
     def _render_waveform(self):
-        amp = max([abs(value) for value in self.waveform])
         glLineWidth(self.amp_controlled_line_width(
-                GATHERED_LINE_WIDTH, WAVEFORM_LINE_WIDTH, amp))
+                GATHERED_LINE_WIDTH, WAVEFORM_LINE_WIDTH, self._amp))
         self.visualizer.set_color(self.amp_controlled_color(
-                self.visualizer.gathered_color, WAVEFORM_COLOR, amp))
+                self.visualizer.gathered_color, WAVEFORM_COLOR, self._amp))
 
         glBegin(GL_LINE_STRIP)
         n = 0
@@ -101,10 +109,10 @@ class Segment(visualizer.Segment):
 
     def _text_opacity(self):
         age = self.age()
-        if age < self._peer_info_fade_time:
-            return sigmoid(age / self._peer_info_fade_time)
-        elif age > (self.duration - self._peer_info_fade_time):
-            return 1 - sigmoid(1 - (self.duration - age) / self._peer_info_fade_time)
+        if age < self._peer_info_fade_in:
+            return sigmoid(age / self._peer_info_fade_in)
+        elif age > (self.duration - self._peer_info_fade_out):
+            return 1 - sigmoid(1 - (self.duration - age) / self._peer_info_fade_out)
         else:
             return 1
 
