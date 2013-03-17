@@ -744,7 +744,9 @@ class Orchestra:
         player.addr = addr
         if self.server.options.locate_peers and self._peer_location[addr] is not None:
             x, y, place_name = self._peer_location[addr]
-            player.location_str = "%s,%s,%s" % (x, y, place_name.encode("unicode_escape"))
+            if place_name:
+                place_name = place_name.encode("unicode_escape")
+            player.location_str = "%s,%s,%s" % (x, y, place_name)
         else:
             player.location_str = ""
         return player
