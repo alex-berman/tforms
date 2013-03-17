@@ -81,9 +81,13 @@ class Segment(visualizer.Segment):
         layout_manager = self.visualizer.layout_managers[h_align]
         width, height = self._peer_info_renderer.size()
         x1, y1, x2, y2 = self._peer_info_renderer.bounding_box(h_align, v_align)
-        self._peer_info_layout_component = layout_manager.add(y1, y2)
-        if self._peer_info_layout_component:
-            return True
+        if self._within_screen(y1, y2):
+            self._peer_info_layout_component = layout_manager.add(y1, y2)
+            if self._peer_info_layout_component:
+                return True
+
+    def _within_screen(self, y1, y2):
+        return y1 >= 0 and y2 < self.visualizer.height
 
     def free(self):
         if self.visualizer.args.peer_info and self._peer_info_layout_component:
