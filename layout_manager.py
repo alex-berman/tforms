@@ -1,7 +1,7 @@
 class LayoutManager1d:
     def __init__(self):
         self._components = {}
-        self._id_count = 0
+        self._id_count = 1
 
     def add(self, begin, end):
         for component in self._components.values():

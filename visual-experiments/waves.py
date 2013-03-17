@@ -80,8 +80,7 @@ class Segment(visualizer.Segment):
     def _try_layout_peer_info_with_align(self, h_align, v_align):
         layout_manager = self.visualizer.layout_managers[h_align]
         width, height = self._peer_info_renderer.size()
-        y1 = self._peer_info_renderer.v_position(v_align)
-        y2 = y1 + height
+        x1, y1, x2, y2 = self._peer_info_renderer.bounding_box(h_align, v_align)
         self._peer_info_layout_component = layout_manager.add(y1, y2)
         if self._peer_info_layout_component:
             return True
@@ -135,9 +134,8 @@ class PeerInfoRenderer:
         self._h_margin = 10.0 / 640 * self.visualizer.height
         self._v_margin = 10.0 / 640 * self.visualizer.height
         self.y = y - 2
-        self._text_renderer = visualizer.text_renderer(
-            self._make_text(),
-            self._height)
+        self.text = self._make_text()
+        self._text_renderer = visualizer.text_renderer(self.text, self._height)
 
     def _make_text(self):
         addr = self._anonymize_addr(self.peer.addr)
@@ -152,12 +150,18 @@ class PeerInfoRenderer:
         return "".join(chars)
 
     def render(self, h_align, v_align):
-        if h_align == "left":
-            x = self._h_margin
-        else:
-            x = self.visualizer.width - self._h_margin
+        self._text_renderer.render(
+            self.h_position(h_align), self.v_position(v_align), v_align, h_align)
 
-        self._text_renderer.render(x, self.v_position(v_align), v_align, h_align)
+    def bounding_box(self, h_align, v_align):
+        return self._text_renderer.bounding_box(
+            self.h_position(h_align), self.v_position(v_align), v_align, h_align)
+
+    def h_position(self, h_align):
+        if h_align == "left":
+            return self._h_margin
+        else:
+            return self.visualizer.width - self._h_margin
 
     def v_position(self, v_align):
         if v_align == "top":
