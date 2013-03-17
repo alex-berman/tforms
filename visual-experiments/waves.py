@@ -132,10 +132,13 @@ class PeerInfoRenderer:
         self.visualizer = visualizer
         self._height = 16.0 / 800 * self.visualizer.height
         self._h_margin = 10.0 / 640 * self.visualizer.height
-        self._v_margin = 10.0 / 640 * self.visualizer.height
-        self.y = y - 2
+        self._v_margin = 20.0 / 640 * self.visualizer.height
+        self.y = y + self._baseline()
         self.text = self._make_text()
         self._text_renderer = visualizer.text_renderer(self.text, self._height)
+
+    def _baseline(self):
+        return self._height * 0.2
 
     def _make_text(self):
         addr = self._anonymize_addr(self.peer.addr)
