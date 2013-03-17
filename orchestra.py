@@ -311,6 +311,7 @@ class Orchestra:
         self.segments_by_id = {}
         self._playing = False
         self._quitting = False
+        self._was_stopped = False
         self.space = Space()
 
         self._scheduler_queue = Queue.Queue()
@@ -488,15 +489,18 @@ class Orchestra:
 
     def play_non_realtime(self, quit_on_end=False):
         logger.info("entering play_non_realtime")
+        self._was_stopped = False
         self._num_finished_visualizers = 0
         if self._loop:
             while True:
                 self._play_until_end()
-                self._wait_for_visualizers_to_finish()
+                if not self._was_stopped:
+                    self._wait_for_visualizers_to_finish()
                 self.set_time_cursor(0)
         else:
             self._play_until_end()
-            self._wait_for_visualizers_to_finish()
+            if not self._was_stopped:
+                self._wait_for_visualizers_to_finish()
             if quit_on_end:
                 self._quitting = True
         logger.info("leaving play_non_realtime")
@@ -564,6 +568,7 @@ class Orchestra:
         # stop_all disabled as it also deletes ~reverb
         # if self.synth:
         #     self.synth.stop_all()
+        self._was_stopped = True
         self._playing = False
         self.log_time_played_from = self.get_current_log_time()
         self.stopwatch.stop()
