@@ -11,6 +11,7 @@ from logger_factory import logger
 import glob
 import datetime
 from shuffler import Shuffler
+import importlib
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="*")
@@ -53,7 +54,7 @@ if args.playlist and len(args.sessiondirs) > 0:
     raise Exception("cannot specify both playlist and sessiondirs")
 
 if args.playlist:
-    playlist_module = __import__(args.playlist)
+    playlist_module = importlib.import_module(args.playlist)
     playlist = playlist_module.playlist
     for item in playlist:
         matches = glob.glob(item["session"])
