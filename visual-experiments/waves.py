@@ -45,7 +45,7 @@ class Segment(visualizer.Segment):
         self._peer_info_size = self._peer_info_renderer.size()
         self._peer_info_fade_in = min(self.duration/2, PEER_INFO_FADE_IN)
         self._peer_info_fade_out = min(self.duration/2, PEER_INFO_FADE_IN)
-        self._peer_info_allocation_id = None
+        self._peer_info_layout_component = None
             
     def render(self):
         self._amp = max([abs(value) for value in self.waveform])
@@ -54,12 +54,12 @@ class Segment(visualizer.Segment):
             self._potentially_render_peer_info()
 
     def _potentially_render_peer_info(self):
-        if not self._peer_info_allocation_id and self._amp > PEER_INFO_AMP_THRESHOLD:
-            self._try_allocate_place_for_peer_info()
-        if self._peer_info_allocation_id:
+        if not self._peer_info_layout_component and self._amp > PEER_INFO_AMP_THRESHOLD:
+            self._try_layout_peer_info()
+        if self._peer_info_layout_component:
             self._render_peer_info()
 
-    def _try_allocate_place_for_peer_info(self):
+    def _try_layout_peer_info(self):
         v_aligns = ["top", "bottom"]
         random.shuffle(v_aligns)
         h_aligns = set(["left", "right"])
@@ -71,24 +71,24 @@ class Segment(visualizer.Segment):
             h_aligns.remove(h_align)
 
             for v_align in v_aligns:
-                if self._try_allocate_place_for_peer_info_with_align(h_align, v_align):
+                if self._try_layout_peer_info_with_align(h_align, v_align):
                     self._peer_info_h_align = h_align
                     self._peer_info_v_align = v_align
                     return True
 
-    def _try_allocate_place_for_peer_info_with_align(self, h_align, v_align):
-        allocator = self.visualizer.allocators[h_align]
+    def _try_layout_peer_info_with_align(self, h_align, v_align):
+        layout_manager = self.visualizer.layout_managers[h_align]
         width, height = self._peer_info_renderer.size()
         y1 = self._peer_info_renderer.v_position(v_align)
         y2 = y1 + height
-        self._peer_info_allocation_id = allocator.allocate(y1, y2)
-        if self._peer_info_allocation_id:
+        self._peer_info_layout_component = layout_manager.add(y1, y2)
+        if self._peer_info_layout_component:
             return True
 
     def free(self):
-        if self.visualizer.args.peer_info and self._peer_info_allocation_id:
-            allocator = self.visualizer.allocators[self._peer_info_h_align]
-            allocator.free(self._peer_info_allocation_id)
+        if self.visualizer.args.peer_info and self._peer_info_layout_component:
+            layout_manager = self.visualizer.layout_managers[self._peer_info_h_align]
+            layout_manager.remove(self._peer_info_layout_component)
 
     def _render_peer_info(self):
         glColor4f(1,1,1, self._text_opacity())
@@ -189,8 +189,8 @@ class Waves(visualizer.Visualizer):
                                        peer_class=Peer,
                                        segment_class=Segment)
         if self.args.peer_info:
-            self.allocators = {"left":  RasterAllocator(),
-                               "right": RasterAllocator()}
+            self.layout_managers = {"left":  LayoutManager1d(),
+                                    "right": LayoutManager1d()}
         
     @staticmethod
     def add_parser_arguments(parser):
@@ -334,19 +334,19 @@ class Waves(visualizer.Visualizer):
     def handle_segment_waveform_value(self, segment, value):
         segment.append_to_waveform(value)
 
-class RasterAllocator:
+class LayoutManager1d:
     def __init__(self):
-        self._allocations = {}
+        self._components = {}
         self._id_count = 0
 
-    def allocate(self, begin, end):
-        for allocation in self._allocations.values():
-            if self._overlap(allocation["begin"], allocation["end"], begin, end):
+    def add(self, begin, end):
+        for component in self._components.values():
+            if self._overlap(component["begin"], component["end"], begin, end):
                 return False
-        allocation_id = self._id_count
-        self._allocations[allocation_id] = {"begin": begin, "end": end}
+        layout_component = self._id_count
+        self._components[layout_component] = {"begin": begin, "end": end}
         self._id_count += 1
-        return allocation_id
+        return layout_component
 
     def _overlap(self, begin1, end1, begin2, end2):
         return ((begin2 <= begin1 <= end2) or
@@ -354,8 +354,8 @@ class RasterAllocator:
                 (begin1 <= begin2 <= end1) or
                 (begin1 <= end2 <= end1))
 
-    def free(self, allocation_id):
-        del self._allocations[allocation_id]
+    def remove(self, layout_component):
+        del self._components[layout_component]
 
 if __name__ == "__main__":
     parser = ArgumentParser()
