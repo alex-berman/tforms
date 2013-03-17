@@ -7,6 +7,7 @@ import threading
 import time
 from orchestra import Orchestra, Server
 from session import Session
+import logger_factory
 from logger_factory import logger
 import glob
 import datetime
@@ -21,7 +22,10 @@ parser.add_argument("--start", type=int, default=0)
 parser.add_argument("--get-duration", action="store_true")
 parser.add_argument("--preview", type=float)
 Server.add_parser_arguments(parser)
+logger_factory.add_parser_arguments(parser)
 args = parser.parse_args()
+
+logger.setLevel(args.log_level)
 
 orchestra_parser = ArgumentParser()
 Orchestra.add_parser_arguments(orchestra_parser)
