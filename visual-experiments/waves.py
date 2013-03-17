@@ -146,13 +146,8 @@ class PeerInfoRenderer:
             return addr
 
     def _anonymize_addr(self, addr):
-        parts = addr.split(".")
-        parts[-1] = self._anonymize_addr_part(parts[-1])
-        return ".".join(parts)
-
-    def _anonymize_addr_part(self, string):
-        chars = list(string)
-        chars[random.randint(0, len(chars)-1)] = "%d" % random.randint(0, 9)
+        chars = list(addr)
+        chars[-1] = "%d" % random.randint(0, 9)
         return "".join(chars)
 
     def render(self, h_align, v_align):
