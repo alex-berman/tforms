@@ -36,9 +36,10 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         visualizer.Visualizer.add_parser_arguments(parser)
         parser.add_argument("--peer-info", action="store_true")
         parser.add_argument("--disable-title", action="store_true")
+        parser.add_argument("--enable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
-        parser.add_argument("--margin-top", type=float)
-        parser.add_argument("--margin-bottom", type=float)
+        parser.add_argument("--margin-top", type=float, default=0.0)
+        parser.add_argument("--margin-bottom", type=float, default=0.0)
         parser.add_argument("--hscope", type=str, default="0:1")
 
     def reset(self, *args):
