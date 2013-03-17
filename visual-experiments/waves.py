@@ -8,6 +8,7 @@ from gatherer import Gatherer
 from math_tools import sigmoid
 import random
 from layout_manager import LayoutManager1d
+from title_renderer import TitleRenderer
 
 WAVEFORM_SIZE = 60
 WAVEFORM_MAGNITUDE = 30.0 / 480
@@ -40,6 +41,7 @@ class Segment(visualizer.Segment):
         self.y = self.visualizer.byte_to_py(self.torrent_begin)
         if self.visualizer.args.peer_info:
             self._prepare_peer_info()
+        self.visualizer._first_segment_received = True
 
     def _prepare_peer_info(self):
         self._peer_info_renderer = PeerInfoRenderer(self.peer, self.y, self.visualizer)
@@ -203,6 +205,8 @@ class Waves(visualizer.Visualizer):
     def add_parser_arguments(parser):
         visualizer.Visualizer.add_parser_arguments(parser)
         parser.add_argument("--peer-info", action="store_true")
+        parser.add_argument("--disable-title", action="store_true")
+        parser.add_argument("--test-title", type=str)
 
     def configure_2d_projection(self):
         glMatrixMode(GL_PROJECTION)
@@ -219,6 +223,8 @@ class Waves(visualizer.Visualizer):
         self.gatherer = Gatherer()
         if self._gathered_segments_layer:
             self._gathered_segments_layer.refresh()
+        self._first_segment_received = False
+        self._title_renderer = None
 
     def pan_segment(self, segment):
         # let orchestra & synth spatialize
@@ -247,6 +253,33 @@ class Waves(visualizer.Visualizer):
         self._set_gathered_color()
         self._gathered_segments_layer.draw()
         self.draw_playing_segments()
+
+        if not self.args.disable_title:
+            if not self._title_renderer and (self._first_segment_received or self.args.test_title):
+                self._create_title_renderer()
+            if self._title_renderer:
+                self._render_title()
+
+    def _create_title_renderer(self):
+        if self.args.test_title:
+            title = self.args.test_title
+        else:
+            title = self.torrent_title
+        size = 30.0 / 1024 * self.width
+        self._title_renderer = TitleRenderer(title, size, self)
+
+    def _render_title(self):
+        x = self.width * 0.03
+        y = self.height * 0.03
+
+        x1, y1, x2, y2 = self._title_renderer.bounding_box(x, y)
+        margin_top = 25.0 / 640 * self.height
+        margin_right = 30.0 / 800 * self.width
+        glColor4f(0, 0, 0, 0.8)
+        glRectf(0, 0, x2 + margin_right, y2 - y1 + margin_top)
+
+        glColor3f(1,1,1)
+        self._title_renderer.render(x, y)
 
     def _set_gathered_color(self):
         if self.download_completed():

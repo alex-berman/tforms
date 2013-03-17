@@ -7,3 +7,6 @@ class TitleRenderer:
 
     def render(self, x, y):
         self._text_renderer.render(x, y)
+
+    def bounding_box(self, x, y):
+        return self._text_renderer.bounding_box(x, y)

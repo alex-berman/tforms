@@ -77,6 +77,14 @@ class GlutTextRenderer(TextRenderer):
         return width, self.size
 
 
+class FontAttributes:
+    def __init__(self, name, size):
+        self.name = name
+        self.size = size
+
+    def __hash__(self):
+        return hash((self.name, self.size))
+
 ftgl_fonts = {}
 
 class FtglTextRenderer(TextRenderer):
@@ -86,17 +94,18 @@ class FtglTextRenderer(TextRenderer):
         TextRenderer.__init__(self, *args)
         if not self.font:
             raise Exception("font required")
-        self._font_object = self._prepare_font(self.font)
+        self._font_object = self._prepare_font()
         self.text = self.text.encode("utf8")
 
-    def _prepare_font(self, name):
+    def _prepare_font(self):
+        attributes = FontAttributes(self.font, self.size)
         try:
-            return ftgl_fonts[name]
+            return ftgl_fonts[attributes]
         except KeyError:
-            font = FTGL.OutlineFont(name)
-            font.FaceSize(int(self.size), self.RESOLUTION)
-            ftgl_fonts[name] = font
-            return font
+            font_object = FTGL.OutlineFont(self.font)
+            font_object.FaceSize(int(self.size), self.RESOLUTION)
+            ftgl_fonts[attributes] = font_object
+            return font_object
 
     def stroke(self):
         glLineWidth(1.0)
