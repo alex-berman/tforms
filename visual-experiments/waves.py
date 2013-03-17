@@ -277,24 +277,31 @@ class Waves(visualizer.Visualizer):
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):
+        if self.download_completed():
+            color = self._fade_out_color()
+        else:
+            color = Vector3d(1,1,1)
+        glColor3f(*color)
         x = self.width * 0.01
         y = self.height * 0.02
-        glColor3f(1,1,1)
         self._title_renderer.render(x, y)
 
     def _set_gathered_color(self):
         if self.download_completed():
-            time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
-            if time_after_completion > FADE_OUT_DURATION:
-                self.gathered_color = Vector3d(0,0,0)
-            else:
-                self.gathered_color = WAVEFORM_COLOR * pow(1 - time_after_completion/FADE_OUT_DURATION, 0.15)
+            self.gathered_color = self._fade_out_color()
             self._gathered_segments_layer.refresh()
         elif self.torrent_length > 0:
             torrent_progress = float(self.gatherer.gathered_bytes()) / self.torrent_length
             self.gathered_color = GATHERED_COLOR + (WAVEFORM_COLOR - GATHERED_COLOR) * pow(torrent_progress, 20)
         else:
             self.gathered_color = GATHERED_COLOR
+
+    def _fade_out_color(self):
+        time_after_completion = max(self.now - self.torrent_download_completion_time, 0)
+        if time_after_completion > FADE_OUT_DURATION:
+            return Vector3d(0,0,0)
+        else:
+            return WAVEFORM_COLOR * pow(1 - time_after_completion/FADE_OUT_DURATION, 0.15)
 
     def active(self):
         return len(self.playing_segments) > 0
