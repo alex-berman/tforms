@@ -815,8 +815,6 @@ class Visualizer:
 
     @staticmethod
     def add_parser_arguments(parser):
-        if hasattr(parser, "_tforms_added_default_parser_arguments"):
-            return
         parser.add_argument("-host", type=str, default="localhost")
         parser.add_argument('-port', type=int)
         parser.add_argument("-listen", type=str)
@@ -841,7 +839,6 @@ class Visualizer:
         parser.add_argument("-exit-when-finished", action="store_true")
         parser.add_argument("--text-renderer", choices=TEXT_RENDERERS.keys(), default="glut")
         parser.add_argument("--font", type=str)
-        parser._tforms_added_default_parser_arguments = True
 
 def run(visualizer_class):
     print "Hit ESC key to quit."

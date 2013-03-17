@@ -89,7 +89,7 @@ class Segment(visualizer.Segment):
                 return True
 
     def _within_screen(self, y1, y2):
-        return y1 >= 0 and y2 < self.visualizer.height
+        return y1 >= self.visualizer.waves_bottom and y2 < self.visualizer.waves_top
 
     def free(self):
         if self.visualizer.args.peer_info and self._peer_info_layout_component:
@@ -112,7 +112,7 @@ class Segment(visualizer.Segment):
         n = 0
         for value in self.waveform:
             x = n * self.visualizer.width / (WAVEFORM_SIZE-1)
-            y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer.height
+            y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer.waves_height
             glVertex2f(x, y)
             n += 1
         glEnd()
@@ -121,7 +121,7 @@ class Segment(visualizer.Segment):
         return weak_color + (strong_color - weak_color) * sigmoid(pow(amp, 0.25))
 
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
-        return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.height
+        return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.waves_height
 
     def _text_opacity(self):
         age = self.age()
@@ -205,8 +205,16 @@ class Waves(visualizer.Visualizer):
     def add_parser_arguments(parser):
         visualizer.Visualizer.add_parser_arguments(parser)
         parser.add_argument("--peer-info", action="store_true")
-        parser.add_argument("--disable-title", action="store_true")
+        parser.add_argument("--enable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
+        parser.add_argument("--margin-top", type=float, default=0.01)
+        parser.add_argument("--margin-bottom", type=float, default=0.08)
+
+    def ReSizeGLScene(self, *args):
+        visualizer.Visualizer.ReSizeGLScene(self, *args)
+        self.waves_top = (1 - self.args.margin_top) * self.height
+        self.waves_bottom = self.args.margin_bottom * self.height
+        self.waves_height = self.waves_top - self.waves_bottom
 
     def configure_2d_projection(self):
         glMatrixMode(GL_PROJECTION)
@@ -254,7 +262,7 @@ class Waves(visualizer.Visualizer):
         self._gathered_segments_layer.draw()
         self.draw_playing_segments()
 
-        if not self.args.disable_title:
+        if self.args.enable_title:
             if not self._title_renderer and (self._first_segment_received or self.args.test_title):
                 self._create_title_renderer()
             if self._title_renderer:
@@ -269,15 +277,8 @@ class Waves(visualizer.Visualizer):
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):
-        x = self.width * 0.03
-        y = self.height * 0.03
-
-        x1, y1, x2, y2 = self._title_renderer.bounding_box(x, y)
-        margin_top = 25.0 / 640 * self.height
-        margin_right = 30.0 / 800 * self.width
-        glColor4f(0, 0, 0, 0.8)
-        glRectf(0, 0, x2 + margin_right, y2 - y1 + margin_top)
-
+        x = self.width * 0.01
+        y = self.height * 0.02
         glColor3f(1,1,1)
         self._title_renderer.render(x, y)
 
@@ -316,12 +317,12 @@ class Waves(visualizer.Visualizer):
         glBegin(GL_QUADS)
         x1 = 0
         x2 = self.width
-        min_height = GATHERED_LINE_WIDTH * self.height
+        min_height = GATHERED_LINE_WIDTH * self.waves_height
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
             y2 = max(self.byte_to_py(segment.torrent_end), y1 + min_height)
             if (y2 - y1) > min_height:
-                d = min((y2 - y1) * 0.2, MAX_GRADIENT_HEIGHT * self.height)
+                d = min((y2 - y1) * 0.2, MAX_GRADIENT_HEIGHT * self.waves_height)
                 y1d = y1 + d
                 y2d = y2 - d
 
@@ -366,7 +367,7 @@ class Waves(visualizer.Visualizer):
         glEnd()
 
     def byte_to_py(self, byte):
-        return int(self.byte_to_relative_y(byte) * self.height)
+        return int(self.waves_bottom + self.byte_to_relative_y(byte) * self.waves_height)
 
     def byte_to_relative_y(self, byte):
         return float(byte) / self.torrent_length
