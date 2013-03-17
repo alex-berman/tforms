@@ -10,6 +10,7 @@ import rectangular_visualizer as visualizer
 from vector import Vector2d
 from OpenGL.GL import *
 from math_tools import sigmoid
+from title_renderer import TitleRenderer
 
 sys.path.append("geo")
 import locations
@@ -75,6 +76,7 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.reset(self)
         self.playing_segments = collections.OrderedDict()
         self._first_segment_received = False
+        self._title_renderer = None
 
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
@@ -128,30 +130,26 @@ class HeatMap(visualizer.Visualizer):
         self._update()
         self._history_layer.draw()
         self._render_activity()
-        if not self.args.disable_title and (self._first_segment_received or self.args.test_title):
-            self._render_title()
 
-    def _render_title(self):
-        glColor3f(1,1,1)
+        if not self.args.disable_title:
+            if not self._title_renderer and (self._first_segment_received or self.args.test_title):
+                self._create_title_renderer()
+            if self._title_renderer:
+                self._render_title()
+
+    def _create_title_renderer(self):
         if self.args.test_title:
             title = self.args.test_title
         else:
             title = self.torrent_title
+        size = 21.3 / 1024 * self.width
+        self._title_renderer = TitleRenderer(title, size, self)
 
-        if ":" in title:
-            author, book = title.split(":")
-            title = "%s: %s" % (author.upper(), book)
-
-        weight = 3
+    def _render_title(self):
+        glColor3f(1,1,1)
         x = self.width * 0.08
         y = self.height * 0.03
-        for n in range(weight):
-            self.draw_text(
-                text = title,
-                size = 21.3 / 1024 * self.width,
-                x = x,
-                y = y,
-                spacing = 50.0)
+        self._title_renderer.render(x, y)
 
     def _render_history(self):
         glColor4f(0.8,0.8,0.8,1)
