@@ -214,6 +214,7 @@ class Waves(visualizer.Visualizer):
         self.waves_margin.update()
         self._waves_height = self.height - self.waves_margin.top - self.waves_margin.bottom
         self._waves_top = self.height - self.waves_margin.top
+        self._title_renderer = None
 
     def configure_2d_projection(self):
         glMatrixMode(GL_PROJECTION)
