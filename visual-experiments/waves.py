@@ -38,7 +38,7 @@ class Segment(visualizer.Segment):
         self.waveform.extend([0.0] * WAVEFORM_SIZE)
         self.amp = 0
         self.pan = 0.5
-        self.y = self.visualizer.byte_to_py(self.torrent_begin)
+        self.y = self.visualizer.byte_to_py((self.torrent_begin + self.torrent_end) / 2)
         if self.visualizer.args.peer_info:
             self._prepare_peer_info()
         self.visualizer._first_segment_received = True
