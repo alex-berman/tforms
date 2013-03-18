@@ -60,6 +60,7 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.__init__(
             self, args, file_class=File, peer_class=Peer, segment_class=Segment)
         self._set_horizontal_scope()
+        self._map_margin = self.parse_margin_argument(self.args.map_margin)
 
     def _set_horizontal_scope(self):
         self._hscope_min, self._hscope_max = map(float, self.args.hscope.split(":"))
@@ -71,6 +72,7 @@ class HeatMap(visualizer.Visualizer):
         parser.add_argument("--disable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
         parser.add_argument("--hscope", type=str, default="0:1")
+        visualizer.Visualizer.add_margin_argument(parser, "--map-margin")
 
     def reset(self):
         visualizer.Visualizer.reset(self)
@@ -83,8 +85,11 @@ class HeatMap(visualizer.Visualizer):
         glClearColor(0.0, 0.0, 0.0, 0.0)
         self._history_layer = self.new_layer(self._render_history)
 
-    def ReSizeGLScene(self, *args):
-        visualizer.Visualizer.ReSizeGLScene(self, *args)
+    def resized_window(self):
+        self._map_margin.update()
+        self._map_width = self.width - self._map_margin.left - self._map_margin.right
+        self._map_height = self.height - self._map_margin.top - self._map_margin.bottom
+
         self._marker_lists = []
         for n in range(0, MARKER_PRECISION):
             display_list = self.new_display_list_id()
@@ -163,8 +168,8 @@ class HeatMap(visualizer.Visualizer):
 
     def _location_vertex(self, location_x, location_y):
         glVertex2f(
-            (location_x - self._hscope_min) / self._hscope_size * self.width,
-            self.height - location_y * self.height)
+            self._map_margin.left + (location_x - self._hscope_min) / self._hscope_size * self._map_width,
+            self.height - self._map_margin.top - location_y * self._map_height)
 
     def _render_activity(self):
         glColor4f(1,1,1,1)

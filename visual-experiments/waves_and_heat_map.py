@@ -24,9 +24,9 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         waves.Waves.InitGL(self, *args)
         heat_map.HeatMap.InitGL(self, *args)
 
-    def ReSizeGLScene(self, *args):
-        waves.Waves.ReSizeGLScene(self, *args)
-        heat_map.HeatMap.ReSizeGLScene(self, *args)
+    def resized_window(self):
+        waves.Waves.resized_window(self)
+        heat_map.HeatMap.resized_window(self)
 
     def configure_2d_projection(self):
         heat_map.HeatMap.configure_2d_projection(self)
@@ -41,6 +41,8 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         parser.add_argument("--margin-top", type=float, default=0.0)
         parser.add_argument("--margin-bottom", type=float, default=0.0)
         parser.add_argument("--hscope", type=str, default="0:1")
+        visualizer.Visualizer.add_margin_argument(parser, "--map-margin")
+        visualizer.Visualizer.add_margin_argument(parser, "--waves-margin")
 
     def reset(self, *args):
         waves.Waves.reset(self, *args)

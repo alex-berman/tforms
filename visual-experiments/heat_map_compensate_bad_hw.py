@@ -69,8 +69,7 @@ class HeatMap(visualizer.Visualizer):
         glClearColor(0.0, 0.0, 0.0, 0.0)
         self._history_layer = self.new_layer(self._render_history)
 
-    def ReSizeGLScene(self, *args):
-        visualizer.Visualizer.ReSizeGLScene(self, *args)
+    def resized_window(self):
         self._marker_lists = []
         for n in range(0, MARKER_PRECISION):
             display_list = self.new_display_list_id()

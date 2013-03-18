@@ -89,7 +89,7 @@ class Segment(visualizer.Segment):
                 return True
 
     def _within_screen(self, y1, y2):
-        return y1 >= self.visualizer.waves_bottom and y2 < self.visualizer.waves_top
+        return y1 >= self.visualizer.waves_margin.bottom and y2 < self.visualizer._waves_top
 
     def free(self):
         if self.visualizer.args.peer_info and self._peer_info_layout_component:
@@ -112,7 +112,7 @@ class Segment(visualizer.Segment):
         n = 0
         for value in self.waveform:
             x = n * self.visualizer.width / (WAVEFORM_SIZE-1)
-            y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer.waves_height
+            y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer._waves_height
             glVertex2f(x, y)
             n += 1
         glEnd()
@@ -121,7 +121,7 @@ class Segment(visualizer.Segment):
         return weak_color + (strong_color - weak_color) * sigmoid(pow(amp, 0.25))
 
     def amp_controlled_line_width(self, weak_line_width, strong_line_width, amp):
-        return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer.waves_height
+        return (weak_line_width + (strong_line_width - weak_line_width) * pow(amp, 0.25)) * self.visualizer._waves_height
 
     def _text_opacity(self):
         age = self.age()
@@ -200,6 +200,7 @@ class Waves(visualizer.Visualizer):
         if self.args.peer_info:
             self.layout_managers = {"left":  LayoutManager1d(),
                                     "right": LayoutManager1d()}
+        self.waves_margin = self.parse_margin_argument(self.args.waves_margin)
         
     @staticmethod
     def add_parser_arguments(parser):
@@ -207,14 +208,12 @@ class Waves(visualizer.Visualizer):
         parser.add_argument("--peer-info", action="store_true")
         parser.add_argument("--enable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
-        parser.add_argument("--margin-top", type=float, default=0.01)
-        parser.add_argument("--margin-bottom", type=float, default=0.08)
+        visualizer.Visualizer.add_margin_argument(parser, "--waves-margin")
 
-    def ReSizeGLScene(self, *args):
-        visualizer.Visualizer.ReSizeGLScene(self, *args)
-        self.waves_top = (1 - self.args.margin_top) * self.height
-        self.waves_bottom = self.args.margin_bottom * self.height
-        self.waves_height = self.waves_top - self.waves_bottom
+    def resized_window(self):
+        self.waves_margin.update()
+        self._waves_height = self.height - self.waves_margin.top - self.waves_margin.bottom
+        self._waves_top = self.height - self.waves_margin.top
 
     def configure_2d_projection(self):
         glMatrixMode(GL_PROJECTION)
@@ -324,12 +323,12 @@ class Waves(visualizer.Visualizer):
         glBegin(GL_QUADS)
         x1 = 0
         x2 = self.width
-        min_height = GATHERED_LINE_WIDTH * self.waves_height
+        min_height = GATHERED_LINE_WIDTH * self._waves_height
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
             y2 = max(self.byte_to_py(segment.torrent_end), y1 + min_height)
             if (y2 - y1) > min_height:
-                d = min((y2 - y1) * 0.2, MAX_GRADIENT_HEIGHT * self.waves_height)
+                d = min((y2 - y1) * 0.2, MAX_GRADIENT_HEIGHT * self._waves_height)
                 y1d = y1 + d
                 y2d = y2 - d
 
@@ -374,7 +373,7 @@ class Waves(visualizer.Visualizer):
         glEnd()
 
     def byte_to_py(self, byte):
-        return int(self.waves_bottom + self.byte_to_relative_y(byte) * self.waves_height)
+        return int(self.waves_margin.bottom + self.byte_to_relative_y(byte) * self._waves_height)
 
     def byte_to_relative_y(self, byte):
         return float(byte) / self.torrent_length

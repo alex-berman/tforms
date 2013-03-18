@@ -495,6 +495,10 @@ class Visualizer:
         self._refresh_layers()
         if not self._3d_enabled:
             self.configure_2d_projection()
+        self.resized_window()
+
+    def resized_window(self):
+        pass
 
     def configure_2d_projection(self):
         glMatrixMode(GL_PROJECTION)
@@ -839,6 +843,31 @@ class Visualizer:
         parser.add_argument("-exit-when-finished", action="store_true")
         parser.add_argument("--text-renderer", choices=TEXT_RENDERERS.keys(), default="glut")
         parser.add_argument("--font", type=str)
+
+    @staticmethod
+    def add_margin_argument(parser, name):
+        parser.add_argument(name, type=str, default="0,0,0,0",
+                            help="top,right,bottom,left in relative units")
+
+    def parse_margin_argument(self, argument_string):
+        return MarginAttributes.from_argument(argument_string, self)
+
+class MarginAttributes:
+    @staticmethod
+    def from_argument(argument_string, visualizer):
+        fields = ["top", "right", "bottom", "left"]
+        margin_attributes = MarginAttributes()
+        margin_attributes.visualizer = visualizer
+        for field, value_string in zip(fields, argument_string.split(",")):
+            setattr(margin_attributes, "relative_%s" % field, float(value_string))
+        margin_attributes.update()
+        return margin_attributes
+
+    def update(self):
+        self.left = int(self.relative_left * self.visualizer.width)
+        self.right = int(self.relative_right * self.visualizer.width)
+        self.top = int(self.relative_top * self.visualizer.height)
+        self.bottom = int(self.relative_bottom * self.visualizer.height)
 
 def run(visualizer_class):
     print "Hit ESC key to quit."

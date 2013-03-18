@@ -344,13 +344,11 @@ class Stairs(visualizer.Visualizer):
         for f in self.files.values():
             f.render()
 
-    def ReSizeGLScene(self, _width, _height):
-        if _height == 0:
-            _height = 1
-        glViewport(0, 0, _width, _height)
+    def configure_2d_projection(self):
+        glViewport(0, 0, self.window_width, self.window_height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(45, float(_width) / _height, 0.1, 100)
+        gluPerspective(45, float(self.window_width) / self.window_height, 0.1, 100)
         glMatrixMode(GL_MODELVIEW)
 
     def InitGL(self):

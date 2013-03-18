@@ -248,8 +248,7 @@ class Waves(visualizer.Visualizer):
     def handle_segment_waveform_value(self, segment, value):
         segment.add_to_waveform(value)
 
-    def ReSizeGLScene(self, *args):
-        visualizer.Visualizer.ReSizeGLScene(self, *args)
+    def resized_window(self):
         margin_x = FILE_MARGIN_X * self.width
         margin_y = FILE_MARGIN_Y * self.height
         self.x1 = margin_x

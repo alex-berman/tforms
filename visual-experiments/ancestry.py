@@ -28,9 +28,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glClearColor(0.0, 0.0, 0.0, 0.0)
         self._layer = self.new_layer(self._render_ancestry_layer)
 
-    def ReSizeGLScene(self, width, height):
-        visualizer.Visualizer.ReSizeGLScene(self, width, height)
-        self._size = min(width, height) - 2*MARGIN
+    def resized_window(self):
+        self._size = min(self.width, self.height) - 2*MARGIN
         AncestryPlotter.set_size(self, self._size, self._size)
 
     def added_segment(self, segment):
