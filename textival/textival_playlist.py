@@ -24,8 +24,10 @@ playlist = [
      "args": ["--pretend-audio=textival/audio/ibsen_ett_dockhem1.wav",
               "--title=Henrik Ibsen: Ett dockhem (del 1 av 6)",
               "-z", "4",
-              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]}
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
 
-    # {"session": "sessions/*astrid-lindgrens-favoriter-bocker",
-    #  "args": ["-z", "1"]},
+    {"session": "sessions/*astrid-lindgrens-favoriter-bocker",
+     "args": ["--pretend-audio=textival/audio/flygare_carlen_nyckfull1.wav",
+              "--title=Emilie Flygare-Carl\\xe9n: En nyckfull kvinna (del 1 av 2)",
+              "-z", "0.6"]},
 ]

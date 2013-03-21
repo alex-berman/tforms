@@ -351,7 +351,8 @@ class Visualizer:
 
     def handle_torrent_message(self, path, args, types, src, data):
         (self.num_files, self.download_duration, self.total_size,
-         num_chunks, self.num_segments, self.torrent_title) = args
+         num_chunks, self.num_segments, encoded_torrent_title) = args
+        self.torrent_title = encoded_torrent_title.decode("unicode_escape")
 
     def handle_file_message(self, path, args, types, src, data):
         (filenum, offset, length) = args
