@@ -764,7 +764,6 @@ class Orchestra:
                 place_name = place_name.encode("unicode_escape")
             else:
                 place_name = ""
-                print "WARNING: unknown place for IP %s" % addr
             player.location_str = "%s,%s,%s" % (x, y, place_name)
         else:
             player.location_str = ""
