@@ -123,11 +123,17 @@ OSCresponder.new(nil, "/play",
 	  var channel = msg[6];
 	  var pan = msg[7];
 	  //"numSynths=".post; s.numSynths.postln;
-	  ~synths[segment_id] = Synth(\warp, [\buffer, ~sounds[sound_id],
-		  \segment_id, segment_id,
-		  \begin, begin, \end, end,
-		  \duration, duration,
-		  \channel, channel, \pan, pan]);
+	  var buffer = ~sounds[sound_id];
+	  if(buffer == nil, {
+		  "WARNING: undefined sound ID ".post;
+		  sound_id.postln;
+	  }, {
+		  ~synths[segment_id] = Synth(\warp, [\buffer, buffer,
+			  \segment_id, segment_id,
+			  \begin, begin, \end, end,
+			  \duration, duration,
+			  \channel, channel, \pan, pan]);
+	  });
   }).add;
 
 OSCresponder.new(nil, "/loop",

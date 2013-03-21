@@ -196,16 +196,27 @@ class Player:
 
 class WavPlayer(Player):
     def interpret_sonically(self, segment):
-        file_info = self.orchestra.tr_log.files[segment["filenum"]]
+        if self.orchestra.options.pretend_audio_filename:
+            segment["audio_filenum"] = 0
+            file_info = self.orchestra.tr_log.files[segment["audio_filenum"]]
+            begin = segment["begin"]
+            end = segment["end"]
+        else:
+            segment["audio_filenum"] = segment["filenum"]
+            file_info = self.orchestra.tr_log.files[segment["audio_filenum"]]
+            begin = segment["begin"] - file_info["offset"]
+            end = segment["end"] - file_info["offset"]
+
         filename = file_info["decoded_name"]
-        start_time_in_file = self._bytecount_to_secs(segment["begin"]-file_info["offset"], file_info)
-        end_time_in_file = self._bytecount_to_secs(segment["end"]-file_info["offset"], file_info)
+        start_time_in_file = self._bytecount_to_secs(begin, file_info)
+        end_time_in_file = self._bytecount_to_secs(end, file_info)
 
         logger.debug("playing %s at position %fs with duration %fs" % (
                 filename, start_time_in_file, segment["duration"]))
 
-        segment["start_time_in_file"] = start_time_in_file
-        segment["end_time_in_file"] = end_time_in_file
+        audio_file_duration = file_info["duration"]
+        segment["relative_start_time_in_file"] = start_time_in_file / audio_file_duration
+        segment["relative_end_time_in_file"] = end_time_in_file / audio_file_duration
         self.orchestra.play_segment(segment, self)
         return True
 
@@ -402,9 +413,9 @@ class Orchestra:
 
             self.synth.play_segment(
                 segment["id"],
-                segment["filenum"],
-                segment["start_time_in_file"] / file_info["duration"],
-                segment["end_time_in_file"] / file_info["duration"],
+                segment["audio_filenum"],
+                segment["relative_start_time_in_file"],
+                segment["relative_end_time_in_file"],
                 segment["duration"],
                 self.looped_duration,            
                 channel,
