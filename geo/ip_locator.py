@@ -24,7 +24,22 @@ DB_EXTENSION = {
         "longitude": 13.1833,
         "latitude": 55.7,
         "city": u"Lund"
-        }
+        },
+    "83.190.165.146": {
+        "longitude": 17.92,
+        "latitude": 59.45,
+        "city": u"Kista"
+        },
+    "82.182.78.82": {
+        "longitude": 20.25,
+        "latitude": 63.83,
+        "city": u"Umeå"
+        },
+    "46.246.123.125": {
+        "longitude": 18.05,
+        "latitude": 59.3333,
+        "city": u"Stockholm"
+        },
     }
 
 class IpLocator:
