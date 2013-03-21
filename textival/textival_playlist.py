@@ -20,6 +20,12 @@ playlist = [
               "--max-segment-duration=5.0", "--max-pause-within-segment=2.5",
               "-z", "2.5"]},
 
+    {"session": "sessions/*roda_rummet2",
+     "args": ["--pretend-audio=textival/ibsen_ett_dockhem1.wav",
+              "--title=Henrik Ibsen: Ett dockhem (del 1 av 6)",
+              "-z", "4",
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]}
+
     # {"session": "sessions/*astrid-lindgrens-favoriter-bocker",
     #  "args": ["-z", "1"]},
 ]
