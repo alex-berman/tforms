@@ -30,4 +30,10 @@ playlist = [
      "args": ["--pretend-audio=textival/audio/flygare_carlen_nyckfull1.wav",
               "--title=Emilie Flygare-Carl\\xe9n: En nyckfull kvinna (del 1 av 2)",
               "-z", "0.6"]},
+
+    {"session": "sessions/*zlatan-11-20",
+     "args": ["--pretend-audio=textival/audio/lagerloef_nils1.wav",
+              "--title=Selma Lagerl\xf6f: Nils Holgersson's Adventures (part 1)",
+              "-z", "0.7",
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
 ]
