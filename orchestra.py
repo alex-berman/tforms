@@ -305,8 +305,8 @@ class Orchestra:
         logger.debug("num selected chunks: %s" % len(self.chunks))
 
         self.score = self._interpret_chunks_to_score(tr_log, self.playable_chunks, options)
-        print "playback duration: %s" % datetime.timedelta(
-            seconds=self._estimated_playback_duration(self.score, options))
+        self.estimated_duration = self._estimated_playback_duration(self.score, options)
+        print "playback duration: %s" % datetime.timedelta(seconds=self.estimated_duration)
         self._chunks_by_id = {}
         self.segments_by_id = {}
         self._playing = False
@@ -751,6 +751,9 @@ class Orchestra:
             x, y, place_name = self._peer_location[addr]
             if place_name:
                 place_name = place_name.encode("unicode_escape")
+            else:
+                place_name = ""
+                print "WARNING: unknown place for IP %s" % addr
             player.location_str = "%s,%s,%s" % (x, y, place_name)
         else:
             player.location_str = ""
@@ -835,17 +838,6 @@ class Orchestra:
     def _tell_visualizers(self, *args):
         self._send_torrent_info_to_uninformed_visualizers()
         self.server._tell_visualizers(*args)
-
-    @classmethod
-    def estimate_duration(cls, tr_log, options):
-        if cls.predecode:
-            predecoder = Predecoder(
-                tr_log.files, sample_rate=cls.SAMPLE_RATE, location=tr_log.file_location)
-            predecoder.decode()
-        cls._get_wav_files_info(tr_log)
-        playable_chunks = cls._filter_playable_chunks(tr_log, tr_log.chunks)
-        score = cls._interpret_chunks_to_score(tr_log, playable_chunks, options)
-        return cls._estimated_playback_duration(score, options)
 
     def _fileinfo_for_pretended_audio_file(self):
         return {"offset": 0,

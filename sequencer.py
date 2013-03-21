@@ -19,7 +19,6 @@ parser.add_argument("sessiondirs", nargs="*")
 parser.add_argument("--playlist", type=str)
 parser.add_argument("--pause", type=float, default=5.0)
 parser.add_argument("--start", type=int, default=0)
-parser.add_argument("--get-duration", action="store_true")
 parser.add_argument("--preview", type=float)
 Server.add_parser_arguments(parser)
 logger_factory.add_parser_arguments(parser)
@@ -92,55 +91,50 @@ def log_open_files():
         n += 1
     logger.info("num open files: %s" % n)
 
+total_duration = 0
 for item in playlist:
     item["logfilename"] = "%s/session.log" % item["sessiondir"]
     print "preparing %s" % item["sessiondir"]
     item["tr_log"] = TrLogReader(item["logfilename"]).get_log(reduced_passivity=True)
     item["orchestra"] = Orchestra(server, item["sessiondir"], item["tr_log"], item["args"])
+    total_duration += item["orchestra"].estimated_duration
 
-if args.get_duration:
-    total_duration = 0
-    for item in playlist:
-        duration = Orchestra.estimate_duration(item["tr_log"], item["args"])
-        print "%-50s%s" % (item["sessiondir"], datetime.timedelta(seconds=duration))
-        total_duration += duration
-    print "-" * 64
-    print "%-50s%s" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
+print "-" * 33
+print "%-19s%s\n" % ("TOTAL DURATION", datetime.timedelta(seconds=total_duration))
 
+if args.start:
+    count = args.start
+    print "WARNING: shuffle disabled"
 else:
+    shuffler = Shuffler(range(len(playlist)))
+
+while True:
+    # print "\n\n\nnum threads: %s\n\n" % threading.active_count()
+    # print "\nthreads:%s\n" % "\n".join(map(str, threading.enumerate()))
+    log_open_files()
+
     if args.start:
-        count = args.start
-        print "WARNING: shuffle disabled"
+        item = playlist[count % len(playlist)]
+        count += 1
     else:
-        shuffler = Shuffler(range(len(playlist)))
+        item = playlist[shuffler.next()]
+    print "playing %s" % item["sessiondir"]
+    orchestra = item["orchestra"]
+    if len(orchestra.chunks) == 0:
+        raise Exception("No chunks to play. Unsupported file format?")
 
-    while True:
-        # print "\n\n\nnum threads: %s\n\n" % threading.active_count()
-        # print "\nthreads:%s\n" % "\n".join(map(str, threading.enumerate()))
-        log_open_files()
+    server.set_orchestra(orchestra)
 
-        if args.start:
-            item = playlist[count % len(playlist)]
-            count += 1
-        else:
-            item = playlist[shuffler.next()]
-        print "playing %s" % item["sessiondir"]
-        orchestra = item["orchestra"]
-        if len(orchestra.chunks) == 0:
-            raise Exception("No chunks to play. Unsupported file format?")
+    def stop_orchestra_after_preview():
+        time.sleep(args.preview)
+        orchestra.stop()
+    if args.preview:
+        threading.Thread(target=stop_orchestra_after_preview).start()
 
-        server.set_orchestra(orchestra)
+    play(orchestra, item["args"])
+    wait_for_play_completion_or_interruption()
 
-        def stop_orchestra_after_preview():
-            time.sleep(args.preview)
-            orchestra.stop()
-        if args.preview:
-            threading.Thread(target=stop_orchestra_after_preview).start()
+    print "completed playback"
 
-        play(orchestra, item["args"])
-        wait_for_play_completion_or_interruption()
-
-        print "completed playback"
-
-        time.sleep(args.pause)
-        orchestra.reset()
+    time.sleep(args.pause)
+    orchestra.reset()
