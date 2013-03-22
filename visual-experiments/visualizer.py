@@ -430,7 +430,11 @@ class Visualizer:
 
     def handle_amp_message(self, path, args, types, src, data):
         (segment_id, amp) = args
-        segment = self._segments_by_id[segment_id]
+        try:
+            segment = self._segments_by_id[segment_id]
+        except KeyError:
+            print "WARNING: amp message for unknown segment ID %s" % segment_id
+            return
         self.handle_segment_amplitude(segment, amp)
 
     def handle_segment_amplitude(self, segment, amp):
@@ -438,7 +442,11 @@ class Visualizer:
 
     def handle_waveform_message(self, path, args, types, src, data):
         (segment_id, value) = args
-        segment = self._segments_by_id[segment_id]
+        try:
+            segment = self._segments_by_id[segment_id]
+        except KeyError:
+            print "WARNING: waveform message for unknown segment ID %s" % segment_id
+            return
         self.handle_segment_waveform_value(segment, value * self.waveform_gain)
 
     def handle_segment_waveform_value(self, segment, value):
