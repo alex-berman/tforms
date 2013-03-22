@@ -2,6 +2,8 @@ import re
 import gps
 import os
 
+Y_OFFSET = 0.01
+
 class World:
     def __init__(self, width, height):
         self.width = width
@@ -21,7 +23,7 @@ class World:
                 longitude = float(m.group(1))
                 latitude = float(m.group(2))
                 x = self._gps.x(longitude)
-                y = self._gps.y(latitude)
+                y = self._gps.y(latitude) + Y_OFFSET
                 self._path.append((x, y))
             else:
                 self._close_path()

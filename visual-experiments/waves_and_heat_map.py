@@ -1,3 +1,4 @@
+from OpenGL.GL import *
 import visualizer
 import waves
 import heat_map
@@ -41,6 +42,8 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         parser.add_argument("--margin-top", type=float, default=0.0)
         parser.add_argument("--margin-bottom", type=float, default=0.0)
         parser.add_argument("--hscope", type=str, default="0:1")
+        parser.add_argument("--vscope", type=str, default="0:1")
+        parser.add_argument("--continents", action="store_true")
         visualizer.Visualizer.add_margin_argument(parser, "--map-margin")
         visualizer.Visualizer.add_margin_argument(parser, "--waves-margin")
 
@@ -49,8 +52,13 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         heat_map.HeatMap.reset(self, *args)
 
     def render(self, *args):
-        waves.Waves.render(self, *args)
         heat_map.HeatMap.render(self, *args)
+        self._clear_space_for_waves()
+        waves.Waves.render(self, *args)
+
+    def _clear_space_for_waves(self):
+        glColor3f(0,0,0)
+        glRectf(0, self._waves_top, self.width, self.waves_margin.bottom)
 
     def _create_title_renderer(self, *args):
         heat_map.HeatMap._create_title_renderer(self, *args)

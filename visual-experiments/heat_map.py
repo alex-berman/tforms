@@ -60,11 +60,19 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.__init__(
             self, args, file_class=File, peer_class=Peer, segment_class=Segment)
         self._set_horizontal_scope()
+        self._set_verical_scope()
         self._map_margin = self.parse_margin_argument(self.args.map_margin)
+        if self.args.continents:
+            import world
+            self._world = world.World(1.0, 1.0)
 
     def _set_horizontal_scope(self):
         self._hscope_min, self._hscope_max = map(float, self.args.hscope.split(":"))
         self._hscope_size = self._hscope_max - self._hscope_min
+
+    def _set_verical_scope(self):
+        self._vscope_min, self._vscope_max = map(float, self.args.vscope.split(":"))
+        self._vscope_size = self._vscope_max - self._vscope_min
         
     @staticmethod
     def add_parser_arguments(parser):
@@ -72,6 +80,8 @@ class HeatMap(visualizer.Visualizer):
         parser.add_argument("--disable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
         parser.add_argument("--hscope", type=str, default="0:1")
+        parser.add_argument("--vscope", type=str, default="0:1")
+        parser.add_argument("--continents", action="store_true")
         visualizer.Visualizer.add_margin_argument(parser, "--map-margin")
 
     def reset(self):
@@ -134,7 +144,10 @@ class HeatMap(visualizer.Visualizer):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         self._update()
-        self._history_layer.draw()
+        if self.args.continents:
+            self._render_continents()
+        else:
+            self._history_layer.draw()
         self._render_activity()
 
         if not self.args.disable_title:
@@ -142,6 +155,18 @@ class HeatMap(visualizer.Visualizer):
                 self._create_title_renderer()
             if self._title_renderer:
                 self._render_title()
+
+    def _render_continents(self):
+        glColor4f(0.8,0.8,0.8,1)
+        glLineWidth(1.0)
+        for path in self._world.paths:
+            self._draw_path(path)
+
+    def _draw_path(self, path):
+        glBegin(GL_LINE_STRIP)
+        for x, y in path:
+            self._location_vertex(x, y)
+        glEnd()
 
     def _create_title_renderer(self):
         if self.args.test_title:
@@ -168,9 +193,12 @@ class HeatMap(visualizer.Visualizer):
             glEnd()
 
     def _location_vertex(self, location_x, location_y):
+        p = Vector2d(
+            (location_x - self._hscope_min) / self._hscope_size,
+            (location_y - self._vscope_min) / self._vscope_size)
         glVertex2f(
-            self._map_margin.left + (location_x - self._hscope_min) / self._hscope_size * self._map_width,
-            self.height - self._map_margin.top - location_y * self._map_height)
+            self._map_margin.left + p.x * self._map_width,
+            self._map_margin.bottom + (1-p.y) * self._map_height)
 
     def _render_activity(self):
         glColor4f(1,1,1,1)
