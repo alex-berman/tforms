@@ -269,6 +269,7 @@ class Orchestra:
             self._peer_location = {}
             for peeraddr in tr_log.peers:
                 self._peer_location[peeraddr] = server.ip_locator.locate(peeraddr)
+            self._peers_center_location_x = self._get_peers_center_location_x()
 
         if options.pretend_audio_filename:
             self._pretended_file = self._fileinfo_for_pretended_audio_file()
@@ -765,6 +766,11 @@ class Orchestra:
             else:
                 place_name = ""
             player.location_str = "%s,%s,%s" % (x, y, place_name)
+
+            if x < self._peers_center_location_x:
+                player.spatial_position.pan = -1.0
+            else:
+                player.spatial_position.pan = 1.0
         else:
             player.location_str = ""
         return player
@@ -861,7 +867,15 @@ class Orchestra:
     def _wait_for_visualizers_to_finish(self):
         while self._num_finished_visualizers < len(self.visualizers):
             time.sleep(0.1)
-        
+
+    def _get_peers_center_location_x(self):
+        if len(self._peer_location) <= 1:
+            return 0
+        else:
+            sorted_xs = sorted([x for x,y,location_str in self._peer_location.values()])
+            center_index = int((len(self._peer_location)-1) / 2)
+            return float(sorted_xs[center_index] + sorted_xs[center_index+1]) / 2
+
 def warn(logger, message):
     logger.info(message)
     print >> sys.stderr, "WARNING: %s" % message
