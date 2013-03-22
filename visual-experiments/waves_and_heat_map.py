@@ -61,10 +61,10 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         glRectf(0, self._waves_top, self.width, self.waves_margin.bottom)
 
     def _create_title_renderer(self, *args):
-        heat_map.HeatMap._create_title_renderer(self, *args)
+        waves.Waves._create_title_renderer(self, *args)
 
     def _render_title(self, *args):
-        heat_map.HeatMap._render_title(self, *args)
+        waves.Waves._render_title(self, *args)
 
     def _delete_outdated_segments(self):
         # this is done by Waves.update() and should only be done there

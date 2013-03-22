@@ -285,8 +285,8 @@ class Waves(visualizer.Visualizer):
         else:
             color = Vector3d(1,1,1)
         glColor3f(*color)
-        x = self.width * 0.01
-        y = self.height * 0.02
+        x = self.waves_margin.left + 10.0 / 640 * self.width
+        y = self.height * 0.03
         self._title_renderer.render(x, y)
 
     def _set_gathered_color(self):
