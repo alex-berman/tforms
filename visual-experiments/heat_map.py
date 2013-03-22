@@ -147,7 +147,7 @@ class HeatMap(visualizer.Visualizer):
             title = self.args.test_title
         else:
             title = self.torrent_title
-        size = 21.3 / 1024 * self.width
+        size = 30.0 / 1024 * self._map_width
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):

@@ -52,6 +52,9 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         waves.Waves.render(self, *args)
         heat_map.HeatMap.render(self, *args)
 
+    def _create_title_renderer(self, *args):
+        heat_map.HeatMap._create_title_renderer(self, *args)
+
     def _render_title(self, *args):
         heat_map.HeatMap._render_title(self, *args)
 
