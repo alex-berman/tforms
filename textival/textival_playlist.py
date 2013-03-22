@@ -45,6 +45,12 @@ playlist = [
               "-z", "4.5",
               "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
 
+    {"session": "sessions/*andersen-samlingen-1",
+     "args": ["--pretend-audio=textival/audio/andersen_swineherd.wav",
+              "--title=H.C. Andersen: The Swineherd",
+              "-z", "3",
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
+
 
 
     # REMOVED:

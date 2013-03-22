@@ -40,6 +40,11 @@ DB_EXTENSION = {
         "latitude": 59.3333,
         "city": u"Stockholm"
         },
+    "193.91.189.8": {
+        "longitude": 10.63,
+        "latitude": 59.9,
+        "city": u"Fornebu"
+        },
     }
 
 class IpLocator:
