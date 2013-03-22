@@ -152,7 +152,7 @@ class HeatMap(visualizer.Visualizer):
 
     def _render_title(self):
         glColor3f(1,1,1)
-        x = self.width * 0.08
+        x = self._map_margin.left + 10.0 / 640 * self.width
         y = self.height * 0.03
         self._title_renderer.render(x, y)
 

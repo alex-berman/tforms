@@ -111,7 +111,8 @@ class Segment(visualizer.Segment):
         glBegin(GL_LINE_STRIP)
         n = 0
         for value in self.waveform:
-            x = n * self.visualizer.width / (WAVEFORM_SIZE-1)
+            x = self.visualizer.waves_margin.left + \
+                n * self.visualizer._waves_width / (WAVEFORM_SIZE-1)
             y = self.y + value * WAVEFORM_MAGNITUDE * self.visualizer._waves_height
             glVertex2f(x, y)
             n += 1
@@ -137,7 +138,7 @@ class PeerInfoRenderer:
         self.peer = peer
         self.visualizer = visualizer
         self._height = 16.0 / 800 * self.visualizer.height
-        self._h_margin = 10.0 / 640 * self.visualizer.height
+        self._h_margin = 10.0 / 640 * self.visualizer.width
         self._v_margin = 20.0 / 640 * self.visualizer.height
         self.y = y + self._baseline()
         self.text = self._make_text()
@@ -168,9 +169,9 @@ class PeerInfoRenderer:
 
     def h_position(self, h_align):
         if h_align == "left":
-            return self._h_margin
+            return self.visualizer.waves_margin.left + self._h_margin
         else:
-            return self.visualizer.width - self._h_margin
+            return self.visualizer._waves_right - self._h_margin
 
     def v_position(self, v_align):
         if v_align == "top":
@@ -212,6 +213,8 @@ class Waves(visualizer.Visualizer):
 
     def resized_window(self):
         self.waves_margin.update()
+        self._waves_width = self.width - self.waves_margin.left - self.waves_margin.right
+        self._waves_right = self.width - self.waves_margin.left
         self._waves_height = self.height - self.waves_margin.top - self.waves_margin.bottom
         self._waves_top = self.height - self.waves_margin.top
         self._title_renderer = None
@@ -322,8 +325,8 @@ class Waves(visualizer.Visualizer):
 
     def _render_gathered_segments(self):
         glBegin(GL_QUADS)
-        x1 = 0
-        x2 = self.width
+        x1 = self.waves_margin.left
+        x2 = self._waves_right
         min_height = GATHERED_LINE_WIDTH * self._waves_height
         for segment in self.gatherer.pieces():
             y1 = self.byte_to_py(segment.torrent_begin)
