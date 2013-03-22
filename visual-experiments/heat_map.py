@@ -89,6 +89,7 @@ class HeatMap(visualizer.Visualizer):
         self._map_margin.update()
         self._map_width = self.width - self._map_margin.left - self._map_margin.right
         self._map_height = self.height - self._map_margin.top - self._map_margin.bottom
+        self._size_factor = (float(self._map_width) + self._map_height) / 2 / ((1024 + 768) / 2)
 
         self._marker_lists = []
         for n in range(0, MARKER_PRECISION):
@@ -147,7 +148,7 @@ class HeatMap(visualizer.Visualizer):
             title = self.args.test_title
         else:
             title = self.torrent_title
-        size = 30.0 / 1024 * self._map_width
+        size = 30.0 * self._size_factor
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):
@@ -159,7 +160,7 @@ class HeatMap(visualizer.Visualizer):
     def _render_history(self):
         glColor4f(0.8,0.8,0.8,1)
         for location, frequency in self._locations.iteritems():
-            point_size = pow(float(frequency) / self._max_frequency, 0.15) * 4 / 1024 * self.width
+            point_size = pow(float(frequency) / self._max_frequency, 0.15) * 4 * self._size_factor
             #point_size = max(point_size, 3)
             glPointSize(point_size)
             glBegin(GL_POINTS)
@@ -187,7 +188,7 @@ class HeatMap(visualizer.Visualizer):
 
             #size = (1.0 + 0.3 * math.sin((self.now - segment.peer.arrival_time) * 2.0)) * 8 / 640
             #glPointSize(size * self.width)
-            glPointSize(max(int(segment.relative_size() * 10.0/1024 * self.width), 1))
+            glPointSize(max(int(segment.relative_size() * 10.0 * self._size_factor), 1))
             glBegin(GL_POINTS)
             self._location_vertex(x, y)
             glEnd()
@@ -220,7 +221,7 @@ class HeatMap(visualizer.Visualizer):
         glEnd()
 
         glColor4f(1,1,1,1)
-        glLineWidth(2.0 / 1024 * self.width)
+        glLineWidth(2.0 * self._size_factor)
         glBegin(GL_LINE_LOOP)
         for i in range(20):
             a = float(i) / 20 * 2*math.pi
