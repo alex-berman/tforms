@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
+import math
 import sys
 sys.path.append("..")
 from vector import Vector2d, DirectionalVector
@@ -10,8 +11,7 @@ window_height = 600
 ESCAPE = '\033'
 COLUMNS = 20
 ROWS = 20
-ZOOM_POINT = Vector2d(200, 100)
-ZOOM_RADIUS = 100
+ZOOM_POINT = Vector2d(0.5, 0.1)
 
 def DrawGLScene():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -22,10 +22,10 @@ def DrawGLScene():
     glBegin(GL_POINTS)
     for x in range(COLUMNS):
         for y in range(ROWS):
-            p = Vector2d(float(x+0.5) / COLUMNS * window_width,
-                         float(y+0.5) / ROWS * window_height)
+            p = Vector2d(float(x+0.5) / COLUMNS,
+                         float(y+0.5) / ROWS)
             q = barrel_distort(p)
-            glVertex2f(q.x, q.y)
+            glVertex2f(q.x * window_width, q.y * window_height)
     glEnd()
 
     glutSwapBuffers()
@@ -33,12 +33,14 @@ def DrawGLScene():
 def barrel_distort(p):
     diff = p - ZOOM_POINT
     angle = diff.angle()
-    mag = diff.mag()
-    if mag < ZOOM_RADIUS:
-        distorted_mag = mag
+    q = 4
+    mag = diff.mag() / q
+    # distorted_mag = pow(mag, 0.9) * 0.7
+    if mag < 1:
+        distorted_mag = mag * (1 + ((math.sin(mag * math.pi*2 + 6*math.pi/2) + 1) / 2)) * 0.8
     else:
-        distorted_mag = pow(mag - ZOOM_RADIUS, 0.9) + ZOOM_RADIUS
-    return DirectionalVector(angle.get(), distorted_mag) + ZOOM_POINT
+        distorted_mag = mag
+    return DirectionalVector(angle.get(), distorted_mag * q) + ZOOM_POINT
 
 def ReSizeGLScene(_width, _height):
     if _height == 0:
