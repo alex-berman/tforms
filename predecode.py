@@ -22,8 +22,16 @@ class flac_decoder:
     def command(self, source_filename, target_filename, sample_rate=None):
         return 'flac -d "%s" --channels=1 -o "%s"' % (source_filename, target_filename)
         
+class wma_decoder:
+    def command(self, source_filename, target_filename, sample_rate=None):
+        cmd = 'mplayer -vo null -vc null'
+        if sample_rate:
+            cmd += ' -af resample=%s' % sample_rate
+        cmd += ' -ao pcm:waveheader -ao pcm:file="%s" "%s"' % (target_filename, source_filename)
+        return cmd
+
 class Predecoder:
-    DECODABLE_FORMATS = ['mp3', 'm4b', 'flac']
+    DECODABLE_FORMATS = ['mp3', 'm4b', 'flac', 'wma']
 
     def __init__(self, files, location=None, sample_rate=None):
         self._files = files
