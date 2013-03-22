@@ -18,7 +18,7 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	output_rear = Pan2.ar(rear_content, pan);
 	Out.ar(2, output_rear);
 
-	Out.ar(~reverb_bus, front_content + rear_content);
+	Out.ar(~reverb_bus, output_front + output_rear);
 
 	amp = LPF.kr(Amplitude.kr(front_content), 5);
 	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
@@ -28,14 +28,15 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 
 SynthDef(\add_reverb, {
 	arg mix = 0.25, room = 0.85, damp = 1.0;
-	var signal, silent_noise, reverb;
+	var signal_left, signal_right, silent_noise, reverb_left, reverb_right;
 	silent_noise = WhiteNoise.ar(0.00001); // see http://new-supercollider-mailing-lists-forums-use-these.2681727.n2.nabble.com/cpu-problems-with-PV-MagFreeze-and-Freeverb-tp5998599p6013552.html
-	signal = In.ar(~reverb_bus, 1);
-	reverb = FreeVerb.ar(signal + silent_noise,	mix, room, damp);
-	Out.ar(0, reverb);
-	Out.ar(1, reverb);
-	Out.ar(2, reverb);
-	Out.ar(3, reverb);
+	# signal_left, signal_right = In.ar(~reverb_bus, 2);
+	reverb_left = FreeVerb.ar(signal_left + silent_noise, mix, room, damp);
+	reverb_right = FreeVerb.ar(signal_right + silent_noise, mix, room, damp);
+	Out.ar(0, reverb_left);
+	Out.ar(1, reverb_right);
+	Out.ar(2, reverb_left);
+	Out.ar(3, reverb_right);
 }).send(s);
 
 SystemClock.sched(1.0, {

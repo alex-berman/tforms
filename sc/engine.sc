@@ -189,7 +189,7 @@ OSCresponder.new(nil, "/shutdown",
 	}).add;
 
 
-~reverb_bus = Bus.audio(s, 1);
+~reverb_bus = Bus.audio(s, 2);
 
 OSCresponder.new(nil, "/set_reverb_mix",
   { arg t, r, msg;
