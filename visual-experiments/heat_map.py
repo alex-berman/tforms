@@ -62,9 +62,6 @@ class HeatMap(visualizer.Visualizer):
         self._set_horizontal_scope()
         self._set_verical_scope()
         self._map_margin = self.parse_margin_argument(self.args.map_margin)
-        if self.args.continents:
-            import world
-            self._world = world.World(1.0, 1.0)
 
     def _set_horizontal_scope(self):
         self._hscope_min, self._hscope_max = map(float, self.args.hscope.split(":"))
@@ -94,6 +91,10 @@ class HeatMap(visualizer.Visualizer):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
         self._history_layer = self.new_layer(self._render_history)
+        if self.args.continents:
+            import world
+            self._world = world.World(1.0, 1.0)
+            self._continents_layer = self.new_layer(self._render_continents)
 
     def resized_window(self):
         self._map_margin.update()
@@ -145,7 +146,7 @@ class HeatMap(visualizer.Visualizer):
 
         self._update()
         if self.args.continents:
-            self._render_continents()
+            self._continents_layer.draw()
         else:
             self._history_layer.draw()
         self._render_activity()
