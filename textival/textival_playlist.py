@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 playlist = [
-    {"session": "sessions/*zlatan-01-10",
-     "args": ["--pretend-audio=textival/audio/kallocain1.wav",
+    {"session": "sessions/*kallocain1",
+     "args": ["--pretend-audio=textival/audio/kallocain1a.wav",
               "--title=Karin Boye: Kallocain (del 1)",
-              "-z", "0.1"]},
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5",
+              "-z", "1.25"]},
 
-    {"session": "sessions/*zlatan-11-20",
-     "args": ["--pretend-audio=textival/audio/kallocain2.wav",
+    {"session": "sessions/*kallocain3",
+     "args": ["--pretend-audio=textival/audio/kallocain1b.wav",
               "--title=Karin Boye: Kallocain (del 2)",
-              "-z", "0.5",
-              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
+              "--max-segment-duration=5.0", "--max-pause-within-segment=2.5",
+              "-z", "1.25"]},
 
     {"session": "sessions/*roda_rummet1",
      "args": ["--pretend-audio=textival/audio/strindberg_brott_och_brott1.wav",
@@ -50,13 +51,4 @@ playlist = [
               "--title=H.C. Andersen: The Swineherd",
               "-z", "3",
               "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
-
-
-
-    # REMOVED:
-    # {"session": "sessions/*zlatan-11-20",
-    #  "args": ["--pretend-audio=textival/audio/lagerloef_nils1.wav",
-    #           u"--title=Selma Lagerlöf: Nils Holgersson's Adventures (part 1)".encode("unicode_escape"),
-    #           "-z", "0.7",
-    #           "--max-segment-duration=5.0", "--max-pause-within-segment=2.5"]},
 ]
