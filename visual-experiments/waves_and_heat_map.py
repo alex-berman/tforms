@@ -3,6 +3,8 @@ import visualizer
 import waves
 import heat_map
 from argparse import ArgumentParser
+from smoother import Smoother
+from math_tools import sigmoid
 
 class File(waves.File, heat_map.File):
     def add_segment(self, *args):
@@ -13,6 +15,17 @@ class Segment(waves.Segment, heat_map.Segment):
     def __init__(self, *args):
         waves.Segment.__init__(self, *args)
         heat_map.Segment.__init__(self, *args)
+        self._amp_smoother = Smoother(response_factor=2.5)
+
+    def relative_size(self):
+        age = self.age()
+        if age > (self.duration - self._fade_time):
+            return 1 - sigmoid(1 - (self.duration - age) / self._fade_time)
+        else:
+            self._amp_smoother.smooth(
+                max([abs(value) for value in self.waveform]),
+                self.visualizer.time_increment)
+            return sigmoid(pow(self._amp_smoother.value(), 0.25))
 
 class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
     def __init__(self, *args):

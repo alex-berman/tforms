@@ -25,7 +25,8 @@ SynthDef(\warp, {arg buffer = 0, segment_id, begin, end, duration, channel, pan;
 	amp = LPF.kr(Amplitude.kr(front_content), 5);
 	SendReply.kr(Impulse.kr(50), "/amp_private", amp, segment_id);
 
-	SendReply.ar(Impulse.ar(500), "/waveform_private", front_content, segment_id);
+	SendReply.ar(Impulse.ar(500), "/waveform_private",
+		(front_content + rear_content) / 2, segment_id);
 }).send(s);
 
 SynthDef(\add_reverb, {
