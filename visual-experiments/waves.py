@@ -214,7 +214,7 @@ class Waves(visualizer.Visualizer):
     def resized_window(self):
         self.waves_margin.update()
         self._waves_width = self.width - self.waves_margin.left - self.waves_margin.right
-        self._waves_right = self.width - self.waves_margin.left
+        self._waves_right = self.width - self.waves_margin.right
         self._waves_height = self.height - self.waves_margin.top - self.waves_margin.bottom
         self._waves_top = self.height - self.waves_margin.top
         self._title_renderer = None
