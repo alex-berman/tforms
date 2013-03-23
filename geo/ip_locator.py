@@ -30,6 +30,16 @@ DB_EXTENSION = {
         "latitude": 59.45,
         "city": u"Kista"
         },
+    "193.14.105.126": {
+        "longitude": 17.92,
+        "latitude": 59.45,
+        "city": u"Kista"
+        },
+    "193.14.26.56": {
+        "longitude": 17.92,
+        "latitude": 59.45,
+        "city": u"Kista"
+        },
     "82.182.78.82": {
         "longitude": 20.25,
         "latitude": 63.83,
@@ -63,7 +73,7 @@ class IpLocator:
             else:
                 print "WARNING: unknown city for IP %s (GeoIP reports coordinates %r, %r)" % (
                     addr, record['longitude'], record['latitude'])
-                return record
+                return self._location_tuple_from_record(record)
         else:
             print "WARNING: unknown location IP %s" % addr
 
