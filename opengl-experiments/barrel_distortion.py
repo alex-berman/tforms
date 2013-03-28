@@ -11,7 +11,8 @@ window_height = 600
 ESCAPE = '\033'
 COLUMNS = 20
 ROWS = 20
-ZOOM_POINT = Vector2d(0.5, 0.1)
+ZOOM_POINT = Vector2d(0.5, 0.01)
+ZOOM_FACTOR = 0.8
 
 def DrawGLScene():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -33,14 +34,10 @@ def DrawGLScene():
 def barrel_distort(p):
     diff = p - ZOOM_POINT
     angle = diff.angle()
-    q = 4
-    mag = diff.mag() / q
-    # distorted_mag = pow(mag, 0.9) * 0.7
-    if mag < 1:
-        distorted_mag = mag * (1 + ((math.sin(mag * math.pi*2 + 6*math.pi/2) + 1) / 2)) * 0.8
-    else:
-        distorted_mag = mag
-    return DirectionalVector(angle.get(), distorted_mag * q) + ZOOM_POINT
+    mag = diff.mag()
+    vicinity_to_edge = 1 - min([p.x, 1-p.x, p.y, 1-p.y])
+    distorted_mag = pow(mag, ZOOM_FACTOR + (1 - ZOOM_FACTOR) * pow(vicinity_to_edge, 10.0))
+    return DirectionalVector(angle.get(), distorted_mag) + ZOOM_POINT
 
 def ReSizeGLScene(_width, _height):
     if _height == 0:
