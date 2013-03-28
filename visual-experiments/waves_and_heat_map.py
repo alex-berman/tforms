@@ -25,7 +25,7 @@ class Segment(waves.Segment, heat_map.Segment):
             self._amp_smoother.smooth(
                 max([abs(value) for value in self.waveform]),
                 self.visualizer.time_increment)
-            return sigmoid(pow(self._amp_smoother.value(), 0.25))
+            return sigmoid(pow(max(self._amp_smoother.value(), 0), 0.25))
 
 class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
     def __init__(self, *args):
