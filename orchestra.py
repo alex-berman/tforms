@@ -74,6 +74,7 @@ class Server(OscReceiver):
         parser.add_argument("--sc-mode", type=str, default="default_stereo")
         parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
         parser.add_argument("--force-predecode", action="store_true")
+        parser.add_argument("--capture-audio", action="store_true")
 
     def __init__(self, options):
         self.options = options
@@ -343,6 +344,8 @@ class Orchestra:
             self.synth.launch_engine(self.server.options.sc_mode)
             self.synth.connect(self.synth.lang_port)
             self.synth.subscribe_to_info()
+            if self.options.capture_audio:
+                self._start_capture_audio()
             self._tell_visualizers("/synth_address", self.synth.lang_port)
 
             if self.output == self.SSR:
@@ -356,6 +359,12 @@ class Orchestra:
         else:
             self._ff_to_time = None
             self.set_time_cursor(self.options.start_time)
+
+    def _start_capture_audio(self):
+        self._audio_capture_process = subprocess.Popen(
+            ["jack_rec", "-f", "capture.wav", "-d", "-1",
+             "SuperCollider:out_1", "SuperCollider:out_2"],
+            shell=False)
 
     @classmethod
     def _estimated_playback_duration(cls, score, options):
@@ -520,8 +529,13 @@ class Orchestra:
             if not self._was_stopped:
                 self._wait_for_visualizers_to_finish()
             if quit_on_end:
-                self._quitting = True
+                self._quit()
         logger.info("leaving play_non_realtime")
+
+    def _quit(self):
+        if self.options.capture_audio:
+            self._audio_capture_process.kill()
+        self._quitting = True
 
     def _play_until_end(self):
         logger.info("entering _play_until_end")

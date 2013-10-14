@@ -211,6 +211,8 @@ class Visualizer:
         self.time_increment = 0
         self.stopwatch = Stopwatch()
         self._synth_instance = None
+        self._synth_port = None
+        self._sync_beeped = False
         self._layers = []
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
@@ -522,7 +524,8 @@ class Visualizer:
     def DrawGLScene(self):
         if self.exiting:
             self.logger.debug("total number of rendered frames: %s" % self._frame_count)
-            self.logger.debug("total FPS: %s" % (float(self._frame_count) / self.stopwatch.get_elapsed_time()))
+            if self.stopwatch.get_elapsed_time() > 0:
+                self.logger.debug("total FPS: %s" % (float(self._frame_count) / self.stopwatch.get_elapsed_time()))
             if self.args.profile:
                 import yappi
                 yappi.print_stats(sys.stdout, yappi.SORTTYPE_TTOT)
@@ -547,12 +550,17 @@ class Visualizer:
             self.current_export_time = float(self.exporter.frame_count) / self.export_fps
 
         self.now = self.current_time()
-        if self._frame_count == 0:
+        is_waiting_for_synth = (self.sync and not self._synth() and not self._sync_beeped)
+        if self._frame_count == 0 and not is_waiting_for_synth:
             self.stopwatch.start()
             if self.sync:
                 self._synth().sync_beep()
+                self._sync_beeped = True
         else:
-            self.time_increment = self.now - self.previous_frame_time
+            if self._frame_count == 0:
+                self.time_increment = 0
+            else:
+                self.time_increment = self.now - self.previous_frame_time
             glTranslatef(self.margin, self.margin, 0)
             if self.args.border:
                 self.draw_border()
@@ -562,7 +570,7 @@ class Visualizer:
                     0, 0,
                     -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
             self.render()
-            if self.show_fps:
+            if self.show_fps and self._frame_count > 0:
                 self.update_fps_history()
                 self.show_fps_if_timely()
 
@@ -574,10 +582,12 @@ class Visualizer:
         if self.export:
             self.exporter.export_frame()
 
-        self._frame_count += 1
         if finished and not self._notified_finished:
             self.orchestra.notify_finished()
             self._notified_finished = True
+
+        if not is_waiting_for_synth:
+            self._frame_count += 1
 
     def finished(self):
         return False
@@ -798,7 +808,7 @@ class Visualizer:
         return glGenLists(1)
     
     def _synth(self):
-        if self._synth_instance is None:
+        if self._synth_instance is None and self._synth_port:
             from synth_controller import SynthController
             self._synth_instance = SynthController()
             self._synth_instance.connect(self._synth_port)
