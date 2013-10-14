@@ -11,7 +11,7 @@ class Handler:
         self.user_data = user_data
 
 class OscReceiver:
-    def __init__(self, port=None, log_filename=None, proto=osc.TCP, listen=None, name=None):
+    def __init__(self, port=None, proto=osc.TCP, listen=None, name=None):
         if name:
             self._name = name
         else:
@@ -19,8 +19,6 @@ class OscReceiver:
 
         if proto != osc.TCP:
             raise Exception("simple OSC receiver only supports TCP")
-        if log_filename:
-            raise Exception("log_filename not supported")
         if port is None:
             port = 0
         self._handlers = {}

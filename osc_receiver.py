@@ -4,7 +4,7 @@ import threading
 import traceback_printer
 
 class OscReceiver(liblo.Server):
-    def __init__(self, port=None, log_filename=None, proto=liblo.TCP, name=None):
+    def __init__(self, port=None, proto=liblo.TCP, name=None):
         if name:
             self._name = name
         else:
@@ -13,14 +13,8 @@ class OscReceiver(liblo.Server):
         liblo.Server.__init__(self, port, proto)
         self._running = False
         self._freed = False
-        if log_filename:
-            self.read_log(log_filename)
-            self.log = True
-            self.sender = liblo.Address("localhost", self.port, liblo.TCP)
-        else:
-            self.log = False
-            self._queue = []
-            self._lock = threading.Lock()
+        self._queue = []
+        self._lock = threading.Lock()
 
     def add_method(self, path, typespec, callback_func, user_data=None):
         liblo.Server.add_method(self, path, typespec, self._callback,
@@ -31,14 +25,13 @@ class OscReceiver(liblo.Server):
             self._queue.append((path, args, types, src, callback_func, user_data))
 
     def start(self):
-        if not self.log:
-            if self._freed:
-                raise Exception("Cannot call OscReceiver.start a second time. You need to create a new OscReceiver instance.")
-            self._running = True
-            serve_thread = threading.Thread(name="%s.server_thread" % self._name,
-                                            target=self._serve)
-            serve_thread.daemon = True
-            serve_thread.start()
+        if self._freed:
+            raise Exception("Cannot call OscReceiver.start a second time. You need to create a new OscReceiver instance.")
+        self._running = True
+        serve_thread = threading.Thread(name="%s.server_thread" % self._name,
+                                        target=self._serve)
+        serve_thread.daemon = True
+        serve_thread.start()
 
     def _serve(self):
         while self._running:
@@ -52,29 +45,6 @@ class OscReceiver(liblo.Server):
                 self._fire_callback_with_exception_handler(
                     path, args, types, src, callback_func, user_data)
             self._queue = []
-
-    def read_log(self, filename):
-        f = open(filename, "r")
-        self.entries = []
-        try:
-            while True:
-                entry = pickle.load(f)
-                self.entries.append(entry)
-        except EOFError:
-            pass
-        f.close()
-
-    def serve_from_log_until(self, time_target):
-        while True:
-            if len(self.entries) == 0:
-                return
-            (t, args) = self.entries[0]
-            if t < time_target:
-                liblo.send(self.sender, *args)
-                self.entries.pop(0)
-                self.serve()
-            else:
-                return
 
     def _fire_callback_with_exception_handler(self, path, args, types, src, callback, user_data):
         try:

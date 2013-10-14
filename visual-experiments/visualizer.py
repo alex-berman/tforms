@@ -25,6 +25,7 @@ import simple_osc_receiver
 from stopwatch import Stopwatch
 import traceback_printer
 from camera_script_interpreter import CameraScriptInterpreter
+from message_log import *
 text_renderer_module = __import__("text_renderer")
 
 logging.basicConfig(filename="visualizer.log", 
@@ -200,7 +201,8 @@ class Visualizer:
         self.margin = args.margin
         self.show_fps = args.show_fps
         self.export = args.export
-        self.osc_log = args.osc_log
+        self.capture_message_log = args.capture_message_log
+        self.play_message_log = args.play_message_log
         self.waveform_gain = args.waveform_gain
         self._standalone = args.standalone
 
@@ -240,7 +242,7 @@ class Visualizer:
                 port = self._get_orchestra_port()
             self.orchestra_host = args.host
             self.orchestra_port = port
-            self.setup_osc(self.osc_log)
+            self.setup_osc()
             self.orchestra.register(self.server.port)
 
         self._screen_dumper = Exporter(".", self.margin, self.margin, self.width, self.height)
@@ -255,6 +257,11 @@ class Visualizer:
                 shutil.rmtree(export_dir)
             os.mkdir(export_dir)
             self.exporter = Exporter(export_dir, self.margin, self.margin, self.width, self.height)
+
+        if self.play_message_log:
+            self._message_log_reader = MessageLogReader(self.play_message_log)
+        if self.capture_message_log:
+            self._message_log_writer = MessageLogWriter(self.capture_message_log)
 
         self._initialized = True
 
@@ -351,13 +358,15 @@ class Visualizer:
         self.InitGL()
         glutPositionWindow(self._left, self._top)
 
-    def handle_torrent_message(self, path, args, types, src, data):
-        (self.num_files, self.download_duration, self.total_size,
-         num_chunks, self.num_segments, encoded_torrent_title) = args
+    def handle_torrent_message(self, num_files, download_duration, total_size,
+                               num_chunks, num_segments, encoded_torrent_title):
+        self.num_files = num_files
+        self.download_duration = download_duration
+        self.total_size = total_size
+        self.num_segments = num_segments
         self.torrent_title = encoded_torrent_title.decode("unicode_escape")
 
-    def handle_file_message(self, path, args, types, src, data):
-        (filenum, offset, length) = args
+    def handle_file_message(self, filenum, offset, length):
         f = self.files[filenum] = self.file_class(self, filenum, offset, length)
         self.logger.debug("added file %s" % f)
         self.torrent_length += length
@@ -366,8 +375,7 @@ class Visualizer:
             self.logger.debug("added all files")
             self.added_all_files()
 
-    def handle_chunk_message(self, path, args, types, src, data):
-        (chunk_id, torrent_position, byte_size, filenum, peer_id, t) = args
+    def handle_chunk_message(self, chunk_id, torrent_position, byte_size, filenum, peer_id, t):
         if filenum in self.files:
             f = self.files[filenum]
             peer = self.peers[peer_id]
@@ -380,9 +388,8 @@ class Visualizer:
         else:
             print "ignoring chunk from undeclared file %s" % filenum
 
-    def handle_segment_message(self, path, args, types, src, data):
-        (segment_id, torrent_position, byte_size, filenum,
-         peer_id, t, duration) = args
+    def handle_segment_message(self, segment_id, torrent_position, byte_size, filenum,
+                               peer_id, t, duration):
         if filenum in self.files:
             f = self.files[filenum]
             peer = self.peers[peer_id]
@@ -397,8 +404,7 @@ class Visualizer:
         else:
             print "ignoring segment from undeclared file %s" % filenum
 
-    def handle_peer_message(self, path, args, types, src, data):
-        peer_id, addr, bearing, pan, location = args
+    def handle_peer_message(self, peer_id, addr, bearing, pan, location):
         peer = self.peer_class(self, addr, bearing, pan, location)
         self.peers[peer_id] = peer
         self.peers_by_addr[addr] = peer
@@ -424,14 +430,13 @@ class Visualizer:
             print "WARNING: pan_segment undefined in visualizer. Orchestra and synth now control panning."
             self._warned_about_missing_pan_segment = True
 
-    def handle_shutdown(self, path, args, types, src, data):
+    def handle_shutdown(self):
         self.exiting = True
 
-    def handle_reset(self, *args):
+    def handle_reset(self):
         self.reset()
 
-    def handle_amp_message(self, path, args, types, src, data):
-        (segment_id, amp) = args
+    def handle_amp_message(self, segment_id, amp):
         try:
             segment = self._segments_by_id[segment_id]
         except KeyError:
@@ -442,8 +447,7 @@ class Visualizer:
     def handle_segment_amplitude(self, segment, amp):
         pass
 
-    def handle_waveform_message(self, path, args, types, src, data):
-        (segment_id, value) = args
+    def handle_waveform_message(self, segment_id, value):
         try:
             segment = self._segments_by_id[segment_id]
         except KeyError:
@@ -454,35 +458,56 @@ class Visualizer:
     def handle_segment_waveform_value(self, segment, value):
         pass
 
-    def handle_synth_address(self, path, args, types, src, data):
+    def handle_synth_address(self, port):
         self._synth_instance = None
-        self._synth_port = args[0]
+        self._synth_port = port
         self.synth_address_received()
 
     def synth_address_received(self):
         pass
 
-    def setup_osc(self, log_filename):
+    def setup_osc(self):
         self.orchestra = OrchestraController(self.orchestra_host, self.orchestra_port)
         self.server = simple_osc_receiver.OscReceiver(
-            listen=self.args.listen, log_filename=log_filename, name="Visualizer")
-        self.server.add_method("/torrent", "ifiiis", self.handle_torrent_message)
-        self.server.add_method("/file", "iii", self.handle_file_message)
-        self.server.add_method("/chunk", "iiiiif", self.handle_chunk_message)
-        self.server.add_method("/segment", "iiiiiff", self.handle_segment_message)
-        self.server.add_method("/peer", "isffs", self.handle_peer_message)
-        self.server.add_method("/reset", "", self.handle_reset)
-        self.server.add_method("/shutdown", "", self.handle_shutdown)
-        self.server.add_method("/synth_address", "i", self.handle_synth_address)
+            listen=self.args.listen, name="Visualizer")
+        self.server.add_method("/torrent", "ifiiis", self._handle_osc_message,
+                               "handle_torrent_message")
+        self.server.add_method("/file", "iii", self._handle_osc_message,
+                               "handle_file_message")
+        self.server.add_method("/chunk", "iiiiif", self._handle_osc_message,
+                               "handle_chunk_message")
+        self.server.add_method("/segment", "iiiiiff", self._handle_osc_message,
+                               "handle_segment_message")
+        self.server.add_method("/peer", "isffs", self._handle_osc_message,
+                               "handle_peer_message")
+        self.server.add_method("/reset", "", self._handle_osc_message,
+                               "handle_reset")
+        self.server.add_method("/shutdown", "", self._handle_osc_message,
+                               "handle_shutdown")
+        self.server.add_method("/synth_address", "i", self._handle_osc_message,
+                               "handle_synth_address")
         self.server.start()
         self.waveform_server = None
 
     def setup_waveform_server(self):
-        import osc_receiver
-        self.waveform_server = osc_receiver.OscReceiver(proto=osc.UDP)
-        self.waveform_server.add_method("/amp", "if", self.handle_amp_message)
-        self.waveform_server.add_method("/waveform", "if", self.handle_waveform_message)
-        self.waveform_server.start()
+        if not self._standalone:
+            import osc_receiver
+            self.waveform_server = osc_receiver.OscReceiver(proto=osc.UDP)
+            self.waveform_server.add_method("/amp", "if", self._handle_osc_message,
+                                            "handle_amp_message")
+            self.waveform_server.add_method("/waveform", "if", self._handle_osc_message,
+                                            "handle_waveform_message")
+            self.waveform_server.start()
+
+    def _handle_osc_message(self, path, args, types, src, handler_name):
+        if self.capture_message_log:
+            self._message_log_writer.write(
+                self.stopwatch.get_elapsed_time(), handler_name, args)
+        self._call_handler(handler_name, args)
+
+    def _call_handler(self, handler_name, args):
+        handler = getattr(self, handler_name)
+        handler(*args)
 
     def InitGL(self):
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -582,9 +607,10 @@ class Visualizer:
         if self.export:
             self.exporter.export_frame()
 
-        if finished and not self._notified_finished:
-            self.orchestra.notify_finished()
-            self._notified_finished = True
+        if not self._standalone:
+            if finished and not self._notified_finished:
+                self.orchestra.notify_finished()
+                self._notified_finished = True
 
         if not is_waiting_for_synth:
             self._frame_count += 1
@@ -593,13 +619,18 @@ class Visualizer:
         return False
 
     def handle_incoming_messages(self):
-        if not self.args.standalone:
-            if self.osc_log:
-                self.server.serve_from_log_until(self.now)
-            else:
-                self.server.serve()
-                if self.waveform_server:
-                    self.waveform_server.serve()
+        if self.args.standalone:
+            if self.play_message_log:
+                self._process_message_log_until(self.now)
+        else:
+            self.server.serve()
+            if self.waveform_server:
+                self.waveform_server.serve()
+
+    def _process_message_log_until(self, t):
+        messages = self._message_log_reader.read_until(t)
+        for _t, handler_name, args in messages:
+            self._call_handler(handler_name, args)
 
     def update_fps_history(self):
         fps = 1.0 / self.time_increment
@@ -651,7 +682,8 @@ class Visualizer:
         self._screen_dumper.export_frame()
 
     def playing_segment(self, segment):
-        self.orchestra.visualizing_segment(segment.id)
+        if not self._standalone:
+            self.orchestra.visualizing_segment(segment.id)
         segment.playing = True
 
     def current_time(self):
@@ -789,9 +821,10 @@ class Visualizer:
         self._synth().subscribe_to_amp(self.waveform_server.port)
 
     def subscribe_to_waveform(self):
-        if not self.waveform_server:
-            self.setup_waveform_server()
-        self._synth().subscribe_to_waveform(self.waveform_server.port)
+        if not self._standalone:
+            if not self.waveform_server:
+                self.setup_waveform_server()
+            self._synth().subscribe_to_waveform(self.waveform_server.port)
 
     def _move_camera_by_script(self):
         position, orientation = self._camera_script.position_and_orientation(
@@ -848,7 +881,8 @@ class Visualizer:
         parser.add_argument("-top", type=int)
         parser.add_argument('-margin', dest='margin', type=int, default=0)
         parser.add_argument('-show-fps', dest='show_fps', action='store_true')
-        parser.add_argument('-osc-log', dest='osc_log')
+        parser.add_argument('-capture-message-log', dest='capture_message_log')
+        parser.add_argument('-play-message-log', dest='play_message_log')
         parser.add_argument('-export', dest='export', action='store_true')
         parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
         parser.add_argument("-waveform", dest="waveform", action='store_true')

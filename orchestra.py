@@ -50,8 +50,7 @@ class VisualizerConnector:
     def connect_to(self, port):
         self._sender = OscSender(
             host=self.host,
-            port=port,
-            log_filename=self.server.options.osc_log)
+            port=port)
         self.connected = True
 
     def send(self, *args):
@@ -68,7 +67,6 @@ class Server(OscReceiver):
     def add_parser_arguments(parser):
         parser.add_argument("--visualizer", type=str, action="append")
         parser.add_argument("-port", type=int)
-        parser.add_argument("--osc-log", dest="osc_log")
         parser.add_argument("--no-synth", action="store_true")
         parser.add_argument("--locate-peers", action="store_true")
         parser.add_argument("--sc-mode", type=str, default="default_stereo")
