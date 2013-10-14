@@ -11,18 +11,17 @@ class SsrControl:
     def __init__(self, num_sources=16):
         self.num_sources = num_sources
         self.scene = basicscene.BasicScene()
-        self.scene.smooth_movement_enabled = False
+        self.scene.smooth_movement_enabled = True
         self.updated = False
         pp = packetParser.PacketParser( self.scene, self.update )
         self.ssr_socket = ssrsocket.AIOThread( HOSTNAME, PORT, pp.parse_packet )
         self.scene.ssr_socket = self.ssr_socket
         self.ssr_socket.start()
-        self._add_sources_if_needed()
         self.set_listener_position(0, 0)
         self.set_listener_orientation(90)
 
-    def enable_smooth_movement(self):
-        self.scene.smooth_movement_enabled = True
+    def run(self):
+        self._add_sources_if_needed()
         self._mute_all_sources()
         self._start_movement_thread()
 

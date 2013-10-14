@@ -333,8 +333,6 @@ class Orchestra:
         if self.output == self.SSR:
             self.ssr = SsrControl()
             self._warned_about_max_sources = False
-        else:
-            self.ssr = None
 
     def init_playback(self):
         if self.server.options.no_synth:
@@ -346,6 +344,9 @@ class Orchestra:
             self.synth.connect(self.synth.lang_port)
             self.synth.subscribe_to_info()
             self._tell_visualizers("/synth_address", self.synth.lang_port)
+
+            if self.output == self.SSR:
+                self.ssr.run()
 
         self._load_sounds()
         self._log_time_for_last_handled_event = 0
@@ -399,18 +400,23 @@ class Orchestra:
         segment_id = args[0]
         segment = self.segments_by_id[segment_id]
         logger.debug("visualizing segment %s" % segment)
-        if self.output == self.SSR:
-            if segment["sound_source_id"]:
-                channel = segment["sound_source_id"] - 1
-                self._ask_synth_to_play_segment(segment, channel=channel, pan=None)
-        else:
-            player = self.get_player_for_segment(segment)
-            self._ask_synth_to_play_segment(segment, channel=0, pan=player.spatial_position.pan)
+        player = self.get_player_for_segment(segment)
+        self._ask_synth_to_play_segment(segment, channel=0, pan=player.spatial_position.pan)
 
     def _ask_synth_to_play_segment(self, segment, channel, pan):
         if self.synth:
             logger.debug("asking synth to play %s" % segment)
             file_info = self.tr_log.files[segment["filenum"]]
+
+            if self.output == self.SSR:
+                segment["sound_source_id"] = self.ssr.allocate_source()
+                if segment["sound_source_id"] and not self._warned_about_max_sources:
+                    channel = segment["sound_source_id"] - 1
+                    pan = None
+                else:
+                    print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
+                    self._warned_about_max_sources = True
+                    return
 
             self.synth.play_segment(
                 segment["id"],
@@ -655,12 +661,6 @@ class Orchestra:
 
     def visualize_segment(self, segment, player):
         if len(self.visualizers) > 0:
-            if self.ssr:
-                segment["sound_source_id"] = self.ssr.allocate_source()
-                if not segment["sound_source_id"] and not self._warned_about_max_sources:
-                    print "WARNING: max sources exceeded, skipping segment playback (this warning will not be repeated)"
-                    self._warned_about_max_sources = True
-
             self._inform_visualizers_about_peer(player)
             file_info = self.tr_log.files[segment["filenum"]]
             self.segments_by_id[segment["id"]] = segment
@@ -680,9 +680,8 @@ class Orchestra:
         logger.debug("stopped segment %s" % segment)
         if self.gui:
             self.gui.unhighlight_segment(segment)
-        if len(self.visualizers) > 0:
-            if self.ssr and segment["sound_source_id"]:
-                self.ssr.free_source(segment["sound_source_id"])
+        if self.output == self.SSR and segment["sound_source_id"]:
+            self.ssr.free_source(segment["sound_source_id"])
 
     def play_segment(self, segment, player):
         self.segments_by_id[segment["id"]] = segment
@@ -803,18 +802,18 @@ class Orchestra:
         return len(self.score) - 1
 
     def _handle_set_listener_position(self, path, args, types, src, data):
-        if self.ssr:
+        if self.output == self.SSR:
             x, y = args
             self.ssr.set_listener_position(x, y)
 
     def _handle_set_listener_orientation(self, path, args, types, src, data):
-        if self.ssr:
+        if self.output == self.SSR:
             orientation = args[0]
             self.ssr.set_listener_orientation(orientation)
 
     def _handle_place_segment(self, path, args, types, src, data):
         segment_id, x, y, duration = args
-        if self.ssr:
+        if self.output == self.SSR:
             segment = self.segments_by_id[segment_id]
             sound_source_id = segment["sound_source_id"]
             if sound_source_id is not None:
@@ -825,12 +824,11 @@ class Orchestra:
                 self.synth.pan(segment_id, pan)
 
     def _handle_enable_smooth_movement(self, path, args, types, src, data):
-        if self.ssr:
-            self.ssr.enable_smooth_movement()
+        pass # OBSOLETE after smooth movement made default
 
     def _handle_start_segment_movement_from_peer(self, path, args, types, src, data):
         segment_id, duration = args
-        if self.ssr:
+        if self.output == self.SSR:
             segment = self.segments_by_id[segment_id]
             sound_source_id = segment["sound_source_id"]
             if sound_source_id is not None:
