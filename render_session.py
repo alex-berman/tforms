@@ -33,4 +33,4 @@ call('sox capture_fixed.wav capture_trimmed.wav silence 1 1 0')
 
 print "___ Creating video file ___"
 
-call('avconv -y -f image2 -r 30 -i export/%07d.png -map 0 -i capture_trimmed.wav -vcodec libx264 -crf 0 export.mp4 -acodec libvo_aacenc -ab 320k')
+call('avconv -y -f image2 -r 30 -i export/%07d.png -map 0 -i capture_trimmed.wav -vcodec libx264 -crf 0 -ss 0.5 export.mp4 -acodec libvo_aacenc -ab 320k')
