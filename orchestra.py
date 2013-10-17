@@ -343,13 +343,16 @@ class Orchestra:
             self.synth.connect(self.synth.lang_port)
             self.synth.subscribe_to_info()
             if self.options.capture_audio:
+                self._load_sounds()
                 self._start_capture_audio()
             self._tell_visualizers("/synth_address", self.synth.lang_port)
 
             if self.output == self.SSR:
                 self.ssr.run()
 
-        self._load_sounds()
+        if not self.options.capture_audio:
+            self._load_sounds()
+
         self._log_time_for_last_handled_event = 0
         if self.options.ff_to_start:
             self._ff_to_time = self.options.start_time

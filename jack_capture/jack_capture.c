@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <sys/time.h>
 #include <jack/jack.h>
 
 SNDFILE *sf;
@@ -37,6 +38,7 @@ unsigned int channels;
 int bitdepth;
 char *path;
 volatile int can_process;
+int logged_timestamp;
 
 unsigned int nports;
 jack_port_t **ports;
@@ -54,6 +56,14 @@ static void signal_handler(int sig)
 	exit(0);
 }
 
+void log_timestamp() {
+  struct timeval tp;
+  gettimeofday(&tp, NULL);
+  float secs = tp.tv_sec + (float) tp.tv_usec / 1000000;
+  printf("audio capture started at %.3f\n", secs);
+  logged_timestamp = 1;
+}
+
 static int
 process (jack_nframes_t nframes, void *arg)
 {
@@ -63,6 +73,9 @@ process (jack_nframes_t nframes, void *arg)
 
   if (!can_process)
     return 0;
+
+  if (!logged_timestamp)
+    log_timestamp();
 
   for (chn = 0; chn < nports; chn++)
     in[chn] = jack_port_get_buffer (ports[chn], nframes);
@@ -211,6 +224,7 @@ main (int argc, char *argv[])
 	sndfile_buffer = (float *) malloc (nports * sample_size *
 					   jack_get_buffer_size(client));
 	open_wav_file();
+	logged_timestamp = 0;
 	jack_set_process_callback (client, process, NULL);
 	jack_on_shutdown (client, jack_shutdown, NULL);
 

@@ -12,6 +12,7 @@ import logging
 import math
 import subprocess
 import platform
+import time
 from exporter import Exporter
 
 dirname = os.path.dirname(__file__)
@@ -214,7 +215,7 @@ class Visualizer:
         self.stopwatch = Stopwatch()
         self._synth_instance = None
         self._synth_port = None
-        self._sync_beeped = False
+        self._synced = False
         self._layers = []
         self._warned_about_missing_pan_segment = False
         self.gl_display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH
@@ -575,12 +576,12 @@ class Visualizer:
             self.current_export_time = float(self._frame_count) / self.export_fps
 
         self.now = self.current_time()
-        is_waiting_for_synth = (self.sync and not self._synth() and not self._sync_beeped)
+        is_waiting_for_synth = (self.sync and not self._synth() and not self._synced)
         if self._frame_count == 0 and not is_waiting_for_synth:
+            self._log_timestamp()
             self.stopwatch.start()
             if self.sync:
-                self._synth().sync_beep()
-                self._sync_beeped = True
+                self._synced = True
         else:
             if self._frame_count == 0:
                 self.time_increment = 0
@@ -614,6 +615,9 @@ class Visualizer:
 
         if not is_waiting_for_synth:
             self._frame_count += 1
+
+    def _log_timestamp(self):
+        print "video export started at %.3f" % time.time()
 
     def finished(self):
         return False
