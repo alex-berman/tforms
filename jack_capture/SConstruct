@@ -1,3 +1,5 @@
 env = Environment()
 env.Append(LIBS = ['jack', 'sndfile'])
+# env.Append(CFLAGS = ['-g'])
+env.Append(CFLAGS = ['-O2'])
 env.Program(target='jack_capture', source=['jack_capture.c'])
