@@ -363,7 +363,7 @@ class Orchestra:
         if os.path.exists(self._audio_capture_filename):
             os.remove(self._audio_capture_filename)
         self._audio_capture_process = subprocess.Popen(
-            ["jack_rec", "-f", self._audio_capture_filename, "-d", "-1",
+            ["./jack_capture/jack_capture", "-f", self._audio_capture_filename, "-d", "-1",
              "SuperCollider:out_1", "SuperCollider:out_2"],
             shell=False)
         self._wait_until_audio_capture_started()

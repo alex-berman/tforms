@@ -1,0 +1,3 @@
+env = Environment()
+env.Append(LIBS = ['jack', 'sndfile'])
+env.Program(target='jack_capture', source=['jack_capture.c'])
