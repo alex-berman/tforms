@@ -78,10 +78,9 @@ def run_offline():
 
 def play():
     global orchestra_thread
-    quit_on_end = False
     orchestra.fast_forwarding = options.ff or options.ff_to_start
     orchestra_thread = threading.Thread(target=orchestra.play_non_realtime,
-                                        args=[quit_on_end])
+                                        args=[options.quit_at_end])
     orchestra_thread.daemon = True
     orchestra_thread.start()
 
