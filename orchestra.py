@@ -359,10 +359,18 @@ class Orchestra:
             self.set_time_cursor(self.options.start_time)
 
     def _start_capture_audio(self):
+        self._audio_capture_filename = "capture.wav"
+        if os.path.exists(self._audio_capture_filename):
+            os.remove(self._audio_capture_filename)
         self._audio_capture_process = subprocess.Popen(
-            ["jack_rec", "-f", "capture.wav", "-d", "-1",
+            ["jack_rec", "-f", self._audio_capture_filename, "-d", "-1",
              "SuperCollider:out_1", "SuperCollider:out_2"],
             shell=False)
+        self._wait_until_audio_capture_started()
+    
+    def _wait_until_audio_capture_started(self):
+        while not os.path.exists(self._audio_capture_filename):
+            time.sleep(0.1)
 
     @classmethod
     def _estimated_playback_duration(cls, score, options):

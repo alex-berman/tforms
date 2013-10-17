@@ -572,7 +572,7 @@ class Visualizer:
         glLoadIdentity()
 
         if self.export:
-            self.current_export_time = float(self.exporter.frame_count) / self.export_fps
+            self.current_export_time = float(self._frame_count) / self.export_fps
 
         self.now = self.current_time()
         is_waiting_for_synth = (self.sync and not self._synth() and not self._sync_beeped)
