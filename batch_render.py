@@ -42,7 +42,8 @@ for (session_pattern, args, timefactors) in sessions:
         subprocess.call(cmd, shell=True)
 
     for timefactor in timefactors:
-        video_filename = "rendered/%s_ancestry_z%s.mp4" % (os.path.basename(session_dir), timefactor)
+        video_filename = "rendered_ancestry/%s_ancestry_z%s.mp4" % (
+            os.path.basename(session_dir), timefactor)
         print "encoding into %s" % video_filename
         if os.path.exists(video_filename):
             print "video file exists - skipping"

@@ -9,10 +9,9 @@ from orchestra import Orchestra, Server
 from session import Session
 import logger_factory
 from logger_factory import logger
-import glob
 import datetime
 from shuffler import Shuffler
-import importlib
+from playlist_reader import read_playlist
 
 parser = ArgumentParser()
 parser.add_argument("sessiondirs", nargs="*")
@@ -57,18 +56,9 @@ if args.playlist and len(args.sessiondirs) > 0:
     raise Exception("cannot specify both playlist and sessiondirs")
 
 if args.playlist:
-    playlist_module = importlib.import_module(args.playlist)
-    playlist = playlist_module.playlist
+    playlist = read_playlist(args.playlist)
     for item in playlist:
-        matches = glob.glob(item["session"])
-        if len(matches) == 1:
-            item["sessiondir"] = matches[0]
-        elif len(matches) == 0:
-            raise Exception("no sessions matching %s" % item["session"])
-        else:
-            raise Exception("more than one session matching %s" % item["session"])
         item["args"] = orchestra_parser.parse_args(item["args"])
-
 else:
     if len(args.sessiondirs) > 0:
         playlist = [{"sessiondir": sessiondir,
