@@ -250,7 +250,9 @@ class Visualizer:
         if self.export:
             self.export_fps = args.export_fps
             import shutil
-            if hasattr(args, "sessiondir"):
+            if args.export_dir:
+                export_dir = args.export_dir
+            elif hasattr(args, "sessiondir"):
                 export_dir = "%s/rendered_%s" % (args.sessiondir, self.__class__.__name__)
             else:
                 export_dir = "export"
@@ -894,6 +896,7 @@ class Visualizer:
         parser.add_argument('-play-message-log', dest='play_message_log')
         parser.add_argument('-export', dest='export', action='store_true')
         parser.add_argument('-export-fps', dest='export_fps', default=30.0, type=float)
+        parser.add_argument('-export-dir')
         parser.add_argument("-waveform", dest="waveform", action='store_true')
         parser.add_argument("-waveform-gain", dest="waveform_gain", default=1, type=float)
         parser.add_argument("-camera-script", dest="camera_script", type=str)

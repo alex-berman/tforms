@@ -247,7 +247,7 @@ class Orchestra:
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
         parser.add_argument("--title", type=str, default="")
         parser.add_argument("--pretend-audio", dest="pretend_audio_filename")
-        parser.add_argument("--capture-audio", action="store_true")
+        parser.add_argument("--capture-audio")
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -362,7 +362,7 @@ class Orchestra:
             self.set_time_cursor(self.options.start_time)
 
     def _start_capture_audio(self):
-        self._audio_capture_filename = "capture.wav"
+        self._audio_capture_filename = self.options.capture_audio
         if os.path.exists(self._audio_capture_filename):
             os.remove(self._audio_capture_filename)
         self._audio_capture_process = subprocess.Popen(

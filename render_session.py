@@ -2,6 +2,7 @@
 
 import subprocess
 from argparse import ArgumentParser
+import os
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
@@ -11,25 +12,59 @@ parser.add_argument("--visualizer",
                     default="python visual-experiments/waves.py -width 640 -height 360")
 parser.add_argument("-o", "--output", default="export.mp4")
 
-def call(command_line):
-    print command_line
-    subprocess.call(command_line, shell=True)
+class SessionRenderer:
+    def __init__(self,
+                 sessiondir,
+                 session_args,
+                 visualizer,
+                 output,
+                 temp_dir="."):
+        self.sessiondir = sessiondir
+        self.session_args = session_args
+        self.visualizer = visualizer
+        self.output = output
+        self.temp_dir = temp_dir
+        self.audio_capture_path = "%s/capture.wav" % self.temp_dir
 
-def render_session(sessiondir, session_args, visualizer, output):
-    print "___ Rendering audio ___"
+    def render(self):
+        self._ensure_temp_dir_exists()
+        self._render_audio()
+        self._render_video()
+        self._create_video_file()
 
-    call('./play.py %s --visualizer="%s -sync -capture-message-log=messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio %s' % (
-            sessiondir,
-            visualizer,
-            session_args))
+    def _ensure_temp_dir_exists(self):
+        if not os.path.exists(self.temp_dir):
+            os.mkdir(self.temp_dir)
 
-    print "___ Rendering video ___"
-    call('%s -play-message-log=messages.log -standalone -export' % visualizer)
+    def _render_audio(self):
+        print "___ Rendering audio ___"
+        self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s %s' % (
+                self.sessiondir,
+                self.visualizer,
+                self.temp_dir,
+                self.audio_capture_path,
+                self.session_args))
 
-    print "___ Creating video file ___"
-    call('avconv -y -f image2 -r 30 -i export/%%07d.png -map 0 -i capture.wav -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % output)
+    def _render_video(self):
+        print "___ Rendering video ___"
+        self._call('%s -play-message-log=%s/messages.log -standalone -export -export-dir %s/export' % (
+                self.visualizer,
+                self.temp_dir,
+                self.temp_dir))
+
+    def _create_video_file(self):
+        print "___ Creating video file ___"
+        self._call('avconv -y -f image2 -r 30 -i %s/export/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
+                self.temp_dir,
+                self.audio_capture_path,
+                self.output))
+
+    def _call(self, command_line):
+        print command_line
+        subprocess.call(command_line, shell=True)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    render_session(args.sessiondir, args.args, args.visualizer, args.output)
+    SessionRenderer(args.sessiondir, args.args, args.visualizer, args.output).render()
+
