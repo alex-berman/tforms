@@ -72,7 +72,6 @@ class Server(OscReceiver):
         parser.add_argument("--sc-mode", type=str, default="default_stereo")
         parser.add_argument("--predecode", action="store_true", dest="predecode", default=True)
         parser.add_argument("--force-predecode", action="store_true")
-        parser.add_argument("--capture-audio", action="store_true")
 
     def __init__(self, options):
         self.options = options
@@ -248,6 +247,7 @@ class Orchestra:
         parser.add_argument("-f", "--file", dest="selected_files", type=int, nargs="+")
         parser.add_argument("--title", type=str, default="")
         parser.add_argument("--pretend-audio", dest="pretend_audio_filename")
+        parser.add_argument("--capture-audio", action="store_true")
 
     _extension_re = re.compile('\.(\w+)$')
 
