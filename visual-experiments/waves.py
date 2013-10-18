@@ -260,7 +260,6 @@ class Waves(visualizer.Visualizer):
             self._gathered_segments_layer.refresh()
 
     def render(self):
-        self.update()
         self._set_gathered_color()
         self._gathered_segments_layer.draw()
         self.draw_playing_segments()

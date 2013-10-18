@@ -91,7 +91,6 @@ class Geography(visualizer.Visualizer):
         self.playing_segments[segment.id] = segment
 
     def render(self):
-        self.update()
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glEnable(GL_BLEND)

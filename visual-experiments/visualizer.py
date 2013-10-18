@@ -578,27 +578,29 @@ class Visualizer:
         self.now = self.current_time()
         is_waiting_for_synth = (self.sync and not self._synth() and not self._synced)
         if self._frame_count == 0 and not is_waiting_for_synth:
-            self._log_timestamp()
             self.stopwatch.start()
             if self.sync:
+                self._log_timestamp()
                 self._synced = True
         else:
             if self._frame_count == 0:
                 self.time_increment = 0
             else:
                 self.time_increment = self.now - self.previous_frame_time
-            glTranslatef(self.margin, self.margin, 0)
-            if self.args.border:
-                self.draw_border()
             self.handle_incoming_messages()
-            if self._3d_enabled and not self._accum_enabled:
-                self.set_perspective(
-                    0, 0,
-                    -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
-            self.render()
-            if self.show_fps and self._frame_count > 0:
-                self.update_fps_history()
-                self.show_fps_if_timely()
+            self.update()
+            if not self.capture_message_log:
+                glTranslatef(self.margin, self.margin, 0)
+                if self.args.border:
+                    self.draw_border()
+                if self._3d_enabled and not self._accum_enabled:
+                    self.set_perspective(
+                        0, 0,
+                        -self._camera_position.x, -self._camera_position.y, self._camera_position.z)
+                self.render()
+                if self.show_fps and self._frame_count > 0:
+                    self.update_fps_history()
+                    self.show_fps_if_timely()
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
@@ -872,6 +874,9 @@ class Visualizer:
 
     def active(self):
         return False
+
+    def update(self):
+        pass
 
     @staticmethod
     def add_parser_arguments(parser):
