@@ -15,6 +15,7 @@ class Exporter:
 
     def export_frame(self):
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
+        glReadBuffer(GL_FRONT)
         buffer = glReadPixels(self.x, self.y, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE)
         image = Image.fromstring(mode="RGB", size=(self.width, self.height), data=buffer)
         image = image.transpose(Image.FLIP_TOP_BOTTOM)
