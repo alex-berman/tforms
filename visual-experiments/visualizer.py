@@ -619,7 +619,7 @@ class Visualizer:
             self._frame_count += 1
 
     def _log_timestamp(self):
-        print "video export started at %.3f" % time.time()
+        print "video message capture started at %.3f" % time.time()
 
     def finished(self):
         return False
