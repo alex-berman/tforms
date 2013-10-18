@@ -17,11 +17,14 @@ playlist = read_playlist(args.playlist)
 for item in playlist:
     print "\n\n___ RENDERING %s ___\n" % item["sessiondir"]
     output = "rendered_sessions/%s.mp4" % os.path.basename(item["sessiondir"])
-    temp_dir = "rendered_sessions/%s" % os.path.basename(item["sessiondir"])
-    args_string = " ".join([pipes.quote(arg) for arg in item["args"]])
-    SessionRenderer(
-        item["sessiondir"],
-        args_string,
-        args.visualizer,
-        output,
-        temp_dir).render()
+    if os.path.exists(output):
+        print "%s already exists - skipping rendering" % output
+    else:
+        temp_dir = "rendered_sessions/%s" % os.path.basename(item["sessiondir"])
+        args_string = " ".join([pipes.quote(arg) for arg in item["args"]])
+        SessionRenderer(
+            item["sessiondir"],
+            args_string,
+            args.visualizer,
+            output,
+            temp_dir).render()
