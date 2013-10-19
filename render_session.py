@@ -38,7 +38,7 @@ class SessionRenderer:
 
     def _render_audio(self):
         print "___ Rendering audio ___"
-        self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s %s' % (
+        self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
                 self.sessiondir,
                 self.visualizer,
                 self.temp_dir,
