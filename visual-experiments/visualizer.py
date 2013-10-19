@@ -604,13 +604,13 @@ class Visualizer:
                     self.update_fps_history()
                     self.show_fps_if_timely()
 
+        if self.export:
+            self.exporter.export_frame()
         glutSwapBuffers()
         self.previous_frame_time = self.now
         finished = self.finished()
         if (self.export or self.args.exit_when_finished) and finished:
             self.exiting = True
-        if self.export:
-            self.exporter.export_frame()
 
         if not self._standalone:
             if finished and not self._notified_finished:
