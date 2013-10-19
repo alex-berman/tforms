@@ -133,10 +133,14 @@ void log_timestamp() {
 }
 
 void warn_about_overrun(jack_thread_info_t *info) {
-  fprintf(stderr, "WARNING: overrun at %.3fs when writing to ring buffer\n",
-  	  (float) info->total_captured / info->sample_rate);
-  fprintf(stderr, "Perhaps try a bigger buffer than -B %"
-  	  PRIu32 ".\n", info->rb_size);
+  static int warned = 0;
+  if (!warned) {
+    fprintf(stderr, "WARNING: overrun at %.3fs when writing to ring buffer\n",
+	    (float) info->total_captured / info->sample_rate);
+    fprintf(stderr, "Perhaps try a bigger buffer than -B %"
+	    PRIu32 ".\n", info->rb_size);
+    warned = 1;
+  }
 }
 
 static int
@@ -217,6 +221,8 @@ setup_disk_thread (jack_thread_info_t *info)
 		jack_client_close (info->client);
 		exit (1);
 	}
+
+	sf_command (info->sf, SFC_SET_CLIPPING, NULL, SF_TRUE);
 
 	info->duration *= sf_info.samplerate;
 	info->can_capture = 0;
