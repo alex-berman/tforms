@@ -16,7 +16,8 @@ args = parser.parse_args()
 playlist = read_playlist(args.playlist)
 for item in playlist:
     print "\n\n___ RENDERING %s ___\n" % item["sessiondir"]
-    output = "rendered_sessions/%s.mp4" % os.path.basename(item["sessiondir"])
+    # output = "rendered_sessions/%s.mp4" % os.path.basename(item["sessiondir"])
+    output = "rendered_sessions/%s.avi" % os.path.basename(item["sessiondir"])
     temp_dir = "rendered_sessions/%s" % os.path.basename(item["sessiondir"])
     args_string = " ".join([pipes.quote(arg) for arg in item["args"]])
     SessionRenderer(

@@ -63,10 +63,12 @@ class SessionRenderer:
         if os.path.exists(self.output):
             print "(skipped as file exists)"
         else:
-            self._call('avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
-                    self.video_frames_dir,
-                    self.audio_capture_path,
-                    self.output))
+            self._call(
+                # 'avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' \
+                'avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec mpeg4 -acodec libmp3lame -f avi -sn -g 300 -ac 2 -vtag DX50 -s 720x576 -trellis 1 -mbd 2 -b 6000000 -ab 224000 %s' \
+                    % (self.video_frames_dir,
+                       self.audio_capture_path,
+                       self.output))
 
     def _call(self, command_line):
         print command_line
