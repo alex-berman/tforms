@@ -60,6 +60,36 @@ DB_EXTENSION = {
         "latitude": 53.5833,
         "city": u"London"
         },
+    "176.252.143.": {
+        "longitude": -2.4333,
+        "latitude": 53.5833,
+        "city": u"London"
+        },
+    "109.144.187.": {
+        "longitude": -2.4333,
+        "latitude": 53.5833,
+        "city": u"London"
+        },
+    "89.149.194.": {
+        "longitude": 9,
+        "latitude": 51,
+        "city": u"Berlin"
+        },
+    "8.19.35.": {
+        "longitude": -97,
+        "latitude": 38,
+        "city": u"Washington"
+        },
+    "37.143.233.": {
+        "longitude": 23.7333,
+        "latitude": 43.7833,
+        "city": u"Kozloduj"
+        },
+    "94.108.118.": {
+        "longitude": 4.8333,
+        "latitude": 51.1833,
+        "city": u"Herentals"
+        },
     }
 
 class IpLocator:
@@ -79,7 +109,8 @@ class IpLocator:
                     return self._location_tuple_from_record(extension_record)
                 else:
                     print "WARNING: unknown city for IP %s (GeoIP reports coordinates %r, %r)" % (
-                        addr, record['longitude'], record['latitude']) 
+                        addr, record['longitude'], record['latitude'])
+                    print "http://www.ip-tracker.org/locator/ip-lookup.php?ip=%s" % addr
                     return self._location_tuple_from_record(record)
         else:
             print "WARNING: unknown location IP %s" % addr
