@@ -10,7 +10,7 @@ parser = ArgumentParser()
 parser.add_argument("playlist")
 parser.add_argument("--visualizer",
                     # default="python visual-experiments/waves.py -width 720 -height 576")
-                    default="python visual-experiments/waves_and_heat_map.py -width 640 -height 360 -left 0 -top 0 --map-margin=0.7,0,0,0 --waves-margin=0,0,0.3,0 --text-renderer=ftgl --font=fonts/simplex_.ttf --peer-info")
+                    default="python visual-experiments/waves_and_heat_map.py -width 720 -height 576 -left 0 -top 0 --map-margin=0.7,0,0,0 --waves-margin=0,0,0.3,0 --text-renderer=ftgl --font=fonts/simplex_.ttf --peer-info")
 args = parser.parse_args()
 
 playlist = read_playlist(args.playlist)

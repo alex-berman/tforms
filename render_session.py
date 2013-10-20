@@ -8,8 +8,7 @@ parser = ArgumentParser()
 parser.add_argument("sessiondir")
 parser.add_argument("--args")
 parser.add_argument("--visualizer",
-                    # default="python visual-experiments/waves.py -width 720 -height 576")
-                    default="python visual-experiments/waves.py -width 640 -height 360")
+                    default="python visual-experiments/waves.py -width 720 -height 576")
 parser.add_argument("-o", "--output", default="export.mp4")
 
 class SessionRenderer:
@@ -64,7 +63,7 @@ class SessionRenderer:
         if os.path.exists(self.output):
             print "(skipped as file exists)"
         else:
-            self._call('avconv -y -f image2 -r 30 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
+            self._call('avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
                     self.video_frames_dir,
                     self.audio_capture_path,
                     self.output))
