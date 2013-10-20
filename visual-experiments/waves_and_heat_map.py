@@ -51,6 +51,7 @@ class WavesAndHeatMap(waves.Waves, heat_map.HeatMap):
         parser.add_argument("--peer-info", action="store_true")
         parser.add_argument("--disable-title", action="store_true")
         parser.add_argument("--enable-title", action="store_true")
+        parser.add_argument("--title-size", type=float, default=30.0)
         parser.add_argument("--test-title", type=str)
         parser.add_argument("--margin-top", type=float, default=0.0)
         parser.add_argument("--margin-bottom", type=float, default=0.0)

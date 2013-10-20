@@ -90,6 +90,46 @@ DB_EXTENSION = {
         "latitude": 51.1833,
         "city": u"Herentals"
         },
+    "106.51.145.": {
+        "longitude": 77.5833,
+        "latitude": 12.9833,
+        "city": u"Bangalore"
+        },
+    "89.47.55.": {
+        "longitude": 26.1,
+        "latitude": 44.4333,
+        "city": u"Bucharest"
+        },
+    "85.187.153.": {
+        "longitude": 23.3167,
+        "latitude": 42.6833,
+        "city": u"Sofia"
+        },
+    "79.176.163.": {
+        "longitude": 34.75,
+        "latitude": 31.5,
+        "city": u"Kiryat Gat"
+        },
+    "197.153.85.": {
+        "longitude": -5.5500,
+        "latitude": 33.9000,
+        "city": u"Meknes"
+        },
+    "91.72.182.": {
+        "longitude": 55.3047,
+        "latitude": 25.2582,
+        "city": u"Dubai"
+        },
+    "176.252.179.": {
+        "longitude": -1.5833,
+        "latitude": 53.8,
+        "city": u"Leeds"
+        },
+    # "": {
+    #     "longitude":
+    #     "latitude":
+    #     "city": u""
+    #     },
     }
 
 class IpLocator:

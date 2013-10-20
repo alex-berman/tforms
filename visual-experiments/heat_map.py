@@ -74,6 +74,7 @@ class HeatMap(visualizer.Visualizer):
     @staticmethod
     def add_parser_arguments(parser):
         visualizer.Visualizer.add_parser_arguments(parser)
+        parser.add_argument("--title-size", type=float, default=30.0)
         parser.add_argument("--disable-title", action="store_true")
         parser.add_argument("--test-title", type=str)
         parser.add_argument("--hscope", type=str, default="0:1")
@@ -174,7 +175,7 @@ class HeatMap(visualizer.Visualizer):
             title = self.args.test_title
         else:
             title = self.torrent_title
-        size = 30.0 * self._size_factor
+        size = self.args.title_size * self._size_factor
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):

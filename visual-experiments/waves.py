@@ -208,6 +208,7 @@ class Waves(visualizer.Visualizer):
         visualizer.Visualizer.add_parser_arguments(parser)
         parser.add_argument("--peer-info", action="store_true")
         parser.add_argument("--enable-title", action="store_true")
+        parser.add_argument("--title-size", type=float, default=30.0)
         parser.add_argument("--test-title", type=str)
         visualizer.Visualizer.add_margin_argument(parser, "--waves-margin")
 
@@ -275,7 +276,7 @@ class Waves(visualizer.Visualizer):
             title = self.args.test_title
         else:
             title = self.torrent_title
-        size = 30.0 / 1024 * self.width
+        size = self.args.title_size / 1024 * self.width
         self._title_renderer = TitleRenderer(title, size, self)
 
     def _render_title(self):
