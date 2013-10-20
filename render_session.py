@@ -38,26 +38,36 @@ class SessionRenderer:
 
     def _render_audio(self):
         print "___ Rendering audio ___"
-        self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
-                self.sessiondir,
-                self.visualizer,
-                self.temp_dir,
-                self.audio_capture_path,
-                self.session_args))
+        if os.path.exists(self.audio_capture_path):
+            print "(skipped as file exists)"
+        else:
+            self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
+                    self.sessiondir,
+                    self.visualizer,
+                    self.temp_dir,
+                    self.audio_capture_path,
+                    self.session_args))
 
     def _render_video(self):
         print "___ Rendering video ___"
-        self._call('%s -play-message-log=%s/messages.log -standalone -export -export-dir %s/export' % (
-                self.visualizer,
-                self.temp_dir,
-                self.temp_dir))
+        self.video_frames_dir = "%s/export" % self.temp_dir
+        if os.path.exists(self.video_frames_dir):
+            print "(skipped as directory exists)"
+        else:
+            self._call('%s -play-message-log=%s/messages.log -standalone -export -export-dir %s' % (
+                    self.visualizer,
+                    self.temp_dir,
+                    self.video_frames_dir))
 
     def _create_video_file(self):
         print "___ Creating video file ___"
-        self._call('avconv -y -f image2 -r 30 -i %s/export/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
-                self.temp_dir,
-                self.audio_capture_path,
-                self.output))
+        if os.path.exists(self.output):
+            print "(skipped as file exists)"
+        else:
+            self._call('avconv -y -f image2 -r 30 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' % (
+                    self.video_frames_dir,
+                    self.audio_capture_path,
+                    self.output))
 
     def _call(self, command_line):
         print command_line
