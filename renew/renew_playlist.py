@@ -1,6 +1,6 @@
 playlist = [
     {"session": "sessions/*gulliver",
-     "args": ["-z", "0.5",
+     "args": ["-z", "0.3",
               "--title=Jonathan Swift: Gulliver's Travels (chapters 1-6)"]},
 
     {"session": "sessions/*gulliver-ch7-10",
