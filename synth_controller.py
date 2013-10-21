@@ -4,6 +4,7 @@ from osc_receiver import OscReceiver
 import time
 import subprocess
 import re
+import logging
 
 class SynthController:
     DEFAULT_PORT = 57120
@@ -13,7 +14,10 @@ class SynthController:
         subprocess.call("killall --quiet sclang", shell=True)
         subprocess.call("killall --quiet scsynth", shell=True)
 
-    def __init__(self):
+    def __init__(self, logger=None):
+        if logger is None:
+            logger = logging.getLogger("SynthController")
+        self.logger = logger
         self._sc_process = None
         self._sc_listener = None
         self._listening_to_engine = False
@@ -63,8 +67,6 @@ class SynthController:
             line = self._sc_process.stdout.readline()
             if line:
                 print "SC: %s" % line,
-        self._sc_process.stdin.close()
-        self._sc_process.stdout.close()
 
     def connect(self, port):
         self._lock = threading.Lock()
@@ -87,6 +89,14 @@ class SynthController:
         if self._listening_to_engine:
             self._listening_to_engine = False
             self._send("/shutdown")
+            self.logger.info("waiting for SC output thread to finish")
+            self._sc_output_thread.join()
+            self.logger.info("closing SC pipe")
+            self._sc_process.stdin.close()
+            self._sc_process.stdout.close()
+            self.logger.info("waiting for SC process to exit")
+            self._sc_process.wait()
+            self.logger.info("SC process exited")
         self.target = None
 
     def load_sound(self, sound_id, filename):

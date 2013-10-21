@@ -338,7 +338,7 @@ class Orchestra:
             self.synth = None
         else:
             from synth_controller import SynthController
-            self.synth = SynthController()
+            self.synth = SynthController(logger)
             self.synth.launch_engine(self.server.options.sc_mode)
             self.synth.connect(self.synth.lang_port)
             self.synth.subscribe_to_info()

@@ -851,7 +851,7 @@ class Visualizer:
     def _synth(self):
         if self._synth_instance is None and self._synth_port:
             from synth_controller import SynthController
-            self._synth_instance = SynthController()
+            self._synth_instance = SynthController(self.logger)
             self._synth_instance.connect(self._synth_port)
         return self._synth_instance
 
