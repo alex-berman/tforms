@@ -4,25 +4,47 @@ import subprocess
 from argparse import ArgumentParser
 import os
 
+profiles = {
+    "high_quality": {
+        "format": "mp4",
+        "width": 1024,
+        "height": 768,
+        "frame_rate": 50,
+        "video_encoding_options": "-vcodec libx264 -crf 0",
+        "audio_encoding_options": "-acodec libvo_aacenc -ab 320k"
+        },
+    "divx": {
+        "format": "avi",
+        "width": 720,
+        "height": 576,
+        "frame_rate": 25,
+        "video_encoding_options": "-vcodec mpeg4 -g 300 -vtag DX50 -trellis 1 -mbd 2 -b 6000000",
+        "audio_encoding_options": "-acodec libmp3lame -ab 224000"
+        },
+    }
+
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
+parser.add_argument("profile", choices=profiles.keys())
 parser.add_argument("--args")
 parser.add_argument("--visualizer",
-                    default="python visual-experiments/waves.py -width 720 -height 576")
-parser.add_argument("-o", "--output", default="export.mp4")
+                    default="python visual-experiments/waves.py")
+parser.add_argument("-o", "--output", default="export")
 
 class SessionRenderer:
     def __init__(self,
                  sessiondir,
                  session_args,
                  visualizer,
-                 output,
+                 output_without_extension,
+                 profile_name,
                  temp_dir="."):
         self.sessiondir = sessiondir
         self.session_args = session_args
         self.visualizer = visualizer
-        self.output = output
         self.temp_dir = temp_dir
+        self.profile = profiles[profile_name]
+        self.output = "%s.%s" % (output_without_extension, self.profile["format"])
         self.audio_capture_path = "%s/capture.wav" % self.temp_dir
 
     def render(self):
@@ -40,9 +62,11 @@ class SessionRenderer:
         if os.path.exists(self.audio_capture_path):
             print "(skipped as file exists)"
         else:
-            self._call('./play.py %s --visualizer="%s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
+            self._call('./play.py %s --visualizer="%s -width %s -height %s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
                     self.sessiondir,
                     self.visualizer,
+                    self.profile["width"],
+                    self.profile["height"],
                     self.temp_dir,
                     self.audio_capture_path,
                     self.session_args))
@@ -53,8 +77,11 @@ class SessionRenderer:
         if os.path.exists(self.video_frames_dir):
             print "(skipped as directory exists)"
         else:
-            self._call('%s -play-message-log=%s/messages.log -standalone -export -export-dir %s' % (
+            self._call('%s -width %s -height %s -export-fps %s -play-message-log=%s/messages.log -standalone -export -export-dir %s' % (
                     self.visualizer,
+                    self.profile["width"],
+                    self.profile["height"],
+                    self.profile["frame_rate"],
                     self.temp_dir,
                     self.video_frames_dir))
 
@@ -64,10 +91,12 @@ class SessionRenderer:
             print "(skipped as file exists)"
         else:
             self._call(
-                # 'avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec libx264 -crf 0 %s -acodec libvo_aacenc -ab 320k' \
-                'avconv -y -f image2 -r 25 -i %s/%%07d.png -map 0 -i %s -vcodec mpeg4 -acodec libmp3lame -f avi -sn -g 300 -ac 2 -vtag DX50 -s 720x576 -trellis 1 -mbd 2 -b 6000000 -ab 224000 %s' \
-                    % (self.video_frames_dir,
+                'avconv -y -f image2 -r %s -i %s/%%07d.png -map 0 -i %s %s %s %s' \
+                    % (self.profile["frame_rate"],
+                       self.video_frames_dir,
                        self.audio_capture_path,
+                       self.profile["video_encoding_options"],
+                       self.profile["audio_encoding_options"],
                        self.output))
 
     def _call(self, command_line):
@@ -77,5 +106,4 @@ class SessionRenderer:
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    SessionRenderer(args.sessiondir, args.args, args.visualizer, args.output).render()
-
+    SessionRenderer(args.sessiondir, args.args, args.visualizer, args.output, args.profile).render()
