@@ -206,6 +206,7 @@ class Visualizer:
         self.play_message_log = args.play_message_log
         self.waveform_gain = args.waveform_gain
         self._standalone = args.standalone
+        self._target_aspect_ratio = self._get_aspect_ratio_from_args()
 
         self.logger = logging.getLogger("visualizer")
         self.reset()
@@ -267,6 +268,10 @@ class Visualizer:
             self._message_log_writer = MessageLogWriter(self.capture_message_log)
 
         self._initialized = True
+
+    def _get_aspect_ratio_from_args(self):
+        w, h = map(float, self.args.aspect.split(":"))
+        return w / h
 
     def _get_orchestra_port(self):
         if self.args.host == "localhost":
@@ -864,7 +869,7 @@ class Visualizer:
     def text_renderer(self, text, size, font=None):
         if font is None:
             font = self.args.font
-        return self._text_renderer_class(text, size, font)
+        return self._text_renderer_class(self, text, size, font, aspect_ratio=self._target_aspect_ratio)
 
     def download_completed(self):
         if self.torrent_download_completion_time:
@@ -908,6 +913,7 @@ class Visualizer:
         parser.add_argument("-exit-when-finished", action="store_true")
         parser.add_argument("--text-renderer", choices=TEXT_RENDERERS.keys(), default="glut")
         parser.add_argument("--font", type=str)
+        parser.add_argument("-aspect", type=str, default="1:1", help="e.g. 16:9")
 
     @staticmethod
     def add_margin_argument(parser, name):

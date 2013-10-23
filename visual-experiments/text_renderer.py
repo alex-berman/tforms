@@ -6,18 +6,20 @@ except ImportError:
     pass
 
 class TextRenderer:
-    def __init__(self, text, size, font=None, spacing=None):
+    def __init__(self, window, text, size, font=None, spacing=None, aspect_ratio=1):
+        self.window = window
         self.text = text
         self.size = size
         self.font = font
         self.spacing = spacing
         self.scale = 1
+        self.aspect_ratio = aspect_ratio
 
     def render(self, x, y, v_align="left", h_align="top"):
         width, height = self.get_size()
         glPushMatrix()
         glTranslatef(x, y, 0)
-        glScalef(self.scale, self.scale, self.scale)
+        glScalef(self.scale / self.aspect_ratio, self.scale, self.scale)
         if h_align == "right":
             glTranslatef(-width, 0, 0)
         if v_align == "top":
@@ -49,8 +51,8 @@ class GlutTextRenderer(TextRenderer):
     TOP = 119.05 # http://www.opengl.org/resources/libraries/glut/spec3/node78.html
     BOTTOM = 33.33
 
-    def __init__(self, *args):
-        TextRenderer.__init__(self, *args)
+    def __init__(self, *args, **kwargs):
+        TextRenderer.__init__(self, *args, **kwargs)
         if not self.font:
             self.font = GLUT_STROKE_ROMAN
         self.scale = self.size / (self.TOP + self.BOTTOM)
@@ -90,8 +92,8 @@ ftgl_fonts = {}
 class FtglTextRenderer(TextRenderer):
     RESOLUTION = 72
 
-    def __init__(self, *args):
-        TextRenderer.__init__(self, *args)
+    def __init__(self, *args, **kwargs):
+        TextRenderer.__init__(self, *args, **kwargs)
         if not self.font:
             raise Exception("font required")
         self._font_object = self._prepare_font()
