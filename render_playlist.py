@@ -11,6 +11,7 @@ parser.add_argument("playlist")
 parser.add_argument("profile", choices=profiles.keys())
 parser.add_argument("--visualizer",
                     default="python visual-experiments/waves.py")
+parser.add_argument("-f", "--force", action="store_true")
 args = parser.parse_args()
 
 playlist = read_playlist(args.playlist)
@@ -25,4 +26,5 @@ for item in playlist:
         args.visualizer,
         output,
         args.profile,
+        args.force,
         temp_dir).render()

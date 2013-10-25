@@ -30,6 +30,7 @@ parser.add_argument("--args")
 parser.add_argument("--visualizer",
                     default="python visual-experiments/waves.py")
 parser.add_argument("-o", "--output", default="export")
+parser.add_argument("-f", "--force", action="store_true")
 
 class SessionRenderer:
     def __init__(self,
@@ -38,12 +39,14 @@ class SessionRenderer:
                  visualizer,
                  output_without_extension,
                  profile_name,
+                 force,
                  temp_dir="."):
         self.sessiondir = sessiondir
         self.session_args = session_args
         self.visualizer = visualizer
         self.temp_dir = temp_dir
         self.profile = profiles[profile_name]
+        self.force = force
         self.output = "%s.%s" % (output_without_extension, self.profile["format"])
         self.audio_capture_path = "%s/capture.wav" % self.temp_dir
         self.video_frames_dir = "%s/export" % self.temp_dir
@@ -73,7 +76,7 @@ class SessionRenderer:
             print "(skipped as file exists)"
 
     def _should_render_audio(self):
-        return not os.path.exists(self.audio_capture_path)
+        return self.force or not os.path.exists(self.audio_capture_path)
 
     def _render_video(self):
         print "___ Rendering video ___"
@@ -89,7 +92,7 @@ class SessionRenderer:
             print "(skipped as directory exists)"
 
     def _should_render_video(self):
-        return not os.path.exists(self.video_frames_dir)
+        return self.force or not os.path.exists(self.video_frames_dir)
 
     def _create_video_file(self):
         print "___ Creating video file ___"
@@ -106,7 +109,7 @@ class SessionRenderer:
             print "(skipped as file exists)"
 
     def _should_create_video_file(self):
-        return not os.path.exists(self.output)
+        return self.force or not os.path.exists(self.output)
 
     def _call(self, command_line):
         print command_line
@@ -115,4 +118,10 @@ class SessionRenderer:
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    SessionRenderer(args.sessiondir, args.args, args.visualizer, args.output, args.profile).render()
+    SessionRenderer(
+        args.sessiondir,
+        args.args,
+        args.visualizer,
+        args.output,
+        args.profile,
+        args.force).render()
