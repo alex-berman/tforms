@@ -913,7 +913,8 @@ class Visualizer:
         parser.add_argument("-exit-when-finished", action="store_true")
         parser.add_argument("--text-renderer", choices=TEXT_RENDERERS.keys(), default="glut")
         parser.add_argument("--font", type=str)
-        parser.add_argument("-aspect", type=str, default="1:1", help="e.g. 16:9")
+        parser.add_argument("-aspect", type=str, default="1:1",
+                            help="Target aspect ratio (e.g. 16:9)")
 
     @staticmethod
     def add_margin_argument(parser, name):
