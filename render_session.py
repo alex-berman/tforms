@@ -49,6 +49,7 @@ class SessionRenderer:
         self.force = force
         self.output = "%s.%s" % (output_without_extension, self.profile["format"])
         self.audio_capture_path = "%s/capture.wav" % self.temp_dir
+        self.message_log_path = "%s/messages.log" % self.temp_dir
         self.video_frames_dir = "%s/export" % self.temp_dir
 
     def render(self):
@@ -64,16 +65,16 @@ class SessionRenderer:
     def _render_audio(self):
         print "___ Rendering audio ___"
         if self._should_render_audio():
-            self._call('./play.py %s --visualizer="%s -width %s -height %s -sync -capture-message-log=%s/messages.log" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
+            self._call('./play.py %s --visualizer="%s -width %s -height %s -sync -capture-message-log=%s" --sc-mode=rear_to_front_stereo_reverb --quit-at-end --capture-audio=%s --locate-peers %s' % (
                     self.sessiondir,
                     self.visualizer,
                     self.profile["width"],
                     self.profile["height"],
-                    self.temp_dir,
+                    self.message_log_path,
                     self.audio_capture_path,
                     self.session_args))
         else:
-            print "(skipped as file exists)"
+            print "(up-to-date)"
 
     def _should_render_audio(self):
         return self.force or not os.path.exists(self.audio_capture_path)
@@ -81,18 +82,21 @@ class SessionRenderer:
     def _render_video(self):
         print "___ Rendering video ___"
         if self._should_render_video():
-            self._call('%s -width %s -height %s -export-fps %s -play-message-log=%s/messages.log -standalone -export -export-dir %s' % (
+            self._call('%s -width %s -height %s -export-fps %s -play-message-log=%s -standalone -export -export-dir %s' % (
                     self.visualizer,
                     self.profile["width"],
                     self.profile["height"],
                     self.profile["frame_rate"],
-                    self.temp_dir,
+                    self.message_log_path,
                     self.video_frames_dir))
         else:
-            print "(skipped as directory exists)"
+            print "(up-to-date)"
 
     def _should_render_video(self):
-        return self.force or not os.path.exists(self.video_frames_dir)
+        return self.force or \
+            ((not os.path.exists(self.video_frames_dir)) or
+             self._older(self.video_frames_dir, self.audio_capture_path) or
+             self._older(self.video_frames_dir, self.message_log_path))
 
     def _create_video_file(self):
         print "___ Creating video file ___"
@@ -106,10 +110,16 @@ class SessionRenderer:
                        self.profile["audio_encoding_options"],
                        self.output))
         else:
-            print "(skipped as file exists)"
+            print "(up-to-date)"
 
     def _should_create_video_file(self):
-        return self.force or not os.path.exists(self.output)
+        return self.force or \
+            ((not os.path.exists(self.output)) or
+             self._older(self.output, self.audio_capture_path) or
+             self._older(self.output, self.video_frames_dir))
+
+    def _older(self, path1, path2):
+        return os.path.getmtime(path1) < os.path.getmtime(path2)
 
     def _call(self, command_line):
         print command_line
