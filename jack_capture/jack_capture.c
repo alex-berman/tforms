@@ -129,6 +129,7 @@ float walltime_seconds() {
 
 void log_timestamp() {
   printf("audio capture started at %.3f\n", walltime_seconds());
+  fflush(stdout);
   logged_timestamp = 1;
 }
 

@@ -266,6 +266,7 @@ class Visualizer:
             self._message_log_reader = MessageLogReader(self.play_message_log)
         if self.capture_message_log:
             self._message_log_writer = MessageLogWriter(self.capture_message_log)
+            self._audio_capture_start_time = None
 
         self._initialized = True
 
@@ -471,6 +472,9 @@ class Visualizer:
         self._synth_port = port
         self.synth_address_received()
 
+    def handle_audio_captured_started(self, start_time):
+        self._audio_capture_start_time = float(start_time)
+
     def synth_address_received(self):
         pass
 
@@ -494,6 +498,8 @@ class Visualizer:
                                "handle_shutdown")
         self.server.add_method("/synth_address", "i", self._handle_osc_message,
                                "handle_synth_address")
+        self.server.add_method("/audio_captured_started", "s", self._handle_osc_message,
+                               "handle_audio_captured_started")
         self.server.start()
         self.waveform_server = None
 
@@ -509,9 +515,16 @@ class Visualizer:
 
     def _handle_osc_message(self, path, args, types, src, handler_name):
         if self.capture_message_log:
-            self._message_log_writer.write(
-                self.stopwatch.get_elapsed_time(), handler_name, args)
+            received_time = time.time()
         self._call_handler(handler_name, args)
+        if self.capture_message_log:
+            if self._audio_capture_start_time is None:
+                capture_time = 0.0
+                print "WARNING: received OSC before audio capture started: %s" % path
+            else:
+                capture_time = received_time - self._audio_capture_start_time
+            self._message_log_writer.write(
+                capture_time, handler_name, args)
 
     def _call_handler(self, handler_name, args):
         handler = getattr(self, handler_name)
@@ -584,10 +597,13 @@ class Visualizer:
 
         self.now = self.current_time()
         is_waiting_for_synth = (self.sync and not self._synth() and not self._synced)
-        if self._frame_count == 0 and not is_waiting_for_synth:
+        is_waiting_for_audio_capture_to_start = (
+            self.capture_message_log and self._audio_capture_start_time is None)
+        if self._frame_count == 0 and \
+                not is_waiting_for_synth and \
+                not is_waiting_for_audio_capture_to_start:
             self.stopwatch.start()
             if self.sync:
-                self._log_timestamp()
                 self._synced = True
         else:
             if self._frame_count == 0:
@@ -624,9 +640,6 @@ class Visualizer:
 
         if not is_waiting_for_synth:
             self._frame_count += 1
-
-    def _log_timestamp(self):
-        print "video message capture started at %.3f" % time.time()
 
     def finished(self):
         return False

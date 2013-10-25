@@ -369,12 +369,20 @@ class Orchestra:
             ["./jack_capture/jack_capture", "-f", self._audio_capture_filename, "-d", "-1",
              "-B", "65536",
              "SuperCollider:out_1", "SuperCollider:out_2"],
-            shell=False)
+            shell=False,
+            stdout=subprocess.PIPE)
         self._wait_until_audio_capture_started()
     
     def _wait_until_audio_capture_started(self):
-        while not os.path.exists(self._audio_capture_filename):
-            time.sleep(0.1)
+        print "waiting for audio capture to start"
+        while True:
+            line = self._audio_capture_process.stdout.readline().rstrip("\r\n")
+            m = re.match('^audio capture started at (.*)$', line)
+            if m:
+                audio_capture_start_time = float(m.group(1))
+                self._tell_visualizers("/audio_captured_started", str(audio_capture_start_time))
+                print "audio capture started"
+                return
 
     @classmethod
     def _estimated_playback_duration(cls, score, options):
