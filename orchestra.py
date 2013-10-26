@@ -248,6 +248,7 @@ class Orchestra:
         parser.add_argument("--title", type=str, default="")
         parser.add_argument("--pretend-audio", dest="pretend_audio_filename")
         parser.add_argument("--capture-audio")
+        parser.add_argument("--leading-pause", type=float, default=0)
 
     _extension_re = re.compile('\.(\w+)$')
 
@@ -263,6 +264,7 @@ class Orchestra:
         self.looped_duration = options.looped_duration
         self.output = options.output
         self.include_non_playable = options.include_non_playable
+        self._leading_pause = options.leading_pause
 
         if server.options.locate_peers:
             self._peer_location = {}
@@ -559,6 +561,7 @@ class Orchestra:
         logger.info("entering _play_until_end")
         self._playing = True
         self.stopwatch.start()
+        time.sleep(self._leading_pause)
         no_more_events = False
         while self._playing and not no_more_events:
             event = self._get_next_chunk_or_segment()

@@ -9,6 +9,7 @@ import pipes
 parser = ArgumentParser()
 parser.add_argument("playlist")
 parser.add_argument("profile", choices=profiles.keys())
+parser.add_argument("--args")
 parser.add_argument("--visualizer",
                     default="python visual-experiments/waves.py")
 parser.add_argument("-f", "--force", action="store_true")
@@ -19,7 +20,7 @@ for item in playlist:
     print "\n\n___ RENDERING %s ___\n" % item["sessiondir"]
     output = "rendered_sessions/%s" % os.path.basename(item["sessiondir"])
     temp_dir = "rendered_sessions/%s" % os.path.basename(item["sessiondir"])
-    args_string = " ".join([pipes.quote(arg) for arg in item["args"]])
+    args_string = args.args + " " + " ".join([pipes.quote(arg) for arg in item["args"]])
     SessionRenderer(
         item["sessiondir"],
         args_string,
