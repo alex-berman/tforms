@@ -54,6 +54,7 @@ class AncestryPlotter:
         parser.add_argument("--edge-style",
                             choices=[LINE, CURVE, SPLINE],
                             default=LINE)
+        parser.add_argument("--node-size", type=float, default=0)
         parser.add_argument("--geometry",
                             choices=GEOMETRIES,
                             default=GEOMETRIES[0])
@@ -153,6 +154,14 @@ class AncestrySvgPlotter(AncestryPlotter):
         AncestryPlotter.plot(self)
         self._write_svg('</g>')
         self._write_svg('</svg>')
+
+    def plot_piece(self, piece):
+        if self._args.node_size > 0:
+            pos = self._position(piece.t, (piece.begin + piece.end) / 2)
+            self._write_svg('<circle style="fill:%s;stroke:none" cx="%f" cy="%f" r="%f" />' % (
+                    self._args.stroke_color,
+                    pos.x, pos.y,
+                    self._args.node_size))
 
     def draw_line(self, x1, y1, x2, y2):
         self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" />' % (
