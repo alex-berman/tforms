@@ -68,8 +68,8 @@ class AncestryPlotter:
         self._num_pieces += 1
 
     def _rect_position(self, t, byte_pos):
-        x = t / self._duration * self._width
-        y = float(byte_pos) / self._total_size * self._height
+        y = (1 - t / self._duration) * self._width
+        x = float(byte_pos) / self._total_size * self._height
         return Vector2d(x, y)
 
     def _circle_position(self, t, byte_pos):
@@ -135,13 +135,13 @@ class AncestryPlotter:
 
 class AncestrySvgPlotter(AncestryPlotter):
     def set_size(self, width, height):
-        if width is None:
-            width = 500
         if height is None:
+            height = 500
+        if width is None:
             if self._args.geometry == RECT:
-                height = int(width * self._total_size / self._duration * 0.000005)
+                width = int(height * self._total_size / self._duration * 0.000005)
             else:
-                height = width
+                width = height
         AncestryPlotter.set_size(self, width, height)
 
     def plot(self, svg_output=None):
