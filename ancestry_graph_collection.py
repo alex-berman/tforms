@@ -1,0 +1,15 @@
+collection = [
+    "sessions/*harry-potter",
+    "sessions/*neuromancer-ch1-3",
+    "sessions/*potter-goblet-ch11",
+    "sessions/*potter-goblet-ch3",
+    "sessions/*emma-ch6-10",
+    "sessions/*arvo-part",
+    "sessions/*utvandrarna-02",
+    "sessions/*roda_rummet2",
+    "sessions/*zlatan-11-20",
+    "sessions/*NIN",
+    "sessions/*wired",
+    "sessions/*guthrie",
+    "sessions/*hunger",
+]
