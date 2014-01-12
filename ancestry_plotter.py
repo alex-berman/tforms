@@ -22,6 +22,7 @@ class AncestryPlotter:
         self._args = args
         self._tracker = AncestryTracker()
         self._num_pieces = 0
+        self._unit = args.unit
 
         if args.output_type != "dot":
             if args.edge_style == LINE:
@@ -49,8 +50,20 @@ class AncestryPlotter:
         self._width = width
         self._height = height
 
+        if self._args.canvas_width:
+            self._canvas_width = self._args.canvas_width
+        else:
+            self._canvas_width = width
+
+        if self._args.canvas_height:
+            self._canvas_height = self._args.canvas_height
+        else:
+            self._canvas_height = height
+
     @staticmethod
     def add_parser_arguments(parser):
+        parser.add_argument("--canvas-width", type=float)
+        parser.add_argument("--canvas-height", type=float)
         parser.add_argument("--edge-style",
                             choices=[LINE, CURVE, SPLINE],
                             default=LINE)
@@ -63,6 +76,7 @@ class AncestryPlotter:
         parser.add_argument("-stroke-width", type=float, default=1)
         parser.add_argument("--output-type", choices=OUTPUT_TYPES.keys(),
                             default="svg")
+        parser.add_argument("--unit", type=str, default="")
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))
@@ -145,12 +159,19 @@ class AncestrySvgPlotter(AncestryPlotter):
                 width = height
         AncestryPlotter.set_size(self, width, height)
 
+    def _x(self, x):
+        return "%f%s" % (x + (self._canvas_width - self._width) / 2, self._unit)
+
+    def _y(self, y):
+        return "%f%s" % (y + (self._canvas_height - self._height) / 2, self._unit)
+
     def plot(self, svg_output=None):
         self._svg_output = svg_output
         self._write_svg('<svg xmlns="http://www.w3.org/2000/svg" version="1.1">')
+        self._write_svg('<rect width="%f%s" height="%f%s" fill="white" />' % (
+            self._canvas_width, self._unit,
+            self._canvas_height, self._unit))
         self._write_svg('<g>')
-        self._write_svg('<rect width="%f" height="%f" fill="white" />' % (
-            self._width, self._height))
         AncestryPlotter.plot(self)
         self._write_svg('</g>')
         self._write_svg('</svg>')
@@ -162,14 +183,20 @@ class AncestrySvgPlotter(AncestryPlotter):
             else:
                 size = self._args.node_size * 3
             pos = self._position(piece.t, (piece.begin + piece.end) / 2)
-            self._write_svg('<circle style="fill:%s;stroke:none" cx="%f" cy="%f" r="%f" />' % (
+            self._write_svg('<circle style="fill:%s;stroke:none" cx="%s" cy="%s" r="%f%s" />' % (
                     self._args.stroke_color,
-                    pos.x, pos.y,
-                    size))
+                    self._x(pos.x),
+                    self._y(pos.y),
+                    size, self._unit))
 
     def draw_line(self, x1, y1, x2, y2):
-        self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" />' % (
-                x1, y1, x2, y2, self._args.stroke_color, self._args.stroke_width))
+        self._write_svg('<line x1="%s" y1="%s" x2="%s" y2="%s" style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f%s" />' % (
+                self._x(x1),
+                self._y(y1),
+                self._x(x2),
+                self._y(y2),
+                self._args.stroke_color,
+                self._args.stroke_width, self._unit))
 
     def draw_shrinking_line(self, x1, y1, x2, y2):
         stroke_points = [(x1, y1),
@@ -177,13 +204,13 @@ class AncestrySvgPlotter(AncestryPlotter):
         self._draw_shrinking_path_xy(stroke_points)
 
     def draw_curve(self, x1, y1, x2, y2):
-        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%f,%f Q%f,%f %f,%f T%f,%f" />' % (
+        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" d="M%s,%s Q%s,%s %s,%s T%s,%s" />' % (
                 self._args.stroke_color,
                 self._args.stroke_width,
-                x1, y1,
-                x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35,
-                x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65,
-                x2, y2))
+                self._x(x1), self._y(y1),
+                self._x(x1 + (x2 - x1) * 0.45, y1 + (y2 - y1) * 0.35),
+                self._y(x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.65),
+                self._x(x2), self._y(y2)))
 
     def draw_shrinking_curve(self, x1, y1, x2, y2):
         control_points = [
@@ -199,15 +226,19 @@ class AncestrySvgPlotter(AncestryPlotter):
     def _draw_shrinking_path_xy(self, stroke_points):
         outline_pairs = self._outline(stroke_points)
         x0, y0 = stroke_points[0]
-        self._write_svg('<path style="fill:%s;stroke:none;stroke-opacity:0.5;" d="M%f,%f' % (
+        self._write_svg('<path style="fill:%s;stroke:none;stroke-opacity:0.5;" d="M%s,%s' % (
                 self._args.stroke_color,
-                x0, y0))
+                self._x(x0), self._y(y0)))
         for pair in outline_pairs:
             x, y = pair[0]
-            self._write_svg(' L%f,%f' % (x, y))
+            self._write_svg(' L%s,%s' % (
+                    self._x(x),
+                    self._y(y)))
         for pair in reversed(outline_pairs):
             x, y = pair[1]
-            self._write_svg(' L%f,%f' % (x, y))
+            self._write_svg(' L%s,%s' % (
+                    self._x(x),
+                    self._y(y)))
         self._write_svg('" />')
 
     def _outline(self, stroke_points):
@@ -236,13 +267,15 @@ class AncestrySvgPlotter(AncestryPlotter):
     def draw_path(self, points):
         t0, b0 = points[0]
         x0, y0 = self._position(t0, b0)
-        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%f,%f' % (
+        self._write_svg('<path style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f;" d="M%s,%s' % (
                 self._args.stroke_color,
                 self._args.stroke_width,
-                x0, y0))
+                self._x(x0), self._y(y0)))
         for (t, b) in points[1:]:
             x, y = self._position(t, b)
-            self._write_svg(' L%f,%f' % (x, y))
+            self._write_svg(' L%s,%s' % (
+                    self._x(x),
+                    self._y(y)))
         self._write_svg('" />')
 
     def _draw_shrinking_path(self, path):
