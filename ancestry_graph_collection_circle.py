@@ -1,0 +1,18 @@
+collection = [
+    "sessions/*linguaphone-german",
+    "sessions/*quran",
+    "sessions/*harry-potter",
+    "sessions/*sherlock",
+    "sessions/*brace-ch1-4",
+    "sessions/*neuromancer-ch1-3",
+    "sessions/*goblet-ch11",
+    "sessions/*goblet-ch3",
+    "sessions/*arvo-part",
+    "sessions/*lindgrens-favoriter-hela",
+    "sessions/*utvandrarna-02",
+    "sessions/*roda_rummet2",
+    "sessions/*NIN",
+    "sessions/*guthrie",
+    "sessions/*hunger",
+    "sessions/*gulliver",
+]
