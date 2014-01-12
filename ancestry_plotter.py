@@ -62,18 +62,21 @@ class AncestryPlotter:
 
     @staticmethod
     def add_parser_arguments(parser):
+        parser.add_argument("-width", type=int, default=2000)
+        parser.add_argument("-height", type=int, default=2000)
         parser.add_argument("--canvas-width", type=float)
         parser.add_argument("--canvas-height", type=float)
         parser.add_argument("--edge-style",
                             choices=[LINE, CURVE, SPLINE],
                             default=LINE)
-        parser.add_argument("--node-size", type=float, default=0)
+        parser.add_argument("--node-size", type=float, default=3)
         parser.add_argument("--geometry",
                             choices=GEOMETRIES,
                             default=GEOMETRIES[0])
         parser.add_argument("--stroke-style",
                             choices=[PLAIN, SHRINKING])
-        parser.add_argument("-stroke-width", type=float, default=1)
+        parser.add_argument("-stroke-width", type=float, default=2)
+        parser.add_argument("-stroke-color", type=str, default="black")
         parser.add_argument("--output-type", choices=OUTPUT_TYPES.keys(),
                             default="svg")
         parser.add_argument("--unit", type=str, default="")
