@@ -88,7 +88,7 @@ class AncestryPlotter:
         sys.setrecursionlimit(max(self._num_pieces, sys.getrecursionlimit()))
 
     def _follow_piece(self, piece, child=None):
-        self.plot_piece(piece)
+        self.plot_piece(piece, child)
         if len(piece.growth) > 0:
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
@@ -101,7 +101,7 @@ class AncestryPlotter:
             self._connect_generations(parent, piece, child)
             self._follow_piece(parent, piece)
 
-    def plot_piece(self, piece):
+    def plot_piece(self, piece, child):
         pass
 
     def _connect_generations(self, parent, child, grandchild, parent_t=None):
@@ -155,13 +155,17 @@ class AncestrySvgPlotter(AncestryPlotter):
         self._write_svg('</g>')
         self._write_svg('</svg>')
 
-    def plot_piece(self, piece):
+    def plot_piece(self, piece, child):
         if self._args.node_size > 0:
+            if child:
+                size = self._args.node_size
+            else:
+                size = self._args.node_size * 3
             pos = self._position(piece.t, (piece.begin + piece.end) / 2)
             self._write_svg('<circle style="fill:%s;stroke:none" cx="%f" cy="%f" r="%f" />' % (
                     self._args.stroke_color,
                     pos.x, pos.y,
-                    self._args.node_size))
+                    size))
 
     def draw_line(self, x1, y1, x2, y2):
         self._write_svg('<line x1="%f" y1="%f" x2="%f" y2="%f" style="stroke:%s;stroke-opacity=0.5;fill:none;stroke-width:%f" />' % (
@@ -263,7 +267,7 @@ class AncestryDotPlotter(AncestryPlotter):
         AncestryPlotter.plot(self)
         self._write("}")
 
-    def plot_piece(self, piece):
+    def plot_piece(self, piece, child):
         self._write("  n%s;" % piece.id)
 
     def _connect_generations(self, parent, child, grandchild, parent_t=None):
