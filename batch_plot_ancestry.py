@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ancestry_plotter import *
+from ancestry_plotter import AncestryPlotter, GEOMETRIES
 import subprocess
 from argparse import ArgumentParser
 import os
@@ -26,6 +26,7 @@ def non_excluded_sessions():
 
 parser = ArgumentParser()
 parser.add_argument("--collection", type=str)
+parser.add_argument("--geometry", choices=GEOMETRIES)
 args = parser.parse_args()
 
 if args.collection:
@@ -36,12 +37,9 @@ else:
 for session_dir in collection:
     session_name = os.path.basename(session_dir)
 
-    # geometry = CIRCLE
-    geometry = RECT
-
-    output_path = "graphs/ancestry_%s_straight/ancestry_%s_%s.svg" % (geometry, session_name, geometry)
+    output_path = "graphs/ancestry_%s_straight/ancestry_%s_%s.svg" % (args.geometry, session_name, args.geometry)
     cmdline = "./plot_ancestry.py -width 2000 -height 2000 -stroke-width 2 --node-size=3 --geometry=%s -o %s %s --edge-style=line" % (
-        geometry, output_path, session_dir)
+        args.geometry, output_path, session_dir)
 
     # output_path = "graphs/ancestry_circle_spline/ancestry_%s_%s.svg" % (session_name, geometry)
     # cmdline = "./plot_ancestry.py -width 2000 -stroke-width 6 --geometry=%s -o %s %s --edge-style=spline" % (
@@ -54,7 +52,7 @@ for session_dir in collection:
     print cmdline
     subprocess.call(cmdline, shell=True)
 
-    # for geometry in AncestryPlotter.GEOMETRIES:
+    # for geometry in GEOMETRIES:
     #     output_path = "graphs/ancestry/ancestry_%s_%s.svg" % (session_name, geometry)
     #     cmdline = "./plot_ancestry.py -width 2000 --geometry=%s -o %s %s" % (
     #         geometry, output_path, session_dir)
