@@ -53,6 +53,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             self._sway_envelope = None
 
+        if args.prune_envelope:
+            self._prune_envelope = AdsrEnvelope.from_string(args.prune_envelope)
 
     @staticmethod
     def add_parser_arguments(parser):
@@ -109,7 +111,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
     def _follow_piece(self, piece, child=None):
         self._update_and_draw_node(piece, piece.t, (piece.begin + piece.end) / 2)
 
-        if len(piece.growth) > 0:
+        if len(piece.growth) > 0 and not (self.args.prune_out and hasattr(piece, "pruned")):
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
@@ -119,13 +121,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._update_and_draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            if not (self.args.prune_out and
-                    self._completion_time and
-                    (self.current_time() - self._completion_time) > self.args.completion_sustain and
-                    (parent.t / tr_log.lastchunktime() * self.args.prune_duration < 
-                     (self.current_time() - self._completion_time - self.args.completion_sustain))):
+            if not (self.args.prune_out and hasattr(piece, "pruned")):
                 self._connect_generations(parent, piece, child)
-                self._follow_piece(parent, piece)
+            self._follow_piece(parent, piece)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -181,20 +179,32 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._update_sway(piece)
         if self._node_plot_method:
             self._node_plot_method(piece, t, b)
+        self._update_prune(piece)
 
     def _update_sway(self, piece):
         if not hasattr(piece, "sway"):
             piece.sway = Sway(self.args.sway_magnitude)
         piece.sway.update(self.time_increment)
 
+    def _update_prune(self, piece):
+        if (self.args.prune_out and
+            not hasattr(piece, "pruned") and
+            self._completion_time and
+            (self.current_time() - self._completion_time) > self.args.completion_sustain and
+            (piece.t / tr_log.lastchunktime() * self.args.prune_duration < 
+             (self.current_time() - self._completion_time - self.args.completion_sustain))):
+            piece.pruned = True
+            piece.prune_start_time = self.current_time()
+
     def _draw_node_circle(self, piece, t, b):
-        radius = max(self.width * self._node_size(piece), 0.1)
-        cx, cy = self._position(t, b)
-        if self.args.sway:
-            piece_sway_magnitude = self._sway_magnitude(piece)
-            cx += piece.sway.sway.x * piece_sway_magnitude * self._size
-            cy += piece.sway.sway.y * piece_sway_magnitude * self._size
-        self._render_node_circle(cx, cy, radius)
+        radius = self.width * self._node_size(piece)
+        if radius > 0:
+            cx, cy = self._position(t, b)
+            if self.args.sway:
+                piece_sway_magnitude = self._sway_magnitude(piece)
+                cx += piece.sway.sway.x * piece_sway_magnitude * self._size
+                cy += piece.sway.sway.y * piece_sway_magnitude * self._size
+            self._render_node_circle(cx, cy, radius)
 
     def _age(self, piece):
         try:
@@ -210,10 +220,15 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             ancestry_factor = self.args.node_size
             envelope = self._node_size_envelope
-        if envelope:
-            age_factor = envelope.value(self._age(piece))
+
+        if self.args.prune_out and hasattr(piece, "pruned"):
+            age_factor = self._prune_envelope.value(self.current_time() - piece.prune_start_time)
         else:
-            age_factor = 1
+            if envelope:
+                age_factor = envelope.value(self._age(piece))
+            else:
+                age_factor = 1
+
         return ancestry_factor * age_factor
 
     def _sway_magnitude(self, piece):
@@ -262,7 +277,8 @@ parser.add_argument("--sway-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
 parser.add_argument("--prune-out", action="store_true")
-parser.add_argument("--prune-duration", type=float, default=1.0)
+parser.add_argument("--prune-duration", type=float, default=0.3)
+parser.add_argument("--prune-envelope", type=str, default="0.1,1,0,1")
 parser.add_argument("--completion-sustain", type=float, default=1.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
