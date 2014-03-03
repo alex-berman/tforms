@@ -217,13 +217,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         piece.sway.update(self.time_increment)
 
     def _draw_node_circle(self, piece, t, b):
-        size = self._node_size(piece)
+        radius = max(self.width * self._node_size(piece), 0.1)
         cx, cy = self._position(t, b)
         if self.args.sway:
             piece_sway_magnitude = self._sway_magnitude(piece)
             cx += piece.sway.sway.x * piece_sway_magnitude * self._size
             cy += piece.sway.sway.y * piece_sway_magnitude * self._size
-        self._render_node_circle(cx, cy, size)
+        self._render_node_circle(cx, cy, radius)
 
     def _age(self, piece):
         try:
@@ -234,16 +234,16 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _node_size(self, piece):
         if self.is_root_piece(piece):
-            ancestry_factor = 1.5
+            ancestry_factor = self.args.root_node_size
             envelope = self._root_node_size_envelope
         else:
-            ancestry_factor = 1
+            ancestry_factor = self.args.node_size
             envelope = self._node_size_envelope
         if envelope:
             age_factor = envelope.value(self._age(piece))
         else:
             age_factor = 1
-        return int(ancestry_factor * age_factor * (NODE_SIZE_PRECISION-1))
+        return ancestry_factor * age_factor
 
     def _sway_magnitude(self, piece):
         age = self._age(piece)
@@ -252,21 +252,21 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         else:
             return 1
 
-    def _render_node_circle(self, cx, cy, size):
+    def _render_node_circle(self, cx, cy, radius):
         glPushMatrix()
         glTranslatef(cx, cy, 0)
-        if size in self._node_circle_lists:
-            glCallList(self._node_circle_lists[size])
+        size_index = int(radius * NODE_SIZE_PRECISION)
+        if size_index in self._node_circle_lists:
+            glCallList(self._node_circle_lists[size_index])
         else:
-            self._node_circle_lists[size] = self._create_and_execute_node_circle_list(size)
+            self._node_circle_lists[size_index] = self._create_and_execute_node_circle_list(radius)
         glPopMatrix()
 
-    def _create_and_execute_node_circle_list(self, size):
+    def _create_and_execute_node_circle_list(self, radius):
         display_list = self.new_display_list_id()
         glNewList(display_list, GL_COMPILE_AND_EXECUTE)
         glColor3f(1,1,1)
         glEnable(GL_POINT_SMOOTH)
-        radius = max(self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1), 0.1)
         glPointSize(radius * 2)
         glBegin(GL_POINTS)
         glVertex2f(0, 0)

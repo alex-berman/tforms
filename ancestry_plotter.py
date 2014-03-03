@@ -73,6 +73,7 @@ class AncestryPlotter:
                             choices=[LINE, CURVE, SPLINE],
                             default=LINE)
         parser.add_argument("--node-size", type=float, default=3)
+        parser.add_argument("--root-node-size", type=float, default=9)
         parser.add_argument("--geometry",
                             choices=GEOMETRIES,
                             default=GEOMETRIES[0])
@@ -185,11 +186,11 @@ class AncestrySvgPlotter(AncestryPlotter):
         self._write_svg('</svg>')
 
     def plot_piece(self, piece, child):
-        if self._args.node_size > 0:
-            if child:
-                size = self._args.node_size
-            else:
-                size = self._args.node_size * 3
+        if child:
+            size = self._args.node_size
+        else:
+            size = self._args.root_node_size
+        if size > 0:
             pos = self._position(piece.t, (piece.begin + piece.end) / 2)
             self._write_svg('<circle style="fill:%s;stroke:none" cx="%s" cy="%s" r="%f%s" />' % (
                     self._args.stroke_color,
