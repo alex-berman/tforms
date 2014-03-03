@@ -74,13 +74,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glClearColor(0.0, 0.0, 0.0, 0.0)
 
         if self.args.node_style == CIRCLE:
-            self._node_circle_lists = []
-            for n in range(0, NODE_SIZE_PRECISION):
-                display_list = self.new_display_list_id()
-                self._node_circle_lists.append(display_list)
-                glNewList(display_list, GL_COMPILE)
-                self._render_node_circle(0, 0, n)
-                glEndList()
+            self._node_circle_lists = {}
 
     def ReSizeGLScene(self, width, height):
         visualizer.Visualizer.ReSizeGLScene(self, width, height)
@@ -228,10 +222,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             piece_sway_magnitude = self._sway_magnitude(piece)
             cx += piece.sway.sway.x * piece_sway_magnitude * self._size
             cy += piece.sway.sway.y * piece_sway_magnitude * self._size
-        glPushMatrix()
-        glTranslatef(cx, cy, 0)
-        glCallList(self._node_circle_lists[size])
-        glPopMatrix()
+        self._render_node_circle(cx, cy, size)
 
     def _age(self, piece):
         try:
@@ -242,9 +233,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _node_size(self, age):
         if self._node_size_envelope:
-            return int(self._node_size_envelope.value(age) * (NODE_SIZE_PRECISION-1))
+            age_factor = self._node_size_envelope.value(age)
         else:
-            return NODE_SIZE_PRECISION-1
+            age_factor = 1
+        return int(age_factor * (NODE_SIZE_PRECISION-1))
 
     def _sway_magnitude(self, piece):
         age = self._age(piece)
@@ -254,47 +246,26 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             return 1
 
     def _render_node_circle(self, cx, cy, size):
-        # glColor3f(0,0,0)
-        # self._render_filled_circle(cx, cy, size)
-        # glColor3f(1,1,1)
-        # self._render_circle_outline(cx, cy, size)
+        glPushMatrix()
+        glTranslatef(cx, cy, 0)
+        if size in self._node_circle_lists:
+            glCallList(self._node_circle_lists[size])
+        else:
+            self._node_circle_lists[size] = self._create_and_execute_node_circle_list(size)
+        glPopMatrix()
 
-        # glColor3f(1,1,1)
-        # self._render_filled_circle(cx, cy, size)
-
+    def _create_and_execute_node_circle_list(self, size):
+        display_list = self.new_display_list_id()
+        glNewList(display_list, GL_COMPILE_AND_EXECUTE)
         glColor3f(1,1,1)
         glEnable(GL_POINT_SMOOTH)
         radius = max(self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1), 0.1)
         glPointSize(radius * 2)
         glBegin(GL_POINTS)
-        glVertex2f(cx, cy)
+        glVertex2f(0, 0)
         glEnd()
-
-    def _render_filled_circle(self, cx, cy, size):
-        glBegin(GL_TRIANGLE_FAN)
-        glVertex2f(cx, cy)
-        angle = 0
-        radius = self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1)
-        while angle < 2*math.pi:
-            x = cx + math.cos(angle) * radius
-            y = cy + math.sin(angle) * radius
-            glVertex2f(x, y)
-            angle += 0.1
-        x = cx + math.cos(0) * radius
-        y = cy + math.sin(0) * radius
-        glVertex2f(x, y)
-        glEnd()
-
-    def _render_circle_outline(self, cx, cy, size):
-        glBegin(GL_LINE_STRIP)
-        angle = 0
-        radius = self.args.node_size * self.width * size / (NODE_SIZE_PRECISION-1)
-        while angle < 2*math.pi:
-            x = cx + math.cos(angle) * radius
-            y = cy + math.sin(angle) * radius
-            glVertex2f(x, y)
-            angle += 0.1
-        glEnd()
+        glEndList()
+        return display_list
 
 parser = ArgumentParser()
 parser.add_argument("sessiondir")
