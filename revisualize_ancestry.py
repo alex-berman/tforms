@@ -88,7 +88,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glColor3f(1,1,1)
 
         if self.args.ff:
-            self._add_oldest_remaining_piece()
+            if len(self._remaining_pieces) > 0:
+                self._add_oldest_remaining_piece()
         else:
             while (len(self._remaining_pieces) > 0 and
                    self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
@@ -273,6 +274,7 @@ parser.add_argument("--sway-magnitude", type=float, default=0.002)
 parser.add_argument("--sway-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
+parser.add_argument("--prune-out", action="store_true")
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
