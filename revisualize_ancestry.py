@@ -30,6 +30,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
 
         self._remaining_pieces = copy.copy(pieces)
+        self._completion_time = None
 
         if args.node_style == CIRCLE:
             self._node_plot_method = self._draw_node_circle
@@ -89,6 +90,10 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                    self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
                 self._add_oldest_remaining_piece()
 
+        if self.args.prune_out:
+            if len(self._remaining_pieces) == 0 and self._completion_time is None:
+                self._completion_time = self.current_time()
+
         self.plot()
 
     def _add_oldest_remaining_piece(self):
@@ -114,8 +119,13 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._update_and_draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            self._connect_generations(parent, piece, child)
-            self._follow_piece(parent, piece)
+            if not (self.args.prune_out and
+                    self._completion_time and
+                    (self.current_time() - self._completion_time) > self.args.completion_sustain and
+                    (parent.t / tr_log.lastchunktime() * self.args.prune_duration < 
+                     (self.current_time() - self._completion_time - self.args.completion_sustain))):
+                self._connect_generations(parent, piece, child)
+                self._follow_piece(parent, piece)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -252,6 +262,8 @@ parser.add_argument("--sway-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
 parser.add_argument("--prune-out", action="store_true")
+parser.add_argument("--prune-duration", type=float, default=1.0)
+parser.add_argument("--completion-sustain", type=float, default=1.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
