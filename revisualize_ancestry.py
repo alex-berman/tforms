@@ -50,15 +50,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._node_plot_method = None
 
         if args.node_size_envelope:
-            attack, decay, sustain = args.node_size_envelope.split(",")
-            self._node_size_envelope = AdsrEnvelope(
-                attack, decay, sustain, args.node_size_envelope_slope)
+            self._node_size_envelope = AdsrEnvelope.from_string(args.node_size_envelope)
         else:
             self._node_size_envelope = None
 
         if args.sway_envelope:
-            attack, decay, sustain = args.sway_envelope.split(",")
-            self._sway_envelope = AdsrEnvelope(attack, decay, sustain)
+            self._sway_envelope = AdsrEnvelope.from_string(args.sway_envelope)
         else:
             self._sway_envelope = None
 
@@ -279,8 +276,7 @@ parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size-envelope", type=str,
-                    help="attack-time,decay-time,sustain-level")
-parser.add_argument("--node-size-envelope-slope", type=float, default=0.2)
+                    help="attack-time,decay-time,sustain-level,slope")
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--sway", action="store_true")
 parser.add_argument("--sway-magnitude", type=float, default=0.002)
