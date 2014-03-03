@@ -215,8 +215,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         piece.sway.update(self.time_increment)
 
     def _draw_node_circle(self, piece, t, b):
-        age = self._age(piece)
-        size = self._node_size(age)
+        size = self._node_size(piece)
         cx, cy = self._position(t, b)
         if self.args.sway:
             piece_sway_magnitude = self._sway_magnitude(piece)
@@ -231,9 +230,9 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             appearance_time = piece.appearance_time = self._adjusted_current_time()
         return self._adjusted_current_time() - appearance_time
 
-    def _node_size(self, age):
+    def _node_size(self, piece):
         if self._node_size_envelope:
-            age_factor = self._node_size_envelope.value(age)
+            age_factor = self._node_size_envelope.value(self._age(piece))
         else:
             age_factor = 1
         return int(age_factor * (NODE_SIZE_PRECISION-1))
