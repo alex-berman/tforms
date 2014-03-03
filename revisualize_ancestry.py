@@ -231,11 +231,15 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         return self._adjusted_current_time() - appearance_time
 
     def _node_size(self, piece):
+        if self.is_root_piece(piece):
+            ancestry_factor = 3
+        else:
+            ancestry_factor = 1
         if self._node_size_envelope:
             age_factor = self._node_size_envelope.value(self._age(piece))
         else:
             age_factor = 1
-        return int(age_factor * (NODE_SIZE_PRECISION-1))
+        return int(min(ancestry_factor * age_factor, 1) * (NODE_SIZE_PRECISION-1))
 
     def _sway_magnitude(self, piece):
         age = self._age(piece)

@@ -153,6 +153,8 @@ class AncestryPlotter:
     def _stroke_width_at_time(self, t):
         return self._args.stroke_width * (1 - pow(t/self._duration, 0.6))
 
+    def is_root_piece(self, piece):
+        return (piece.end - piece.begin) == self._total_size
 
 class AncestrySvgPlotter(AncestryPlotter):
     def set_size(self, width, height):
