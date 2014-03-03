@@ -18,7 +18,6 @@ import sys
 from bezier import make_bezier
 from ancestry_plotter import *
 from vector import Vector2d
-from smoother import Smoother
 
 CURVE_PRECISION = 50
 MARGIN = 0.03
@@ -31,11 +30,6 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
 
         self._remaining_pieces = copy.copy(pieces)
-
-        self._autozoom = (args.geometry == CIRCLE and self.args.autozoom)
-        if self._autozoom:
-            self._max_pxy = 0
-            self._zoom_smoother = Smoother()
 
         if args.node_style == CIRCLE:
             self._node_plot_method = self._draw_node_circle
@@ -95,21 +89,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
                    self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
                 self._add_oldest_remaining_piece()
 
-        if self._autozoom:
-            self._zoom = self._zoom_smoother.value()
-            if self._zoom is None:
-                self._zoom = 0.0
-        else:
-            self._zoom = 1.0
-
         self.plot()
-
-        if self._autozoom:
-            if self._max_pxy == 0:
-                zoom = 0.5
-            else:
-                zoom = 0.5 + self._cursor_t/self._duration * 0.5 / self._max_pxy
-            self._zoom_smoother.smooth(zoom, self.time_increment)
 
     def _add_oldest_remaining_piece(self):
         piece = self._remaining_pieces.pop(0)
@@ -147,10 +127,8 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         rel_t = 1 - t / self._duration
         px = rel_t * math.cos(angle)
         py = rel_t * math.sin(angle)
-        x = self._width / 2 + (px * self._zoom) * self._width / 2
-        y = self._height / 2 + (py * self._zoom) * self._height / 2
-        if self._autozoom:
-            self._max_pxy = max([self._max_pxy, abs(px), abs(py)])
+        x = self._width / 2 + px * self._width / 2
+        y = self._height / 2 + py * self._height / 2
         return Vector2d(x, y)
 
     def draw_path(self, piece, points):
@@ -262,7 +240,6 @@ parser.add_argument("sessiondir")
 parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
-parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size-envelope", type=str,
                     help="attack-time,decay-time,sustain-level,slope")
