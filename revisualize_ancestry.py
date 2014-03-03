@@ -22,8 +22,6 @@ from smoother import Smoother
 
 CURVE_PRECISION = 50
 MARGIN = 0.03
-FORWARD = "forward"
-BACKWARD = "backward"
 NODE_SIZE_PRECISION = 40
 SUSTAIN_TIME = 10.0
 
@@ -32,11 +30,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         visualizer.Visualizer.__init__(self, args)
         AncestryPlotter.__init__(self, tr_log.total_file_size(), tr_log.lastchunktime(), args)
 
-        if args.unfold == BACKWARD:
-            for piece in pieces:
-                self.add_piece(piece["id"], piece["t"], piece["begin"], piece["end"])
-        elif args.unfold == FORWARD:
-            self._remaining_pieces = copy.copy(pieces)
+        self._remaining_pieces = copy.copy(pieces)
 
         self._autozoom = (args.geometry == CIRCLE and self.args.autozoom)
         if self._autozoom:
@@ -93,15 +87,12 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glColor3f(1,1,1)
 
-        if self.args.unfold == BACKWARD:
-            self._cursor_t = self._duration - self._adjusted_current_time() % self._duration
-        elif self.args.unfold == FORWARD:
-            if self.args.ff:
+        if self.args.ff:
+            self._add_oldest_remaining_piece()
+        else:
+            while (len(self._remaining_pieces) > 0 and
+                   self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
                 self._add_oldest_remaining_piece()
-            else:
-                while (len(self._remaining_pieces) > 0 and
-                       self._remaining_pieces[0]["t"] <= self._adjusted_current_time()):
-                    self._add_oldest_remaining_piece()
 
         if self._autozoom:
             self._zoom = self._zoom_smoother.value()
@@ -136,23 +127,14 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             path = [(piece.t,
                     (piece.begin + piece.end) / 2)]
             for older_version in reversed(piece.growth):
-                if self.args.unfold == FORWARD or self._cursor_t < older_version.t:
-                    path.append((older_version.t,
-                                 (older_version.begin + older_version.end) / 2))
+                path.append((older_version.t,
+                             (older_version.begin + older_version.end) / 2))
             self.draw_path(piece, path)
             self._update_and_draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            if self.args.unfold == FORWARD or self._cursor_t < parent.t:
-                self._connect_generations(parent, piece, child)
-                self._follow_piece(parent, piece)
-            else:
-                if self.args.unfold == BACKWARD:
-                    t = self._cursor_t - pow(self._cursor_t - parent.t, 0.7)
-                else:
-                    t = self._cursor_t
-                self._connect_generations(parent, piece, child, t)
-                self._update_and_draw_node(parent, t, (parent.begin + parent.end) / 2)
+            self._connect_generations(parent, piece, child)
+            self._follow_piece(parent, piece)
 
     def _rect_position(self, t, byte_pos):
         x = float(byte_pos) / self._total_size * self._width
@@ -280,7 +262,6 @@ parser.add_argument("--file", dest="selected_files", type=int, nargs="+")
 parser.add_argument("-t", "--torrent", dest="torrentname", default="")
 parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
-parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size-envelope", type=str,
                     help="attack-time,decay-time,sustain-level,slope")
