@@ -304,7 +304,6 @@ parser.add_argument("-interpret", action="store_true")
 parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
-parser.add_argument("--node-size", type=float, default=5.0/1000)
 parser.add_argument("--node-size-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--node-size-envelope-slope", type=float, default=0.2)

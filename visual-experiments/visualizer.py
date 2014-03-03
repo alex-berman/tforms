@@ -904,8 +904,11 @@ class Visualizer:
         parser.add_argument('-port', type=int)
         parser.add_argument("-listen", type=str)
         parser.add_argument('-sync', action='store_true')
-        parser.add_argument('-width', dest='width', type=int, default=1024)
-        parser.add_argument('-height', dest='height', type=int, default=768)
+        try:
+            parser.add_argument('-width', dest='width', type=int, default=1024)
+            parser.add_argument('-height', dest='height', type=int, default=768)
+        except argparse.ArgumentError:
+            pass
         parser.add_argument("-left", type=int)
         parser.add_argument("-top", type=int)
         parser.add_argument('-margin', dest='margin', type=int, default=0)

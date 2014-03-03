@@ -62,8 +62,11 @@ class AncestryPlotter:
 
     @staticmethod
     def add_parser_arguments(parser):
-        parser.add_argument("-width", type=int, default=2000)
-        parser.add_argument("-height", type=int, default=2000)
+        try:
+            parser.add_argument("-width", type=int, default=2000)
+            parser.add_argument("-height", type=int, default=2000)
+        except argparse.ArgumentError:
+            pass
         parser.add_argument("--canvas-width", type=float)
         parser.add_argument("--canvas-height", type=float)
         parser.add_argument("--edge-style",
