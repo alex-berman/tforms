@@ -38,7 +38,7 @@ for (session_pattern, args, timefactors) in sessions:
     if os.path.exists(render_dir):
         print "rendering directory exists - skipping"
     else:
-        cmd = "./revisualize_ancestry.py --geometry=circle %s %s %s --node-style=circle --unfold=forward -interpret --sway --sway-magnitude=0.003 --edge-style=line --line-width=1 --node-size-envelope=0.3,25,0.5,0.2 --sway-envelope=0,50,0.5,1 --node-size=0.003 -export -export-fps=%s" % (session_dir, args, RESOLUTION, FPS)
+        cmd = "./revisualize_ancestry.py --geometry=circle %s %s %s --node-style=circle --unfold=forward -interpret --sway --sway-magnitude=0.003 --edge-style=line --line-width=1 --node-size-envelope=0.3,25,0.5,0.2 --root-node-size-envelope=0.1,0,1,0.2 --sway-envelope=0,50,0.5,1 --node-size=0.003 -export -export-fps=%s" % (session_dir, args, RESOLUTION, FPS)
         subprocess.call(cmd, shell=True)
 
     for timefactor in timefactors:

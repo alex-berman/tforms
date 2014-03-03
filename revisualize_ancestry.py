@@ -24,7 +24,7 @@ CURVE_PRECISION = 50
 MARGIN = 0.03
 FORWARD = "forward"
 BACKWARD = "backward"
-NODE_SIZE_PRECISION = 20
+NODE_SIZE_PRECISION = 40
 SUSTAIN_TIME = 10.0
 
 class Ancestry(visualizer.Visualizer, AncestryPlotter):
@@ -53,6 +53,11 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._node_size_envelope = AdsrEnvelope.from_string(args.node_size_envelope)
         else:
             self._node_size_envelope = None
+
+        if args.root_node_size_envelope:
+            self._root_node_size_envelope = AdsrEnvelope.from_string(args.root_node_size_envelope)
+        else:
+            self._root_node_size_envelope = self._node_size_envelope
 
         if args.sway_envelope:
             self._sway_envelope = AdsrEnvelope.from_string(args.sway_envelope)
@@ -229,14 +234,16 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
     def _node_size(self, piece):
         if self.is_root_piece(piece):
-            ancestry_factor = 3
+            ancestry_factor = 1.5
+            envelope = self._root_node_size_envelope
         else:
             ancestry_factor = 1
-        if self._node_size_envelope:
-            age_factor = self._node_size_envelope.value(self._age(piece))
+            envelope = self._node_size_envelope
+        if envelope:
+            age_factor = envelope.value(self._age(piece))
         else:
             age_factor = 1
-        return int(min(ancestry_factor * age_factor, 1) * (NODE_SIZE_PRECISION-1))
+        return int(ancestry_factor * age_factor * (NODE_SIZE_PRECISION-1))
 
     def _sway_magnitude(self, piece):
         age = self._age(piece)
@@ -276,6 +283,8 @@ parser.add_argument("-autozoom", action="store_true")
 parser.add_argument("--unfold", choices=[FORWARD, BACKWARD], default=BACKWARD)
 parser.add_argument("--node-style", choices=[CIRCLE])
 parser.add_argument("--node-size-envelope", type=str,
+                    help="attack-time,decay-time,sustain-level,slope")
+parser.add_argument("--root-node-size-envelope", type=str,
                     help="attack-time,decay-time,sustain-level,slope")
 parser.add_argument("--fast-forward", action="store_true", dest="ff")
 parser.add_argument("--sway", action="store_true")
