@@ -5,16 +5,16 @@ import subprocess
 import os
 
 def call_ffmpeg():
-    global args, export_dir
+    global args
     cmd = ["ffmpeg",
            "-r", str(args.fps),
-           "-i", "%s/%%07d.png" % export_dir]
+           "-i", "%s/%%07d.png" % args.render_dir]
 
     if args.force:
         cmd.append("-y")
 
     if args.fade_out:
-        num_frames = len(os.listdir(export_dir))
+        num_frames = len(os.listdir(args.render_dir))
         num_fade_frames = int(args.fade_out * args.fps)
         start_frame = num_frames - num_fade_frames
         cmd += [
@@ -30,18 +30,16 @@ def call_ffmpeg():
     subprocess.call(cmd)
 
 def remove_corrupt_first_frame():
-    global export_dir
-    subprocess.call("rm %s/0000000.png" % export_dir, shell=True)
+    global args
+    subprocess.call("rm %s/0000000.png" % args.render_dir, shell=True)
 
 parser = ArgumentParser()
-parser.add_argument("sessiondir")
-parser.add_argument("visualizer")
+parser.add_argument("render_dir")
 parser.add_argument("-fps", type=float, default=25)
 parser.add_argument("-fade-out", type=float)
 parser.add_argument("-f", "--force", action="store_true")
 parser.add_argument("-o", "--output", type=str)
 args = parser.parse_args()
 
-export_dir = "%s/rendered_%s" % (args.sessiondir, args.visualizer)
 remove_corrupt_first_frame()
 call_ffmpeg()
