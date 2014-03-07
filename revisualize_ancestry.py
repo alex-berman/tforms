@@ -121,7 +121,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
             self._update_and_draw_node(piece, path[-1][0], path[-1][1])
 
         for parent in piece.parents.values():
-            if not (self.args.prune_out and hasattr(piece, "pruned")):
+            if not (self.args.prune_out and hasattr(parent, "pruned")):
                 self._connect_generations(parent, piece, child)
             self._follow_piece(parent, piece)
 
