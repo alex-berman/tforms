@@ -284,10 +284,10 @@ parser.add_argument("--sway-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
 parser.add_argument("--prune-out", action="store_true")
-parser.add_argument("--prune-duration", type=float, default=0.6)
-parser.add_argument("--prune-envelope", type=str, default="0,0.2,0,1")
+parser.add_argument("--prune-duration", type=float, default=1)
+parser.add_argument("--prune-envelope", type=str, default="0,0.1,0,1")
 parser.add_argument("--pre-prune-duration", type=float, default=3.0)
-parser.add_argument("--post-prune-duration", type=float, default=3.0)
+parser.add_argument("--post-prune-duration", type=float, default=1.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
