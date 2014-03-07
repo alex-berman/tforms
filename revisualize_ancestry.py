@@ -187,14 +187,21 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         piece.sway.update(self.time_increment)
 
     def _update_prune(self, piece):
-        if (self.args.prune_out and
-            not hasattr(piece, "pruned") and
-            self._completion_time and
-            (self.current_time() - self._completion_time) > self.args.completion_sustain and
-            (piece.t / tr_log.lastchunktime() * self.args.prune_duration < 
-             (self.current_time() - self._completion_time - self.args.completion_sustain))):
-            piece.pruned = True
-            piece.prune_start_time = self.current_time()
+        if self.args.prune_out and not hasattr(piece, "pruned") and self._completion_time:
+            if self.is_root_piece(piece):
+                if self.current_time() > (self._completion_time +
+                                          self.args.pre_prune_duration +
+                                          self.args.prune_duration +
+                                          self.args.post_prune_duration):
+                    self._prune(piece)
+            else:
+                if ((piece.t / tr_log.lastchunktime() * self.args.prune_duration < 
+                     (self.current_time() - self._completion_time - self.args.pre_prune_duration))):
+                    self._prune(piece)
+
+    def _prune(self, piece):
+        piece.pruned = True
+        piece.prune_start_time = self.current_time()
 
     def _draw_node_circle(self, piece, t, b):
         radius = self.width * self._node_size(piece)
@@ -277,9 +284,10 @@ parser.add_argument("--sway-envelope", type=str,
                     help="attack-time,decay-time,sustain-level")
 parser.add_argument("--line-width", type=float, default=2.0)
 parser.add_argument("--prune-out", action="store_true")
-parser.add_argument("--prune-duration", type=float, default=0.3)
-parser.add_argument("--prune-envelope", type=str, default="0.1,1,0,1")
-parser.add_argument("--completion-sustain", type=float, default=1.0)
+parser.add_argument("--prune-duration", type=float, default=0.6)
+parser.add_argument("--prune-envelope", type=str, default="0,0.2,0,1")
+parser.add_argument("--pre-prune-duration", type=float, default=3.0)
+parser.add_argument("--post-prune-duration", type=float, default=3.0)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
