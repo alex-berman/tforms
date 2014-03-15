@@ -1,4 +1,5 @@
 from ancestry_tracker import *
+from ancestry_plotter import *
 import unittest
 
 class AncestryTrackerTest(unittest.TestCase):
@@ -186,19 +187,40 @@ class AncestryPlotterTest(unittest.TestCase):
 
     def when_plotted(self):
         class TestedAncestryPlotter(AncestryPlotter):
-            def _draw_line(self, t1, b1, t2, b2):
+            def __init__(self, chunks):
+                mockup_duration = 1
+                total_size = \
+                    max([chunk["end"] for chunk in chunks]) - \
+                    min([chunk["begin"] for chunk in chunks])
+                AncestryPlotter.__init__(self, total_size, mockup_duration, MockupOptions())
+                for chunk in chunks:
+                    self.add_piece(chunk["id"],
+                                   chunk["t"],
+                                   chunk["begin"],
+                                   chunk["end"])
+
+            def draw_line(self, t1, b1, t2, b2):
                 self.plotted_lines.append((t1, b1, t2, b2))
 
-            def _draw_path(self, path):
+            def draw_path(self, path):
                 self.plotted_paths.append(path)
+
+            def _rect_position(self, t, byte_pos):
+                return Vector2d(t, byte_pos)
 
             def _override_recursion_limit(self): pass
 
         class MockupOptions:
             width = 1
             height = 1
+            unit = "px"
+            output_type = "svg"
+            edge_style = LINE
+            stroke_style = PLAIN
+            geometry = RECT
+            stroke_width = 1
 
-        self.plotter = TestedAncestryPlotter(self.chunks, MockupOptions())
+        self.plotter = TestedAncestryPlotter(self.chunks)
         self.plotter.plotted_lines = []
         self.plotter.plotted_paths = []
         self.plotter.plot()
