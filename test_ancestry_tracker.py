@@ -102,6 +102,14 @@ class AncestryTrackerTest(unittest.TestCase):
             ]
         self.assert_growth(expected_growth, last_piece.growth)
 
+    def test_ignore_already_added_interval(self):
+        self.given_chunks([
+                {'id': 0, 'begin': 100, 'end': 200, 't': 0.0},
+                {'id': 1, 'begin': 150, 'end': 200, 't': 10.0}
+                ])
+        last_piece = self.last_tracked_piece()
+        self.assertEquals(0, last_piece.t)
+        self.assertEquals(0, last_piece.id)
 
 
     def given_chunks(self, chunks):

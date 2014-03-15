@@ -43,16 +43,19 @@ class AncestryTracker:
             else:
                 parent_id = overlapping_pieces[0]
                 parent = self._pieces[parent_id]
-                replacement_piece = copy.copy(parent)
-                replacement_piece.id = new_piece.id
-                replacement_piece.growth = copy.copy(parent.growth)
-                replacement_piece.growth.append(parent)
                 new_extension = [new_piece, parent]
-                replacement_piece.t = max([piece.t for piece in new_extension])
-                replacement_piece.begin = min([piece.begin for piece in new_extension])
-                replacement_piece.end = max([piece.end for piece in new_extension])
-                del self._pieces[parent_id]
-                self._add_piece(replacement_piece)
+                replacement_begin = min([piece.begin for piece in new_extension])
+                replacement_end = max([piece.end for piece in new_extension])
+                if replacement_begin != parent.begin or replacement_end != parent.end:
+                    replacement_piece = copy.copy(parent)
+                    replacement_piece.id = new_piece.id
+                    replacement_piece.growth = copy.copy(parent.growth)
+                    replacement_piece.growth.append(parent)
+                    replacement_piece.t = max([piece.t for piece in new_extension])
+                    replacement_piece.begin = replacement_begin
+                    replacement_piece.end = replacement_end
+                    del self._pieces[parent_id]
+                    self._add_piece(replacement_piece)
         else:
             self._add_piece(new_piece)
 
