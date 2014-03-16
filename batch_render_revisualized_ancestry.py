@@ -18,9 +18,8 @@ sessions = [
     ("rect",   "*gulliver", "-z 4"),
     ("circle", "*NIN", "-z 60"),
     ("rect",   "*guthrie", "-z 20"),
-    ("circle", "*valis", "-z 25"),
-    ("rect",   "*hunger", "-z 60"),
     ("circle", "*lord-rings", "-z 15"),
+    ("rect",   "*hunger", "-z 60"),
     ("circle", "*miracle", "-z 20"),
     ("rect",   "*roda_rummet2", "-z 60"),
     ("circle", "*potter", "-z 30"),
@@ -33,8 +32,8 @@ sessions = [
     ("circle", "*adele", "-z 20"),
     ("rect",   "*utvandrarna-02", "-z 60"),
     ("circle", "*guthrie", "-z 20"),
-    ("rect",   "*frankenstein", "-z 6"),
     ("circle", "*hunger", "-z 60"),
+    ("rect",   "*frankenstein", "-z 6"),
     ("circle", "*arvo-part", "-z 30"),
     ]
 
