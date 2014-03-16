@@ -31,6 +31,7 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
 
         self._remaining_pieces = copy.copy(pieces)
         self._completion_time = None
+        self._line_onset_time = {}
 
         if args.node_style == CIRCLE:
             self._node_plot_method = self._draw_node_circle
@@ -169,10 +170,36 @@ class Ancestry(visualizer.Visualizer, AncestryPlotter):
         glEnd()
 
     def draw_line(self, x1, y1, x2, y2):
+        if self.args.line_growth_speed:
+            age = self._line_age(x1, y1, x2, y2)
+            x1, y1, x2, y2 = self._limit_line_by_age(x1, y1, x2, y2, age)
+        glColor3f(1,1,1)
         glBegin(GL_LINES)
         glVertex2f(x1, y1)
         glVertex2f(x2, y2)
         glEnd()
+
+    def _line_age(self, x1, y1, x2, y2):
+        line_id = hash((x2, y2))
+        if line_id in self._line_onset_time:
+            return self.current_time() - self._line_onset_time[line_id]
+        else:
+            self._line_onset_time[line_id] = self.current_time()
+            return 0
+
+    def _limit_line_by_age(self, x1, y1, x2, y2, age):
+        distance = (Vector2d(x1, y1) - Vector2d(x2, y2)).mag()
+        relative_distance = distance / Vector2d(self.width, self.height).mag()
+        duration = relative_distance / self.args.line_growth_speed
+        p = self._sigmoid(min(age / duration, 1))
+        return (
+            x2,
+            y2,
+            x2 + (x1 - x2) * p,
+            y2 + (y1 - y2) * p)
+
+    def _sigmoid(self, x):
+        return (1 - math.cos(x * math.pi)) / 2
 
     def _update_and_draw_node(self, piece, t, b):
         if self.args.sway:
@@ -288,6 +315,7 @@ parser.add_argument("--prune-duration", type=float, default=1)
 parser.add_argument("--prune-envelope", type=str, default="0,0.1,0,1")
 parser.add_argument("--pre-prune-duration", type=float, default=5.0)
 parser.add_argument("--post-prune-duration", type=float, default=1.0)
+parser.add_argument("--line-growth-speed", type=float, default=1.5)
 Ancestry.add_parser_arguments(parser)
 options = parser.parse_args()
 options.standalone = True
