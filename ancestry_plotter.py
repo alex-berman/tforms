@@ -24,6 +24,9 @@ class AncestryPlotter:
         self._num_pieces = 0
         self._unit = args.unit
 
+        if args.growth_time_limit:
+            self._tracker.growth_time_limit = args.growth_time_limit
+
         if args.output_type != "dot":
             if args.edge_style == LINE:
                 if args.stroke_style == SHRINKING:
@@ -84,6 +87,7 @@ class AncestryPlotter:
         parser.add_argument("--output-type", choices=OUTPUT_TYPES.keys(),
                             default="svg")
         parser.add_argument("--unit", type=str, default="")
+        parser.add_argument("--growth-time-limit", type=float)
 
     def add_piece(self, piece_id, t, begin, end):
         self._tracker.add(Piece(piece_id, t, begin, end))

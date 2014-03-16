@@ -24,6 +24,7 @@ class AncestryTracker:
     def __init__(self):
         self._pieces = dict()
         self._counter = 1
+        self.growth_time_limit = None
 
     def add(self, new_piece):
         logger.info("add(%s)" % new_piece)
@@ -32,7 +33,11 @@ class AncestryTracker:
             if len(overlapping_pieces) > 1:
                 self._add_generation(new_piece, overlapping_pieces)
             else:
-                self._grow(new_piece, overlapping_pieces)
+                parent = self._pieces[overlapping_pieces[0]]
+                if self.growth_time_limit is None or (new_piece.t - parent.t) < self.growth_time_limit:
+                    self._grow(new_piece, overlapping_pieces)
+                else:
+                    self._add_generation(new_piece, overlapping_pieces)
         else:
             logger.info("new piece %s" % new_piece)
             self._add_piece(new_piece)

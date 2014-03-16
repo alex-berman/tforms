@@ -57,7 +57,7 @@ for geometry, session_pattern, render_args in sessions:
     if os.path.exists(render_dir) and not args.force:
         print "rendering directory exists - skipping"
     else:
-        cmd = "./revisualize_ancestry.py --geometry=%s %s %s %s --node-style=circle -interpret --sway --sway-magnitude=0.003 --edge-style=line --line-width=1 --node-size-envelope=0.3,25,0.5,0.2 --root-node-size-envelope=0.1,0,1,0.2 --sway-envelope=0,50,0.5,1 --node-size=0.003 --root-node-size=0.005 --prune-out -export -export-fps=%s -export-dir=%s" % (geometry, session_dir, render_args, RESOLUTION, FPS, render_dir)
+        cmd = "./revisualize_ancestry.py --geometry=%s %s %s %s --node-style=circle -interpret --sway --sway-magnitude=0.003 --edge-style=line --line-width=1 --node-size-envelope=0.3,25,0.5,0.2 --root-node-size-envelope=0.1,0,1,0.2 --sway-envelope=0,50,0.5,1 --node-size=0.003 --root-node-size=0.005 --prune-out --growth-time-limit=20 -export -export-fps=%s -export-dir=%s" % (geometry, session_dir, render_args, RESOLUTION, FPS, render_dir)
         subprocess.call(cmd, shell=True)
 
     video_filename = "rendered_ancestry/%s_ancestry_%s.mp4" % (
